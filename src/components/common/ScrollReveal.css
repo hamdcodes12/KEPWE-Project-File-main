@@ -1,0 +1,95 @@
+/* ScrollReveal Component Stylesheet - High-Visibility Motion */
+.scroll-reveal,
+.reveal-up,
+.reveal-group,
+.reveal-content {
+  opacity: 0 !important;
+  transform: translateY(50px) scale(0.96) !important;
+  will-change: transform, opacity;
+  transition: opacity 650ms cubic-bezier(0.16, 1, 0.3, 1), transform 650ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.scroll-reveal.is-visible,
+.reveal-up.is-visible,
+.reveal-group.is-visible,
+.reveal-content.is-visible {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Ensure all reveal variant aliases use uniform strong bottom-to-top motion */
+.scroll-reveal.reveal-fade-up,
+.scroll-reveal.reveal-fade-in,
+.scroll-reveal.reveal-scale-up,
+.scroll-reveal.reveal-slide-right,
+.scroll-reveal.reveal-slide-left,
+.scroll-reveal.reveal-3d-lift {
+  opacity: 0 !important;
+  transform: translateY(50px) scale(0.96) !important;
+  will-change: transform, opacity;
+  transition: opacity 650ms cubic-bezier(0.16, 1, 0.3, 1), transform 650ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.scroll-reveal.reveal-fade-up.is-visible,
+.scroll-reveal.reveal-fade-in.is-visible,
+.scroll-reveal.reveal-scale-up.is-visible,
+.scroll-reveal.reveal-slide-right.is-visible,
+.scroll-reveal.reveal-slide-left.is-visible,
+.scroll-reveal.reveal-3d-lift.is-visible {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Tablet responsiveness: translateY(20px) */
+@media (max-width: 1024px) {
+
+  .scroll-reveal,
+  .reveal-up,
+  .reveal-group,
+  .reveal-content,
+  .scroll-reveal.reveal-fade-up,
+  .scroll-reveal.reveal-fade-in,
+  .scroll-reveal.reveal-scale-up,
+  .scroll-reveal.reveal-slide-right,
+  .scroll-reveal.reveal-slide-left,
+  .scroll-reveal.reveal-3d-lift {
+    transform: translateY(20px);
+  }
+}
+
+/* Mobile responsiveness: translateY(16px) & 300ms duration */
+@media (max-width: 768px) {
+
+  .scroll-reveal,
+  .reveal-up,
+  .reveal-group,
+  .reveal-content,
+  .scroll-reveal.reveal-fade-up,
+  .scroll-reveal.reveal-fade-in,
+  .scroll-reveal.reveal-scale-up,
+  .scroll-reveal.reveal-slide-right,
+  .scroll-reveal.reveal-slide-left,
+  .scroll-reveal.reveal-3d-lift {
+    transform: translateY(16px);
+    transition-duration: 300ms;
+  }
+}
+
+/* Respect user accessibility preferences for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+  .scroll-reveal,
+  .reveal-up,
+  .reveal-group,
+  .reveal-content,
+  .scroll-reveal.reveal-fade-up,
+  .scroll-reveal.reveal-fade-in,
+  .scroll-reveal.reveal-scale-up,
+  .scroll-reveal.reveal-slide-right,
+  .scroll-reveal.reveal-slide-left,
+  .scroll-reveal.reveal-3d-lift {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

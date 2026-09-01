@@ -1,0 +1,523 @@
+@import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&display=swap');
+
+/* ============================================================
+   INDEXPILOT MARKETING HOME PAGE
+   ENTERPRISE FINTECH / SCROLL-DRIVEN MOTION & TYPOGRAPHY
+   ============================================================ */
+
+.ip-marketing-container {
+  font-family: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #FFFFFF;
+  color: #0F172A;
+  min-height: 100vh;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* ── 1. GLOBAL SCROLL REVEAL SYSTEM ────────────────────────── */
+.ip-reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  filter: blur(4px);
+  transition: opacity 800ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 800ms cubic-bezier(0.16, 1, 0.3, 1),
+              filter 800ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform, filter;
+}
+
+.ip-reveal.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
+/* Header / Eyebrow reveal */
+.ip-reveal-header {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ip-reveal-header.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Card reveal motion */
+.ip-reveal-card {
+  opacity: 0;
+  transform: translateY(24px) scale(0.985);
+  transition: opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.ip-reveal-card.is-revealed {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Stagger Delays for Question Cards */
+.ip-stagger-1 { transition-delay: 0ms; }
+.ip-stagger-2 { transition-delay: 90ms; }
+.ip-stagger-3 { transition-delay: 180ms; }
+.ip-stagger-4 { transition-delay: 270ms; }
+.ip-stagger-5 { transition-delay: 360ms; }
+
+/* Stagger Delays for Comparison Cards */
+.ip-comp-stagger-1 { transition-delay: 0ms; }
+.ip-comp-stagger-2 { transition-delay: 120ms; }
+
+/* Stagger Delays for Pricing Cards */
+.ip-price-stagger-1 { transition-delay: 0ms; }
+.ip-price-stagger-2 { transition-delay: 100ms; }
+.ip-price-stagger-3 { transition-delay: 200ms; }
+.ip-price-stagger-4 { transition-delay: 300ms; }
+
+
+/* ── 2. HERO SECTION ────────────────────────────────────────── */
+.ip-hero-section {
+  padding: 88px 24px 64px;
+  text-align: center;
+  max-width: 1040px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.ip-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  color: #2563EB;
+  padding: 6px 18px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-bottom: 24px;
+}
+
+.ip-hero-title {
+  font-family: "Syncopate", sans-serif;
+  font-size: clamp(2.4rem, 5.2vw, 4.2rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  margin-bottom: 20px;
+  color: #0F172A;
+}
+
+.ip-hero-subtitle {
+  font-size: clamp(1.08rem, 2vw, 1.32rem);
+  color: #475569;
+  max-width: 820px;
+  margin: 0 auto 38px;
+  line-height: 1.6;
+  font-weight: 450;
+}
+
+.ip-hero-btn-primary {
+  background-color: #2563EB;
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 16px 34px;
+  border-radius: 12px;
+  text-decoration: none;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.28);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 220ms ease, transform 220ms ease, box-shadow 220ms ease;
+}
+
+.ip-hero-btn-primary:hover {
+  background-color: #1D4ED8;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.35);
+}
+
+.ip-hero-btn-secondary {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 16px 34px;
+  border-radius: 12px;
+  text-decoration: none;
+  border: 1px solid #CBD5E1;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  transition: background-color 220ms ease, border-color 220ms ease, transform 220ms ease, color 220ms ease;
+}
+
+.ip-hero-btn-secondary:hover {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+  color: #2563EB;
+  transform: translateY(-2px);
+}
+
+
+/* ── 3. DECISION FRAMEWORK (5 QUESTIONS) ───────────────────── */
+.ip-framework-section {
+  background-color: #FFFFFF;
+  padding: 88px 24px;
+  border-top: 1px solid #E2E8F0;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.ip-section-eyebrow {
+  font-size: 0.82rem;
+  color: #2563EB;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: block;
+}
+
+.ip-section-heading {
+  font-family: "Archivo", sans-serif;
+  font-size: clamp(2rem, 3.5vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: #0F172A;
+  margin-top: 8px;
+}
+
+.ip-section-heading.archivo-black {
+  font-family: "Archivo Black", sans-serif;
+  font-weight: 900;
+}
+
+.ip-questions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 48px;
+}
+
+/* Question Card */
+.ip-question-card {
+  background: #F8FAFC;
+  padding: 32px 28px;
+  border-radius: 18px;
+  border: 1px solid #DCE5EF;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.ip-question-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
+}
+
+.ip-question-num {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #2563EB;
+  letter-spacing: 0.06em;
+  display: block;
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+
+.ip-question-title {
+  font-family: "Archivo", sans-serif;
+  font-size: 1.22rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 10px 0 12px;
+  color: #0F172A;
+  line-height: 1.3;
+}
+
+.ip-question-desc {
+  font-size: 0.92rem;
+  color: #475569;
+  line-height: 1.6;
+}
+
+
+/* ── 4. WHY INDEXPILOT IS DIFFERENT ────────────────────────── */
+.ip-different-section {
+  padding: 88px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.ip-comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  margin-top: 48px;
+}
+
+.ip-comp-card {
+  padding: 36px 32px;
+  border-radius: 20px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.ip-comp-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+.ip-comp-bad {
+  background: #FFF5F5;
+  border: 1px solid #FECDD3;
+}
+
+.ip-comp-bad:hover {
+  border-color: #FDA4AF;
+}
+
+.ip-comp-good {
+  background: #F0FDF4;
+  border: 1px solid #A7F3D0;
+}
+
+.ip-comp-good:hover {
+  border-color: #6EE7B7;
+}
+
+.ip-comp-title-bad {
+  font-family: "Archivo", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #E11D48;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ip-comp-title-good {
+  font-family: "Archivo", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #059669;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ip-comp-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 0.96rem;
+}
+
+.ip-comp-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+
+.ip-comp-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+  transform: scale(0.96);
+  transition: opacity 200ms ease, transform 200ms ease;
+  margin-top: 2px;
+}
+
+.ip-comp-card:hover .ip-comp-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+
+/* ── 5. TRANSPARENT 4-TIER PRICING ──────────────────────────── */
+.ip-pricing-section {
+  background-color: #FFFFFF;
+  padding: 88px 24px;
+  border-top: 1px solid #E2E8F0;
+  box-sizing: border-box;
+}
+
+.ip-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 24px;
+  margin-top: 48px;
+  text-align: left;
+}
+
+/* Pricing Card Base */
+.ip-price-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #DCE5EF;
+  border-radius: 18px;
+  padding: 32px 24px;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.055);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.ip-price-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.09);
+}
+
+/* Pro Card (Primary Plan Highlight) */
+.ip-price-card.is-pro {
+  background: #EFF6FF;
+  border: 1px solid rgba(37, 99, 235, 0.65);
+  box-shadow: 0 12px 35px rgba(37, 99, 235, 0.10);
+}
+
+.ip-price-card.is-pro:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 42px rgba(37, 99, 235, 0.18);
+  border-color: #2563EB;
+}
+
+.ip-pro-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2563EB;
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 900;
+  padding: 3px 14px;
+  border-radius: 9999px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ip-plan-name {
+  font-family: "Archivo", sans-serif;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: #0F172A;
+}
+
+.ip-plan-price {
+  font-family: "Archivo", sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #2563EB;
+  margin: 12px 0 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  transition: opacity 500ms ease, transform 500ms ease;
+}
+
+.ip-price-accent-premium {
+  color: #D97706;
+}
+
+.ip-price-unit {
+  font-size: 0.85rem;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.ip-plan-desc {
+  font-size: 0.85rem;
+  color: #64748B;
+  line-height: 1.5;
+}
+
+.ip-pricing-cta-link {
+  color: #2563EB;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 1.02rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 220ms ease;
+}
+
+.ip-pricing-cta-link:hover {
+  color: #1D4ED8;
+}
+
+.ip-pricing-cta-arrow {
+  transition: transform 220ms ease;
+}
+
+.ip-pricing-cta-link:hover .ip-pricing-cta-arrow {
+  transform: translateX(4px);
+}
+
+
+/* ── 6. RESPONSIVE BREAKPOINTS ──────────────────────────────── */
+@media (max-width: 840px) {
+  .ip-comparison-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ip-hero-section {
+    padding: 48px 16px 40px;
+  }
+
+  .ip-framework-section,
+  .ip-different-section,
+  .ip-pricing-section {
+    padding: 56px 16px;
+  }
+
+  .ip-questions-grid,
+  .ip-pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .ip-hero-btn-primary,
+  .ip-hero-btn-secondary {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+}
+
+
+/* ── 7. ACCESSIBILITY: PREFERS-REDUCED-MOTION ──────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ip-reveal,
+  .ip-reveal-header,
+  .ip-reveal-card,
+  .ip-question-card,
+  .ip-comp-card,
+  .ip-price-card,
+  .ip-pricing-cta-arrow,
+  .ip-comp-icon {
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+}

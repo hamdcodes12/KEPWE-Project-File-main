@@ -1,0 +1,143 @@
+.home-faq-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+  position: relative;
+}
+
+.faq-header {
+  max-width: 700px;
+  margin: 0 auto 52px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.faq-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #EFF4FF;
+  border: 1px solid rgba(33, 78, 207, 0.18);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #214ECF;
+}
+
+.faq-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #214ECF;
+}
+
+.faq-title {
+  font-size: clamp(2rem, 3.8vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #111827;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.faq-subtitle {
+  font-size: clamp(0.96rem, 1.3vw, 1.12rem);
+  color: #667085;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* Accordion Container */
+.faq-accordion-container {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.faq-accordion-item {
+  background-color: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.faq-accordion-item:hover {
+  border-color: #CBD5E1;
+}
+
+.faq-accordion-item.active {
+  border-color: #214ECF;
+  box-shadow: 0 8px 24px -4px rgba(33, 78, 207, 0.08);
+}
+
+.faq-accordion-trigger {
+  width: 100%;
+  padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.faq-question-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.4;
+  letter-spacing: -0.015em;
+}
+
+.faq-chevron-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #EFF4FF;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.faq-chevron-circle.rotate-180 {
+  transform: rotate(180deg);
+  background-color: #214ECF;
+}
+
+.faq-chevron-circle.rotate-180 svg {
+  color: #FFFFFF !important;
+}
+
+.faq-accordion-panel {
+  padding: 0 24px 22px 24px;
+  animation: fadeIn 0.25s ease;
+}
+
+.faq-answer-text {
+  font-size: 0.94rem;
+  color: #667085;
+  line-height: 1.65;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .faq-accordion-trigger {
+    padding: 18px 16px;
+  }
+  .faq-question-text {
+    font-size: 0.96rem;
+  }
+  .faq-accordion-panel {
+    padding: 0 16px 18px 16px;
+  }
+}

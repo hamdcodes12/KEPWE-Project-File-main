@@ -1,0 +1,631 @@
+# PROMPT 2 — IndexPilot Algo Engine, NIFTY Strategy & Trading Infrastructure
+
+Continue from **PROMPT 1**.
+
+The IndexPilot Algo Dashboard and authentication system are already implemented.
+
+Now build the **actual algo-trading infrastructure** behind the dashboard.
+
+Do NOT rebuild the frontend/authentication from scratch.
+
+---
+
+# 1. SYSTEM ARCHITECTURE
+
+Implement:
+
+```text
+Market Data
+     ↓
+Strategy Engine
+     ↓
+Signal Generator
+     ↓
+Risk Engine
+     ↓
+Position Validation
+     ↓
+Margin Validation
+     ↓
+Duplicate Order Check
+     ↓
+Order Management System
+     ↓
+Broker Adapter
+     ↓
+Angel One / Lemonn
+     ↓
+Execution
+     ↓
+Portfolio/P&L
+```
+
+The Strategy Engine must NEVER directly place broker orders.
+
+---
+
+# 2. BROKER ADAPTERS
+
+Create separate adapters:
+
+```text
+AngelOneAdapter
+LemonnAdapter
+```
+
+Keep broker-specific API logic isolated.
+
+Required capabilities where supported by the official broker APIs:
+
+* Authentication
+* Market data
+* Historical data
+* Order placement
+* Order modification
+* Order cancellation
+* Order status
+* Positions
+* Trade book
+* Margin/balance
+* Execution updates
+
+Do not invent undocumented APIs.
+
+Use official broker documentation and credentials.
+
+---
+
+# 3. NIFTY STRATEGY
+
+Strategy name:
+
+**Kepwe NIFTY Pulse 5M**
+
+Instrument:
+
+**NIFTY 50**
+
+Primary timeframe:
+
+**5-minute**
+
+Optional higher timeframe confirmation:
+
+**15-minute**
+
+---
+
+# 4. INDICATORS
+
+Use:
+
+* EMA 9
+* EMA 21
+* VWAP
+* RSI 14
+* ATR 14
+* Volume 20-period average
+
+---
+
+# 5. LONG SIGNAL
+
+Generate a BUY candidate when all configured conditions pass:
+
+1. EMA 9 > EMA 21
+2. Price above VWAP
+3. RSI confirms bullish momentum
+4. Breakout/swing-high confirmation
+5. Volume > configured average
+6. ATR/volatility filter passes
+7. Trading window is active
+8. No daily risk limit has been reached
+9. No existing position
+10. Broker/system health is normal
+
+---
+
+# 6. SHORT SIGNAL
+
+Generate a SELL candidate when:
+
+1. EMA 9 < EMA 21
+2. Price below VWAP
+3. RSI confirms bearish momentum
+4. Breakdown/swing-low confirmation
+5. Volume > configured average
+6. ATR/volatility filter passes
+7. Trading window is active
+8. No daily risk limit has been reached
+9. No existing position
+10. Broker/system health is normal
+
+Do not generate trades using a single indicator.
+
+---
+
+# 7. ENTRY
+
+Use confirmation-based entry:
+
+**Trend + VWAP + Momentum + Breakout/Breakdown + Volume + Risk Approval**
+
+Avoid low-quality trades during abnormal market conditions.
+
+---
+
+# 8. STOP LOSS
+
+Calculate SL using:
+
+* Recent swing level
+
+OR
+
+* ATR-based stop
+
+Use configurable parameters.
+
+---
+
+# 9. TARGET
+
+Default:
+
+**1:2 Risk/Reward**
+
+Example:
+
+Entry = ₹100
+
+SL = ₹95
+
+Risk = ₹5
+
+Target = ₹110
+
+The system should calculate target automatically.
+
+---
+
+# 10. POSITION SIZING
+
+Formula:
+
+```text
+Risk Amount = Account Equity × Risk %
+```
+
+Then:
+
+```text
+Quantity = Risk Amount / Stop Loss Distance
+```
+
+Round quantity according to valid broker/exchange lot-size rules.
+
+Never allow quantity to exceed:
+
+* Available margin
+* Broker limits
+* Exchange limits
+* User risk limits
+* Strategy exposure limits
+
+---
+
+# 11. RISK CONFIGURATION
+
+Support:
+
+* 0.5%
+* 1%
+* 2%
+* 5%
+
+5% should be marked as **High Risk**.
+
+Example:
+
+Capital = ₹1,00,000
+
+Risk = 5%
+
+Maximum risk amount = ₹5,000.
+
+The system must prevent the user from accidentally exceeding their configured risk.
+
+---
+
+# 12. DAILY PROTECTION
+
+Implement:
+
+### Maximum trades
+
+3 trades/day.
+
+### Maximum consecutive losses
+
+2.
+
+### Maximum daily loss
+
+2R.
+
+Once reached:
+
+```text
+ALGO = STOPPED
+```
+
+No new trades should be allowed for that trading session.
+
+---
+
+# 13. TRADING WINDOW
+
+Initial strategy window:
+
+**09:30–11:30 IST**
+
+Optional second window:
+
+**13:30–14:45 IST**
+
+No new positions outside configured trading windows.
+
+Implement automatic end-of-day position handling according to the strategy configuration.
+
+---
+
+# 14. AUTOMATIC KILL SWITCH
+
+Stop new trading automatically if:
+
+* Daily loss limit reached
+* Consecutive loss limit reached
+* Market data disconnects
+* Broker API disconnects
+* Position mismatch occurs
+* Duplicate order detected
+* Excessive slippage
+* Abnormal execution
+* System health failure
+
+Record the reason in:
+
+`risk_events`
+
+and
+
+`activity_logs`
+
+---
+
+# 15. ORDER MANAGEMENT SYSTEM
+
+Create an OMS handling:
+
+* Create order
+* Submit order
+* Modify order
+* Cancel order
+* Track status
+* Partial fill
+* Rejection
+* Execution confirmation
+* Position reconciliation
+
+Every order needs:
+
+```text
+internal_order_id
+broker_order_id
+user_id
+strategy_id
+instrument
+side
+quantity
+price
+stop_loss
+target
+timestamp
+status
+```
+
+---
+
+# 16. BACKTEST ENGINE
+
+Create a real backtesting engine.
+
+Inputs:
+
+* Strategy
+* Instrument
+* Date range
+* Capital
+* Risk
+* Timeframe
+
+Calculate:
+
+* Total trades
+* Winning trades
+* Losing trades
+* Win rate
+* Gross P&L
+* Charges
+* Slippage
+* Net P&L
+* Profit factor
+* Maximum drawdown
+* Average win
+* Average loss
+* Expectancy
+* R-multiple
+
+Do not hardcode results.
+
+---
+
+# 17. 80% ACCURACY TARGET
+
+The business wants approximately **80% win rate as a research target**.
+
+Do NOT guarantee 80% accuracy.
+
+Do NOT manipulate backtest parameters just to produce 80%.
+
+Report the actual result.
+
+The strategy should be evaluated through:
+
+```text
+Historical Backtest
+        ↓
+Out-of-Sample Test
+        ↓
+Walk-Forward Test
+        ↓
+Paper Trading
+        ↓
+Controlled Live Testing
+        ↓
+Production Monitoring
+```
+
+---
+
+# 18. PROFITABILITY VALIDATION
+
+The business wants the system to aim for sustainable weekly/monthly profitability.
+
+Do NOT implement guaranteed profit claims.
+
+Instead track:
+
+* Weekly P&L
+* Monthly P&L
+* Win rate
+* Profit factor
+* Expectancy
+* Drawdown
+* Net P&L after costs
+* Slippage
+* Brokerage/fees
+
+The strategy should only be considered production-ready after predefined validation criteria are met.
+
+---
+
+# 19. PAPER TRADING
+
+Implement a complete paper-trading mode.
+
+Paper trading should simulate:
+
+* Signals
+* Entries
+* Exits
+* SL
+* Target
+* Position sizing
+* Slippage
+* Charges
+* P&L
+
+Paper trades must be stored separately from live trades.
+
+---
+
+# 20. LIVE ACTIVATION
+
+Before live activation:
+
+Show:
+
+```text
+Strategy
+Broker
+Capital
+Risk
+Risk/Reward
+Maximum Trades
+Daily Loss Limit
+Trading Window
+```
+
+Require explicit user confirmation of risk.
+
+Only then:
+
+```text
+algo_status = ACTIVE
+```
+
+---
+
+# 21. REAL-TIME DASHBOARD
+
+Update in real time:
+
+* Market price
+* Signal
+* Position
+* Entry
+* SL
+* Target
+* P&L
+* Order status
+* Algo status
+
+Use WebSocket/SSE where appropriate.
+
+Do not continuously reload the entire page.
+
+---
+
+# 22. RECONCILIATION
+
+At regular intervals compare:
+
+**Kepwe internal position**
+
+vs
+
+**Broker position**
+
+If mismatch occurs:
+
+```text
+STOP NEW ORDERS
+ALERT ADMIN
+LOG RISK EVENT
+```
+
+This is mandatory before production live trading.
+
+---
+
+# 23. ADMIN MONITORING
+
+Admin should be able to see:
+
+* Active users
+* Active algos
+* Broker connections
+* Live positions
+* Live orders
+* Today's trades
+* Strategy performance
+* API health
+* Risk events
+* System errors
+
+Admin controls:
+
+* Stop client algo
+* Disable strategy
+* Disable broker
+* Global kill switch
+
+---
+
+# 24. SECURITY
+
+Implement:
+
+* Secure authentication
+* Password hashing
+* Authorization
+* API authentication
+* Rate limiting
+* Input validation
+* Encrypted secrets
+* Secure broker token handling
+* Audit logs
+
+Never expose:
+
+* Broker passwords
+* PINs
+* API secrets
+* Authentication tokens
+
+to the frontend.
+
+---
+
+# 25. PRODUCTION SAFETY
+
+Before live trading:
+
+1. Unit testing
+2. Integration testing
+3. Backtest validation
+4. Out-of-sample validation
+5. Paper trading
+6. Broker sandbox/testing where available
+7. Order reconciliation testing
+8. Failure recovery testing
+9. Kill-switch testing
+10. Security testing
+11. Required broker/compliance approvals
+
+Only after these checks should production live execution be enabled.
+
+---
+
+# 26. FINAL SUCCESS CRITERIA
+
+The complete IndexPilot Algo system should work like this:
+
+```text
+User Signup
+    ↓
+Login
+    ↓
+IndexPilot Algo Dashboard
+    ↓
+Open/Connect Angel One or Lemonn
+    ↓
+Select NIFTY Pulse 5M
+    ↓
+Configure Capital & Risk
+    ↓
+Backtest
+    ↓
+Paper Trading
+    ↓
+Risk Confirmation
+    ↓
+Activate Algo
+    ↓
+Market Data
+    ↓
+Strategy Signal
+    ↓
+Risk Engine
+    ↓
+Order Management
+    ↓
+Broker
+    ↓
+Execution
+    ↓
+Position
+    ↓
+SL / Target
+    ↓
+P&L
+    ↓
+Trade History
+    ↓
+Analytics
+```
+
+Build this as a **modular, scalable production foundation**, not a hardcoded demo.
+
+Most importantly, never represent simulated/backtested performance as live performance and never promise guaranteed weekly/monthly profits.

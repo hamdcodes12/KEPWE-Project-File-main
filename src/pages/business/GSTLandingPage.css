@@ -1,0 +1,487 @@
+/* GST Landing Page Premium Hero Section Styles */
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+.gst-hero-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px 100px;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Ambient Background Lighting Gradients */
+.gst-bg-glow {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.gst-bg-glow-blue {
+  top: -10%;
+  left: 10%;
+  width: 650px;
+  height: 650px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0) 70%);
+  filter: blur(40px);
+}
+
+.gst-bg-glow-lavender {
+  bottom: -5%;
+  right: 10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.06) 0%, rgba(139, 92, 246, 0) 70%);
+  filter: blur(50px);
+}
+
+.gst-bg-glow-cyan {
+  bottom: 10%;
+  left: 5%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.07) 0%, rgba(20, 184, 166, 0) 70%);
+  filter: blur(45px);
+}
+
+/* Technical Subtle Grid Overlay */
+.gst-bg-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(to right, rgba(226, 232, 240, 0.45) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 232, 240, 0.45) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at 50% 45%, black 40%, transparent 85%);
+  -webkit-mask-image: radial-gradient(circle at 50% 45%, black 40%, transparent 85%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Floating Decorative Ornaments */
+.gst-float-dot-1 {
+  position: absolute;
+  top: 22%;
+  left: 14%;
+  width: 10px;
+  height: 10px;
+  background: #14B8A6;
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(20, 184, 166, 0.45);
+  animation: gstFloat 6s ease-in-out infinite;
+  z-index: 2;
+}
+
+.gst-float-dot-2 {
+  position: absolute;
+  bottom: 28%;
+  right: 15%;
+  width: 8px;
+  height: 8px;
+  background: #214ECF;
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.45);
+  animation: gstFloat 8s ease-in-out infinite 1s;
+  z-index: 2;
+}
+
+.gst-float-circle-1 {
+  position: absolute;
+  top: 32%;
+  right: 12%;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(20, 184, 166, 0.35);
+  border-radius: 50%;
+  animation: gstFloat 7s ease-in-out infinite 0.5s;
+  z-index: 2;
+}
+
+.gst-float-circle-2 {
+  position: absolute;
+  bottom: 35%;
+  left: 11%;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  border-radius: 50%;
+  animation: gstFloat 9s ease-in-out infinite 1.5s;
+  z-index: 2;
+}
+
+@keyframes gstFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-12px) scale(1.05);
+  }
+}
+
+/* Hero Content Container */
+.gst-hero-container {
+  position: relative;
+  z-index: 10;
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* 1. /gst Badge */
+.gst-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(37, 99, 235, 0.07);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 999px;
+  padding: 8px 18px;
+  margin-bottom: 24px;
+  cursor: pointer;
+  transition: all 220ms ease;
+  animation: gstFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.gst-badge-pill:hover {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.12);
+}
+
+.gst-badge-icon {
+  color: #1D4ED8;
+}
+
+.gst-badge-text {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1D4ED8;
+  letter-spacing: -0.01em;
+}
+
+/* 2. Main Hero Heading */
+.gst-hero-heading {
+  font-family: 'Archivo Black', 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(38px, 5vw + 1rem, 74px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  margin: 0 0 24px 0;
+  max-width: 960px;
+  animation: gstFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 100ms both;
+}
+
+.gst-text-dark {
+  color: #111827;
+}
+
+.gst-text-blue {
+  color: #214ECF;
+}
+
+.gst-text-dot {
+  color: #14B8A6;
+  display: inline-block;
+}
+
+/* 3. Service Description */
+.gst-service-desc {
+  font-size: clamp(16px, 1.2vw + 0.5rem, 20px);
+  font-weight: 500;
+  color: #64748B;
+  line-height: 1.5;
+  max-width: 860px;
+  margin: 0 auto 32px;
+  letter-spacing: -0.01em;
+  animation: gstFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 200ms both;
+}
+
+/* 4. Service Icon Row */
+.gst-services-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 40px;
+  max-width: 940px;
+  animation: gstFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 300ms both;
+}
+
+.gst-service-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(248, 250, 252, 0.85);
+  border: 1px solid #E2E8F0;
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+  transition: all 200ms ease;
+  backdrop-filter: blur(8px);
+}
+
+.gst-service-chip:hover {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.gst-chip-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 5 & 6. CTA Button Group & Animations */
+.gst-cta-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 60px;
+  animation: gstFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 400ms both;
+}
+
+.gst-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #214ECF;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 32px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 12px 28px rgba(33, 78, 207, 0.22);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  cursor: pointer;
+}
+
+.gst-btn-primary:hover {
+  background: #1A3EB4;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(33, 78, 207, 0.28);
+}
+
+.gst-btn-primary .gst-btn-arrow {
+  transition: transform 180ms ease;
+}
+
+.gst-btn-primary:hover .gst-btn-arrow {
+  transform: translateX(4px);
+}
+
+.gst-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #FFFFFF;
+  color: #214ECF;
+  border: 1.5px solid #214ECF;
+  border-radius: 12px;
+  padding: 15.5px 30px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  cursor: pointer;
+}
+
+.gst-btn-secondary:hover {
+  background: rgba(33, 78, 207, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(33, 78, 207, 0.12);
+}
+
+.gst-btn-secondary .gst-btn-arrow {
+  transition: transform 180ms ease;
+}
+
+.gst-btn-secondary:hover .gst-btn-arrow {
+  transform: translateX(4px);
+}
+
+/* 7. Trust / Feature Glass Strip */
+.gst-trust-strip {
+  width: 100%;
+  max-width: 1080px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 28px 32px;
+  box-sizing: border-box;
+  animation: gstFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 500ms both;
+}
+
+.gst-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  align-items: center;
+}
+
+.gst-trust-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  text-align: left;
+  position: relative;
+}
+
+.gst-trust-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 15%;
+  height: 70%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, #E2E8F0, transparent);
+}
+
+.gst-trust-icon-box {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 220ms ease;
+}
+
+.gst-trust-item:hover .gst-trust-icon-box {
+  transform: scale(1.08);
+}
+
+/* Custom Soft Colors for Feature Icons */
+.icon-bg-teal {
+  background: rgba(20, 184, 166, 0.1);
+  color: #14B8A6;
+}
+
+.icon-bg-blue {
+  background: rgba(33, 78, 207, 0.1);
+  color: #214ECF;
+}
+
+.icon-bg-purple {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8B5CF6;
+}
+
+.icon-bg-cyan {
+  background: rgba(6, 182, 212, 0.1);
+  color: #06B6D4;
+}
+
+.gst-trust-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.gst-trust-title {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 3px;
+  letter-spacing: -0.01em;
+}
+
+.gst-trust-desc {
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: #64748B;
+  line-height: 1.35;
+}
+
+/* Staggered Entrance Animation Keyframe */
+@keyframes gstFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Media Queries */
+@media (max-width: 1024px) {
+  .gst-trust-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+
+  .gst-trust-item:not(:last-child)::after {
+    display: none;
+  }
+
+  .gst-hero-wrapper {
+    padding: 60px 20px 80px;
+  }
+}
+
+@media (max-width: 640px) {
+  .gst-hero-wrapper {
+    padding: 40px 16px 60px;
+  }
+
+  .gst-hero-heading {
+    font-size: 36px;
+    letter-spacing: -0.03em;
+  }
+
+  .gst-service-desc {
+    font-size: 16px;
+  }
+
+  .gst-cta-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .gst-btn-primary,
+  .gst-btn-secondary {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .gst-trust-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .gst-trust-strip {
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
+}

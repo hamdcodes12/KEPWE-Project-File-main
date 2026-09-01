@@ -1,0 +1,385 @@
+/* Services Bento Grid Stylesheet */
+.services-showcase-section {
+  padding: 60px 24px;
+  background: #F8FAFC;
+  color: #0F172A;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.services-container {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.services-header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 56px auto;
+}
+
+.services-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 9999px;
+  color: #2563EB;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+
+.services-main-title {
+  font-size: clamp(2rem, 3.5vw, 2.8rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #0F172A;
+  margin-bottom: 12px;
+}
+
+.services-subtitle {
+  font-size: 1.05rem;
+  color: #64748B;
+}
+
+/* Bento Grid */
+.services-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.service-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 20px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.05), 0 2px 8px rgba(15, 23, 42, 0.02);
+}
+
+.service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.09), 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+
+/* Controlled Multi-Color Category Themes (Soft 2-3% Tint Palette) */
+.card-theme-blue {
+  background: #F8FBFF;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+}
+.card-theme-blue .pillar-num, .card-theme-blue .animated-pillar-label { color: #2563EB; }
+.card-theme-blue .card-link { color: #2563EB; }
+.card-theme-blue:hover { border-color: rgba(37, 99, 235, 0.35); }
+
+.card-theme-indigo {
+  background: #F7F9FF;
+  border: 1px solid rgba(79, 70, 229, 0.15);
+}
+.card-theme-indigo .pillar-num, .card-theme-indigo .animated-pillar-label { color: #4F46E5; }
+.card-theme-indigo .card-link { color: #4F46E5; }
+.card-theme-indigo:hover { border-color: rgba(79, 70, 229, 0.35); }
+
+.card-theme-teal {
+  background: #F6FCFA;
+  border: 1px solid rgba(15, 159, 138, 0.15);
+}
+.card-theme-teal .pillar-num, .card-theme-teal .animated-pillar-label { color: #0F9F8A; }
+.card-theme-teal .card-link { color: #0F9F8A; }
+.card-theme-teal:hover { border-color: rgba(15, 159, 138, 0.35); }
+
+.card-theme-violet {
+  background: #FBF9FF;
+  border: 1px solid rgba(124, 58, 237, 0.15);
+}
+.card-theme-violet .pillar-num, .card-theme-violet .animated-pillar-label { color: #7C3AED; }
+.card-theme-violet .card-link { color: #7C3AED; }
+.card-theme-violet:hover { border-color: rgba(124, 58, 237, 0.35); }
+
+.card-theme-amber {
+  background: #FFFBF5;
+  border: 1px solid rgba(217, 119, 6, 0.15);
+}
+.card-theme-amber .pillar-num, .card-theme-amber .animated-pillar-label { color: #D97706; }
+.card-theme-amber .card-link { color: #D97706; }
+.card-theme-amber:hover { border-color: rgba(217, 119, 6, 0.35); }
+
+.card-theme-slate {
+  background: #F8FAFC;
+  border: 1px solid rgba(71, 85, 105, 0.15);
+}
+.card-theme-slate .pillar-num, .card-theme-slate .animated-pillar-label { color: #475569; }
+.card-theme-slate .card-link { color: #475569; }
+.card-theme-slate:hover { border-color: rgba(71, 85, 105, 0.35); }
+
+.card-theme-highvalue {
+  background: #F7F8FF;
+  border: 1px solid #D8DFFF;
+  box-shadow: 0 10px 34px rgba(79, 70, 229, 0.07);
+}
+.card-theme-highvalue .pillar-num, .card-theme-highvalue .animated-pillar-label { color: #4F46E5; }
+.card-theme-highvalue .card-link { color: #4F46E5; }
+.card-theme-highvalue:hover { border-color: #A5B4FC; }
+
+/* Featured Large Card (Spans 2 columns) */
+.featured-card {
+  grid-column: span 2;
+  background: linear-gradient(145deg, #1E293B 0%, #0F172A 100%);
+  color: #FFFFFF;
+  border-color: #334155;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+.featured-card .animated-pillar-label { color: #38BDF8; }
+
+.featured-card:hover {
+  border-color: #2563EB;
+}
+
+.card-badge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* ==========================================================================
+   PREMIUM PILLAR NUMBER LABEL ANIMATION
+   Masked Vertical Upward Reveal for Number, Delayed Text Fade, Micro Line Draw
+   ========================================================================== */
+.animated-pillar-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #2563EB;
+}
+
+.card-badge-row .animated-pillar-label {
+  margin-bottom: 0;
+}
+
+/* Masked Vertical Reveal for Number */
+.pillar-num-wrapper {
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+}
+
+.pillar-number {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 600ms cubic-bezier(0.16, 1, 0.3, 1),
+              text-shadow 600ms ease;
+}
+
+.animated-pillar-label.is-visible .pillar-number {
+  opacity: 1;
+  transform: translateY(0);
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+.pillar-dash {
+  opacity: 0;
+  transition: opacity 400ms ease 80ms;
+}
+
+.animated-pillar-label.is-visible .pillar-dash {
+  opacity: 0.5;
+}
+
+/* Label Fade-Up Reveal (100ms Delay) */
+.pillar-text {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 500ms cubic-bezier(0.16, 1, 0.3, 1) 100ms,
+              transform 500ms cubic-bezier(0.16, 1, 0.3, 1) 100ms;
+}
+
+.animated-pillar-label.is-visible .pillar-text {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Micro Accent Line Draw (150ms Delay, Left-to-Right) */
+.pillar-accent-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 1.5px;
+  width: 0%;
+  background: currentColor;
+  opacity: 0.45;
+  transition: width 550ms cubic-bezier(0.16, 1, 0.3, 1) 150ms;
+}
+
+.animated-pillar-label.is-visible .pillar-accent-line {
+  width: 100%;
+}
+
+.pillar-num {
+  font-size: 0.75rem;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: #2563EB;
+  letter-spacing: 0.08em;
+}
+
+.featured-card .pillar-num {
+  color: #38BDF8;
+}
+
+.live-status-chip {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 9999px;
+}
+
+.featured-title {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  margin-bottom: 12px;
+}
+
+.featured-desc {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #94A3B8;
+  margin-bottom: 24px;
+}
+
+.featured-capabilities {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.capability-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #E2E8F0;
+}
+
+.featured-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #2563EB;
+  color: #FFFFFF;
+  font-weight: 800;
+  padding: 14px 24px;
+  border-radius: 10px;
+  text-decoration: none;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.featured-cta-btn:hover {
+  background: #1D4ED8;
+  transform: translateY(-2px);
+}
+
+/* Highlighted Card (Virtual CFO) */
+.highlight-card {
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  color: #0F172A;
+  border-color: #C7D2FE;
+}
+
+.highlight-card .pillar-num {
+  color: #4F46E5;
+}
+
+.highlight-card .card-title {
+  color: #0F172A;
+}
+
+.highlight-card .card-desc {
+  color: #475569;
+}
+
+.highlight-link {
+  color: #2563EB !important;
+}
+
+/* Standard Cards */
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 8px 0;
+}
+
+.card-desc {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #64748B;
+  margin-bottom: 20px;
+}
+
+.card-checklist {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.card-checklist li {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.highlight-card .card-checklist li {
+  color: #334155;
+}
+
+.card-link {
+  margin-top: auto;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #2563EB;
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+
+.card-link:hover {
+  transform: translateX(4px);
+}
+
+@media (max-width: 991px) {
+  .services-bento-grid {
+    grid-template-columns: 1fr;
+  }
+  .featured-card {
+    grid-column: span 1;
+  }
+  .featured-capabilities {
+    grid-template-columns: 1fr;
+  }
+}

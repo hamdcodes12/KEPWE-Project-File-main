@@ -1,0 +1,841 @@
+/* ==========================================================================
+   KEPWE CREDIT — APPLICATION STYLES (PREMIUM FINTECH DESIGN SYSTEM)
+   Theme: Pure White (#FFFFFF), Primary CTA (#214ECF), Deep Navy (#0F172A),
+   Clean typography, solid borders (#E2E8F0), soft layered shadows.
+   ========================================================================== */
+
+.credit-application-wrapper {
+  background-color: #FAFBFC;
+  min-height: 100vh;
+  color: #0F172A;
+  padding-bottom: 108px;
+  font-family: var(--font-ui, 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  background-image: 
+    radial-gradient(circle at 80% 0%, rgba(33, 78, 207, 0.03) 0%, transparent 50%),
+    radial-gradient(#CBD5E1 0.6px, transparent 0.6px);
+  background-size: 100% 100%, 28px 28px;
+}
+
+.credit-application-wrapper .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── Sub Navigation Header ────────────────────────────────────────── */
+.application-subnav {
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid #E2E8F0;
+  padding: 14px 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.subnav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.subnav-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475467;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  transition: all 0.18s ease;
+}
+
+.subnav-back-link:hover {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #214ECF;
+}
+
+.subnav-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.01em;
+}
+
+.brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #214ECF;
+  box-shadow: 0 0 0 3px rgba(33, 78, 207, 0.2);
+}
+
+.subnav-trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #166534;
+  background: #F0FDF4;
+  border: 1px solid #86EFAC;
+  padding: 5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.app-content-container {
+  margin-top: 36px;
+}
+
+.app-layout-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 36px;
+  align-items: flex-start;
+}
+
+/* ── TOP 3-STEP PROGRESS STEPPER ──────────────────────────────────── */
+.app-stepper-container {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 18px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
+}
+
+.app-stepper-track {
+  position: absolute;
+  top: 36px;
+  left: 64px;
+  right: 64px;
+  height: 3px;
+  background: #E2E8F0;
+  z-index: 1;
+  border-radius: 999px;
+}
+
+.app-stepper-fill {
+  height: 100%;
+  background: #214ECF;
+  border-radius: 999px;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-stepper-node {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: #FFFFFF;
+  padding: 0 8px;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+}
+
+.app-stepper-node.disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid #CBD5E1;
+  color: #64748B;
+  font-size: 0.84rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-stepper-node.active .step-circle {
+  background: #214ECF;
+  border-color: #214ECF;
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(33, 78, 207, 0.35);
+  transform: scale(1.08);
+}
+
+.app-stepper-node.done .step-circle {
+  background: #10B981;
+  border-color: #10B981;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.step-label-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.step-stage-num {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #94A3B8;
+  text-transform: uppercase;
+}
+
+.step-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748B;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+}
+
+.app-stepper-node.active .step-text {
+  color: #214ECF;
+  font-weight: 800;
+}
+
+.app-stepper-node.done .step-text {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+/* ── MAIN CARD PANEL ──────────────────────────────────────────────── */
+.app-card-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  padding: 36px 32px;
+  box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+  box-sizing: border-box;
+}
+
+.panel-header-wrap {
+  margin-bottom: 26px;
+}
+
+.panel-title {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.015em;
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+}
+
+.panel-sub {
+  font-size: 0.90rem;
+  color: #64748B;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ── INPUTS GRID & FIELD STYLING ──────────────────────────────────── */
+.inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px 22px;
+  margin-bottom: 28px;
+}
+
+.full-width-col {
+  grid-column: span 2;
+}
+
+.input-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.field-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: -0.005em;
+}
+
+.field-valid-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #059669;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.field-input-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* Icons are primary brand blue and strictly positioned on the left */
+.field-prefix-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #214ECF !important;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.field-prefix-icon.icon-invalid {
+  color: #EF4444 !important;
+}
+
+.field-control {
+  width: 100%;
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0F172A;
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+}
+
+/* Strict left padding so text never overlaps icon */
+.field-control.has-icon {
+  padding-left: 44px !important;
+}
+
+.field-control::placeholder {
+  color: #94A3B8;
+  font-weight: 500;
+  opacity: 1;
+}
+
+.field-control:hover:not(:focus):not(.is-invalid) {
+  border-color: #94A3B8;
+}
+
+.field-control:focus {
+  border-color: #214ECF;
+  box-shadow: 0 0 0 3.5px rgba(33, 78, 207, 0.12);
+}
+
+select.field-control {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23214ECF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  padding-right: 40px !important;
+}
+
+select.field-control option {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  padding: 10px 14px;
+}
+
+select.field-control option:hover,
+select.field-control option:focus,
+select.field-control option:checked {
+  background-color: #214ECF !important;
+  color: #FFFFFF !important;
+}
+
+.field-control.is-invalid {
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 0 3.5px rgba(239, 68, 68, 0.12) !important;
+}
+
+.field-control.is-valid {
+  border-color: #10B981;
+}
+
+.field-control.is-valid:focus {
+  border-color: #214ECF;
+  box-shadow: 0 0 0 3.5px rgba(33, 78, 207, 0.12);
+}
+
+.field-input-wrap:focus-within .field-prefix-icon:not(.icon-invalid) {
+  color: #1A3EB4 !important;
+  transform: translateY(-50%) scale(1.05);
+}
+
+.field-error-msg {
+  font-size: 0.75rem;
+  color: #DC2626;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  line-height: 1.3;
+  animation: fadeIn 0.2s ease;
+}
+
+.field-date-input {
+  color: #0F172A;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.field-select {
+  cursor: pointer;
+  appearance: auto;
+}
+
+.field-hint-text {
+  font-size: 0.74rem;
+  color: #64748B;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* ── ACTION ROW & BUTTONS ─────────────────────────────────────────── */
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 14px;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 24px;
+  margin-top: 8px;
+}
+
+.action-row.space-between {
+  justify-content: space-between;
+}
+
+.btn-app-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 20px;
+  background: #FFFFFF;
+  color: #475467;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-app-secondary:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+.btn-app-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 24px;
+  background-color: #214ECF;
+  border: 1px solid #214ECF;
+  color: #FFFFFF;
+  border-radius: 10px;
+  font-size: 0.90rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(33, 78, 207, 0.24);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-app-primary:hover:not(:disabled) {
+  background-color: #1A3EB4;
+  border-color: #1A3EB4;
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 20px rgba(33, 78, 207, 0.32);
+}
+
+.btn-app-primary:hover:not(:disabled) .btn-arrow-icon {
+  transform: translateX(4px);
+}
+
+.btn-app-primary:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+.btn-app-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  background-color: #94A3B8;
+  border-color: #94A3B8;
+}
+
+.btn-arrow-icon {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── RIGHT SELECTED OFFER CARD ────────────────────────────────────── */
+.summary-sticky-card {
+  position: sticky;
+  top: 90px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+  padding: 26px 24px;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.05);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.summary-sticky-card:hover {
+  transform: translateY(-4px);
+  border-color: #BFDBFE;
+  box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.03);
+}
+
+.sum-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid #F1F5F9;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.sum-label-tag {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  background: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid #BFDBFE;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 3px 9px;
+  border-radius: 5px;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.sum-lender {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.sum-plan {
+  font-size: 0.82rem;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.sum-metrics-box {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.s-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+
+.s-metric .lbl {
+  color: #64748B;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.s-metric .val {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.sum-metric-divider {
+  height: 1px;
+  background: #E2E8F0;
+  margin: 2px 0;
+}
+
+.s-metric.highlight {
+  padding-top: 4px;
+}
+
+.s-metric.highlight .lbl {
+  color: #0F172A;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.s-metric .text-blue {
+  color: #214ECF;
+}
+
+.sum-security-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.77rem;
+  color: #64748B;
+  line-height: 1.45;
+  background: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.sum-security-note .lock-icon {
+  color: #64748B;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ── KEPWE SIGNATURE MONEY TYPOGRAPHY ─────────────────────────────── */
+.money-display {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  line-height: 1;
+}
+
+.money-curr {
+  font-size: 0.85em;
+  font-weight: 800;
+  color: inherit;
+  line-height: 1;
+  opacity: 0.92;
+}
+
+.money-val {
+  font-size: 0.98rem;
+  font-weight: 900;
+  color: inherit;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.money-unit {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #64748B;
+  margin-left: 2px;
+  line-height: 1;
+  text-transform: none;
+}
+
+.s-metric.highlight .money-val {
+  font-size: 1.15rem;
+  color: #214ECF;
+  font-weight: 900;
+}
+
+.s-metric.highlight .money-curr {
+  color: #214ECF;
+  font-size: 0.92em;
+  font-weight: 900;
+}
+
+/* ── VERIFICATION CARDS & ALERTS ──────────────────────────────────── */
+.verification-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.doc-item-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px 20px;
+  transition: all 0.2s ease;
+}
+
+.doc-item-row:hover {
+  background: #FFFFFF;
+  border-color: #BFDBFE;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.doc-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.doc-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-name {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.doc-status {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.text-green {
+  color: #059669;
+}
+
+.consent-alert-box {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-size: 0.82rem;
+  color: #1E40AF;
+  line-height: 1.55;
+  margin-bottom: 28px;
+}
+
+.consent-alert-box p {
+  margin: 0;
+}
+
+/* ── ANIMATIONS ───────────────────────────────────────────────────── */
+.animate-fadeIn {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── RESPONSIVE DESIGN ────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .app-layout-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .summary-sticky-card {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .credit-application-wrapper .container {
+    padding: 0 16px;
+  }
+
+  .app-content-container {
+    margin-top: 24px;
+  }
+
+  .app-card-panel {
+    padding: 24px 18px;
+    border-radius: 16px;
+  }
+
+  .inputs-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .full-width-col {
+    grid-column: span 1;
+  }
+
+  .app-stepper-container {
+    padding: 14px 12px;
+  }
+
+  .app-stepper-track {
+    left: 40px;
+    right: 40px;
+    top: 32px;
+  }
+
+  .step-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 0.78rem;
+  }
+
+  .step-text {
+    font-size: 0.70rem;
+  }
+
+  .subnav-trust-badge {
+    display: none;
+  }
+}

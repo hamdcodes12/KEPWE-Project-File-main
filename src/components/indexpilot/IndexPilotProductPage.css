@@ -1,0 +1,672 @@
+/* KEPWE INDEXPILOT PREMIUM PRODUCT PAGE STYLES */
+
+.indexpilot-product-page {
+  background-color: #FFFFFF;
+  color: #111827;
+  font-family: var(--font-family-sans);
+  overflow-x: hidden;
+}
+
+/* 01. HERO SECTION */
+.ip-hero-section {
+  padding: 80px 0 96px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.ip-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+
+.ip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #F0F4FE;
+  color: #214ECF;
+  border: 1px solid #D0D5DD;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 24px;
+}
+
+.ip-hero-headline {
+  font-size: 3.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  color: #111827;
+  margin-bottom: 20px;
+}
+
+.headline-accent {
+  color: #214ECF;
+}
+
+.ip-hero-sub {
+  font-size: 1.125rem;
+  color: #667085;
+  line-height: 1.6;
+  max-width: 520px;
+  margin-bottom: 32px;
+}
+
+.ip-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 40px;
+}
+
+.ip-hero-trust-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #475467;
+  font-weight: 500;
+}
+
+/* HERO VISUAL WINDOW */
+.ip-hero-visual {
+  position: relative;
+}
+
+.ip-visual-window {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px -8px rgba(16, 24, 40, 0.08);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.visual-top-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #F7F9FC;
+}
+
+.live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.725rem;
+  font-weight: 800;
+  color: #214ECF;
+}
+
+.live-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #214ECF;
+  box-shadow: 0 0 0 3px rgba(33, 78, 207, 0.2);
+}
+
+.visual-tag {
+  font-size: 0.725rem;
+  font-weight: 700;
+  color: #12B76A;
+  background: #ECFDF3;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.ip-visual-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.ip-mini-data-card {
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-sym {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #667085;
+}
+
+.card-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.card-change {
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.text-green { color: #12B76A; }
+.text-red { color: #F04438; }
+.text-blue { color: #214ECF; }
+
+.ip-chart-preview-box {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.chart-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.c-title {
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.c-sub {
+  font-size: 0.725rem;
+  color: #214ECF;
+  font-weight: 600;
+}
+
+.ip-clean-chart-svg {
+  width: 100%;
+  height: 90px;
+}
+
+
+/* 02. MARKET OVERVIEW SECTION */
+.ip-overview-section {
+  padding: 96px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.ip-indices-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.ip-index-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.02);
+}
+
+.ip-index-card:hover {
+  transform: translateY(-3px);
+  border-color: #D0D5DD;
+  box-shadow: 0 12px 24px -4px rgba(16, 24, 40, 0.06);
+}
+
+.index-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.index-sym-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.index-change-pill {
+  font-size: 0.725rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.pill-green { background: #ECFDF3; color: #12B76A; }
+.pill-red { background: #FEF3F2; color: #F04438; }
+
+.index-val-num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.index-card-range {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #667085;
+}
+
+
+/* 03. ANALYTICS & TECHNICAL INDICATORS SECTION */
+.ip-analytics-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.ip-analytics-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 32px;
+  align-items: stretch;
+}
+
+.ip-primary-chart-card {
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.chart-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.chart-box-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.chart-box-sub {
+  font-size: 0.8rem;
+  color: #667085;
+}
+
+.chart-pills-group {
+  display: flex;
+  gap: 6px;
+}
+
+.c-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  color: #667085;
+  cursor: pointer;
+}
+
+.c-pill.active {
+  background: #214ECF;
+  color: #FFFFFF;
+  border-color: #214ECF;
+}
+
+.ip-large-chart-svg {
+  width: 100%;
+  height: 180px;
+}
+
+.ip-indicators-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.indicator-card {
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ind-label {
+  font-size: 0.75rem;
+  color: #667085;
+  font-weight: 600;
+}
+
+.ind-val {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.ind-sub {
+  font-size: 0.725rem;
+  color: #98A2B3;
+}
+
+
+/* 04. DATA TABLE SECTION */
+.ip-table-section {
+  padding: 96px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.ip-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  background: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(16, 24, 40, 0.02);
+}
+
+.ip-analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.ip-analytics-table th {
+  background: #F7F9FC;
+  color: #475467;
+  font-weight: 700;
+  padding: 14px 20px;
+  border-bottom: 1px solid #E4E7EC;
+  white-space: nowrap;
+}
+
+.ip-analytics-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #F7F9FC;
+  color: #344054;
+  white-space: nowrap;
+}
+
+.ip-analytics-table tr:last-child td {
+  border-bottom: none;
+}
+
+.type-pill {
+  background: #F0F4FE;
+  color: #214ECF;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.signal-pill {
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  color: #111827;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.risk-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ECFDF3;
+  color: #12B76A;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+
+/* 05. MARKET INSIGHT VISUAL */
+.ip-insight-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.ip-insight-box {
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 20px;
+  padding: 56px 32px;
+}
+
+
+/* 06. FEATURE CARDS */
+.ip-features-section {
+  padding: 96px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.ip-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.ip-feature-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 28px;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.02);
+}
+
+.ip-feature-card:hover {
+  transform: translateY(-3px);
+  border-color: #D0D5DD;
+  box-shadow: 0 12px 24px -4px rgba(16, 24, 40, 0.06);
+}
+
+.ip-feature-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: #F0F4FE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.ip-feature-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.ip-feature-desc {
+  font-size: 0.9rem;
+  color: #667085;
+  line-height: 1.55;
+}
+
+
+/* 07. PRODUCT FLOW */
+.ip-flow-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.ip-flow-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.flow-step {
+  flex: 1;
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+.flow-num {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #214ECF;
+  margin-bottom: 8px;
+}
+
+.flow-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.flow-desc {
+  font-size: 0.825rem;
+  color: #667085;
+  line-height: 1.4;
+}
+
+.flow-arrow {
+  font-size: 1.25rem;
+  color: #214ECF;
+  font-weight: 800;
+}
+
+
+/* 08. FINAL CTA */
+.ip-cta-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+}
+
+.ip-cta-box {
+  background: #F0F4FE;
+  border: 1px solid #D0D5DD;
+  border-radius: 20px;
+  padding: 64px 32px;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ip-cta-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.ip-cta-sub {
+  font-size: 1.1rem;
+  color: #475467;
+  margin-bottom: 32px;
+}
+
+.ip-cta-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+
+/* RESPONSIVE MEDIA QUERIES */
+@media (max-width: 1024px) {
+  .ip-hero-grid,
+  .ip-analytics-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .ip-indices-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ip-features-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ip-flow-grid {
+    flex-direction: column;
+  }
+  .flow-arrow {
+    transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .ip-hero-headline {
+    font-size: clamp(2rem, 5vw + 0.5rem, 2.5rem);
+  }
+
+  .ip-indices-grid,
+  .ip-features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ip-visual-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ip-hero-actions,
+  .ip-cta-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .ip-hero-actions button,
+  .ip-cta-actions button {
+    width: 100% !important;
+  }
+
+  .ip-cta-box {
+    padding: 40px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ip-hero-section,
+  .ip-overview-section,
+  .ip-analytics-section,
+  .ip-table-section,
+  .ip-insight-section,
+  .ip-features-section,
+  .ip-flow-section,
+  .ip-cta-section {
+    padding: 56px 0;
+  }
+
+  .ip-insight-box {
+    padding: 32px 16px;
+  }
+}

@@ -1,0 +1,405 @@
+/* Virtual CFO Hero Section Premium Styles */
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+.vcfo-hero-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px 100px;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Background Lighting & Gradients */
+.vcfo-bg-glow {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.vcfo-bg-glow-blue {
+  top: -10%;
+  left: 10%;
+  width: 650px;
+  height: 650px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.045) 0%, rgba(37, 99, 235, 0) 70%);
+  filter: blur(40px);
+}
+
+.vcfo-bg-glow-cyan {
+  top: 40%;
+  left: 35%;
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.04) 0%, rgba(20, 184, 166, 0) 70%);
+  filter: blur(45px);
+}
+
+.vcfo-bg-glow-lavender {
+  bottom: -10%;
+  right: 10%;
+  width: 650px;
+  height: 650px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.035) 0%, rgba(124, 58, 237, 0) 70%);
+  filter: blur(50px);
+}
+
+/* Technical Subtle Grid Overlay */
+.vcfo-bg-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(to right, rgba(226, 232, 240, 0.45) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 232, 240, 0.45) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at 50% 45%, black 40%, transparent 85%);
+  -webkit-mask-image: radial-gradient(circle at 50% 45%, black 40%, transparent 85%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Floating Ornaments */
+.vcfo-float-dot-1 {
+  position: absolute;
+  top: 20%;
+  left: 12%;
+  width: 9px;
+  height: 9px;
+  background: #14B8A6;
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(20, 184, 166, 0.4);
+  animation: vcfoFloat 6s ease-in-out infinite;
+  z-index: 2;
+}
+
+.vcfo-float-dot-2 {
+  position: absolute;
+  bottom: 25%;
+  right: 13%;
+  width: 8px;
+  height: 8px;
+  background: #214ECF;
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.4);
+  animation: vcfoFloat 8s ease-in-out infinite 1s;
+  z-index: 2;
+}
+
+.vcfo-float-circle-1 {
+  position: absolute;
+  top: 30%;
+  right: 14%;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(20, 184, 166, 0.35);
+  border-radius: 50%;
+  animation: vcfoFloat 7s ease-in-out infinite 0.5s;
+  z-index: 2;
+}
+
+.vcfo-float-circle-2 {
+  position: absolute;
+  bottom: 30%;
+  left: 10%;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  border-radius: 50%;
+  animation: vcfoFloat 9s ease-in-out infinite 1.5s;
+  z-index: 2;
+}
+
+@keyframes vcfoFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.04);
+  }
+}
+
+/* Hero Content Container */
+.vcfo-hero-container {
+  position: relative;
+  z-index: 10;
+  max-width: 1060px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* 3. /virtual-cfo Badge */
+.vcfo-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(37, 99, 235, 0.07);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 999px;
+  padding: 8px 18px;
+  margin-bottom: 20px;
+  transition: all 220ms ease;
+  animation: vcfoFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.vcfo-badge-pill:hover {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.12);
+}
+
+.vcfo-badge-icon {
+  color: #1D4ED8;
+}
+
+.vcfo-badge-text {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1D4ED8;
+  letter-spacing: -0.01em;
+}
+
+/* 4 & 5. Main Heading */
+.vcfo-hero-heading {
+  font-family: 'Archivo Black', 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(36px, 4.5vw + 1rem, 64px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.04;
+  color: #111827;
+  margin: 0 0 32px 0;
+  max-width: 900px;
+  animation: vcfoFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 100ms both;
+}
+
+.vcfo-accent-blue {
+  color: #214ECF;
+}
+
+/* 7 & 8. Value Ladder Container & Heading */
+.vcfo-ladder-card {
+  width: 100%;
+  max-width: 980px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 22px;
+  box-shadow: 
+    0 24px 60px rgba(15, 23, 42, 0.08), 
+    0 8px 20px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 36px 40px;
+  box-sizing: border-box;
+  margin-bottom: 32px;
+  animation: vcfoFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 200ms both;
+}
+
+.vcfo-ladder-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.vcfo-ladder-header-icon {
+  color: #214ECF;
+}
+
+.vcfo-ladder-title {
+  color: #214ECF;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* 9, 10, 11 & 12. Value Ladder Steps & Connected Workflow */
+.vcfo-ladder-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.vcfo-step-pill {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 9px;
+  padding: 12px 18px;
+  color: #172033;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.035);
+  transition: all 180ms ease;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  animation: vcfoFadeUp 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.vcfo-step-pill:hover {
+  transform: translateY(-3px);
+  background: rgba(37, 99, 235, 0.055);
+  border-color: rgba(37, 99, 235, 0.28);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.10);
+  color: #1D4ED8;
+}
+
+.vcfo-step-final {
+  background: rgba(37, 99, 235, 0.07);
+  border: 1px solid rgba(37, 99, 235, 0.20);
+  color: #1D4ED8;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
+}
+
+.vcfo-step-final:hover {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.15);
+}
+
+.vcfo-step-num {
+  font-size: 11px;
+  font-weight: 800;
+  color: #214ECF;
+  background: rgba(37, 99, 235, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.vcfo-arrow {
+  color: #214ECF;
+  font-weight: 800;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: vcfoArrowPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes vcfoArrowPulse {
+  0%, 100% {
+    transform: translateX(0);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateX(3px);
+    opacity: 1;
+  }
+}
+
+/* 14, 15 & 16. Primary CTA */
+.vcfo-cta-wrap {
+  animation: vcfoFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 300ms both;
+}
+
+.vcfo-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #214ECF;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 32px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  cursor: pointer;
+}
+
+.vcfo-btn-primary:hover {
+  background: #1D4ED8;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.28);
+}
+
+.vcfo-btn-primary .vcfo-btn-arrow {
+  transition: transform 180ms ease;
+}
+
+.vcfo-btn-primary:hover .vcfo-btn-arrow {
+  transform: translateX(4px);
+}
+
+/* Entrance Keyframes */
+@keyframes vcfoFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Media Queries */
+@media (max-width: 768px) {
+  .vcfo-hero-wrapper {
+    padding: 60px 20px 80px;
+  }
+
+  .vcfo-hero-heading {
+    font-size: 38px;
+  }
+
+  .vcfo-ladder-card {
+    padding: 24px 20px;
+    border-radius: 18px;
+  }
+
+  .vcfo-ladder-flow {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .vcfo-step-pill {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .vcfo-arrow {
+    transform: rotate(90deg);
+    animation: vcfoArrowPulseDown 1.8s ease-in-out infinite;
+    margin: 2px 0;
+  }
+
+  @keyframes vcfoArrowPulseDown {
+    0%, 100% {
+      transform: rotate(90deg) translateY(0);
+    }
+    50% {
+      transform: rotate(90deg) translateY(3px);
+    }
+  }
+
+  .vcfo-btn-primary {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

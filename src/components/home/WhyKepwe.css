@@ -1,0 +1,129 @@
+.why-kepwe-section {
+  padding: 96px 0;
+  background-color: #F7F9FC;
+  border-top: 1px solid #E4E7EC;
+  border-bottom: 1px solid #E4E7EC;
+  position: relative;
+}
+
+.why-kepwe-header {
+  max-width: 760px;
+  margin: 0 auto 52px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.why-kepwe-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #EFF4FF;
+  border: 1px solid rgba(33, 78, 207, 0.18);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #214ECF;
+}
+
+.why-kepwe-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #214ECF;
+}
+
+.why-kepwe-title {
+  font-size: clamp(2rem, 3.8vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #111827;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.why-kepwe-subtitle {
+  font-size: clamp(0.96rem, 1.3vw, 1.12rem);
+  color: #667085;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* 4 Pillars Grid */
+.why-kepwe-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.why-pillar-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.02);
+}
+
+.why-pillar-card:hover {
+  transform: translateY(-4px);
+  border-color: #214ECF;
+  box-shadow: 0 16px 36px -6px rgba(33, 78, 207, 0.1);
+}
+
+.why-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background-color: #EFF4FF;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+}
+
+.why-pillar-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.why-pillar-short {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #214ECF;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.why-pillar-detail {
+  font-size: 0.88rem;
+  color: #667085;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .why-kepwe-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .why-kepwe-grid {
+    grid-template-columns: 1fr;
+  }
+  .why-kepwe-section {
+    padding: 64px 0;
+  }
+}

@@ -1,0 +1,623 @@
+/* ==========================================================================
+   KEPWE BUSINESS CUSTOMER PORTAL — UNIFIED WHITE + #214ECF DESIGN SYSTEM
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+}
+
+:focus-visible {
+  outline: 2px solid #214ECF;
+  outline-offset: 3px;
+}
+
+/* ── Page Wrapper (White-First Theme) ─────────────────────────── */
+.cp-page-wrapper {
+  position: relative;
+  min-height: 100vh;
+  background-color: #FFFFFF;
+  background-image: radial-gradient(circle at 10% 8%, rgba(33, 78, 207, 0.03), transparent 35%);
+  color: #0F172A;
+  padding: 36px 24px 80px;
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  width: 100%;
+}
+
+.cp-container {
+  position: relative;
+  z-index: 10;
+  max-width: 1260px;
+  margin: 0 auto;
+  width: min(100% - 32px, 1260px);
+}
+
+/* ── 1. Header Greeting & Company Badge ─────────────────────────── */
+.cp-header-block {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+  animation: cpFadeUp 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cp-eyebrow {
+  font-size: 0.78rem;
+  color: #214ECF;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.cp-main-title {
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 900;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.cp-company-badge {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 10px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+@media (hover: hover) {
+  .cp-company-badge:hover {
+    transform: translateY(-2px);
+    border-color: #214ECF;
+    box-shadow: 0 8px 22px rgba(33, 78, 207, 0.08);
+  }
+}
+
+.cp-company-label {
+  font-size: 0.8rem;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.cp-company-name {
+  font-size: 0.92rem;
+  color: #214ECF;
+  font-weight: 800;
+  overflow-wrap: break-word;
+}
+
+/* ── Toast Alert ───────────────────────────────────────────────── */
+.cp-toast-alert {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  color: #059669;
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: cpFadeUp 400ms ease;
+}
+
+/* ── 2. Business Health Snapshot (Clean White Panel) ───────────── */
+.cp-snapshot-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+  padding: clamp(20px, 2.5vw, 28px);
+  margin-bottom: 32px;
+  animation: cpFadeUp 500ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both;
+}
+
+.cp-snapshot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cp-snapshot-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #475569;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.cp-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #059669;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.cp-live-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #10B981;
+  border-radius: 50%;
+  animation: cpLivePulse 1.8s infinite ease-in-out;
+}
+
+@keyframes cpLivePulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* ── Metric Cards Grid ─────────────────────────────────────────── */
+.cp-snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cp-metric-card {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px 14px;
+  min-width: 0;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+
+@media (hover: hover) {
+  .cp-metric-card:hover {
+    transform: translateY(-2px);
+    border-color: #214ECF;
+    background-color: #FAFCFF;
+    box-shadow: 0 8px 20px rgba(33, 78, 207, 0.06);
+  }
+}
+
+.cp-metric-label {
+  font-size: 0.72rem;
+  color: #64748B;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.cp-metric-val {
+  font-size: clamp(16px, 1.8vw, 20px);
+  font-weight: 800;
+  margin-bottom: 4px;
+  line-height: 1.2;
+  color: #0F172A;
+}
+
+.val-green { color: #059669; }
+.val-amber { color: #D97706; }
+.val-red { color: #DC2626; }
+.val-accounting { color: #214ECF; }
+.val-payroll { color: #214ECF; }
+.val-support { color: #214ECF; }
+
+.cp-metric-subtext {
+  font-size: 0.74rem;
+  color: #64748B;
+  font-weight: 500;
+  display: block;
+}
+
+/* ── 3. Navigation Tabs (Unified System) ────────────────────────── */
+.cp-tab-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 32px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.cp-tab-btn {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  min-height: 44px;
+  transition: all 200ms ease;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.cp-tab-btn svg {
+  color: #214ECF;
+  transition: color 200ms ease;
+}
+
+@media (hover: hover) {
+  .cp-tab-btn:hover {
+    color: #214ECF;
+    border-color: #214ECF;
+    background: rgba(33, 78, 207, 0.05);
+  }
+  .cp-tab-btn:hover svg {
+    color: #214ECF;
+  }
+}
+
+.cp-tab-btn.active {
+  background: #214ECF;
+  border-color: #214ECF;
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(33, 78, 207, 0.25);
+}
+
+.cp-tab-btn.active svg {
+  color: #FFFFFF;
+}
+
+/* ── 4. Section Headers ────────────────────────────────────────── */
+.cp-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.cp-section-title-icon {
+  color: #214ECF;
+  flex-shrink: 0;
+}
+
+.cp-section-title {
+  font-size: clamp(18px, 2.2vw, 22px);
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* ── 5. Tasks List Cards ───────────────────────────────────────── */
+.cp-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: cpFadeUp 500ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+}
+
+.cp-task-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-left: 4px solid #CBD5E1;
+  border-radius: 14px;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.035);
+  transition: transform 200ms ease, box-shadow 200ms ease, border-left-color 200ms ease;
+}
+
+@media (hover: hover) {
+  .cp-task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    border-left-color: #214ECF;
+  }
+}
+
+.cp-task-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cp-task-category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.cat-gst { background: rgba(33, 78, 207, 0.08); color: #214ECF; }
+.cat-tds { background: rgba(33, 78, 207, 0.08); color: #214ECF; }
+.cat-mca { background: rgba(33, 78, 207, 0.08); color: #214ECF; }
+.cat-payroll { background: rgba(33, 78, 207, 0.08); color: #214ECF; }
+
+.cp-task-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+  overflow-wrap: break-word;
+}
+
+.cp-task-date {
+  font-size: 0.8rem;
+  color: #64748B;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cp-status-pill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-completed { background: rgba(16, 185, 129, 0.1); color: #059669; }
+.status-in-progress { background: rgba(217, 119, 6, 0.1); color: #D97706; }
+.status-upcoming { background: rgba(33, 78, 207, 0.08); color: #214ECF; }
+
+/* ── 6. Document Vault & Upload System ──────────────────────────── */
+.cp-vault-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+  padding: clamp(20px, 2.5vw, 32px);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.cp-upload-box {
+  background: #FAFCFF;
+  border: 2px dashed #C9D5E8;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 28px;
+  transition: border-color 200ms ease, background-color 200ms ease;
+}
+
+@media (hover: hover) {
+  .cp-upload-box:hover {
+    border-color: #214ECF;
+    background-color: #F8FAFC;
+  }
+}
+
+.cp-input-field {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: #0F172A;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.cp-input-field::placeholder {
+  color: #94A3B8;
+}
+
+.cp-input-field:focus {
+  border-color: #214ECF !important;
+  box-shadow: 0 0 0 3px rgba(33, 78, 207, 0.12) !important;
+  background-color: #FFFFFF;
+}
+
+select.cp-input-field option {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  padding: 10px 14px;
+}
+
+select.cp-input-field option:hover,
+select.cp-input-field option:focus,
+select.cp-input-field option:checked {
+  background-color: #214ECF !important;
+  color: #FFFFFF !important;
+}
+
+.cp-btn-upload {
+  background: #214ECF;
+  color: #FFFFFF;
+  border: none;
+  padding: 12px 22px;
+  min-height: 44px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(33, 78, 207, 0.25);
+  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  user-select: none;
+}
+
+@media (hover: hover) {
+  .cp-btn-upload:hover:not(:disabled) {
+    background: #1A3EB4;
+    transform: translateY(-1.5px);
+    box-shadow: 0 6px 20px rgba(33, 78, 207, 0.35);
+  }
+}
+
+.cp-btn-upload:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.cp-btn-upload:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.cp-doc-item {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+@media (hover: hover) {
+  .cp-doc-item:hover {
+    transform: translateY(-2px);
+    border-color: #214ECF;
+    box-shadow: 0 6px 18px rgba(33, 78, 207, 0.06);
+  }
+}
+
+/* ── 7. Support & Tickets ──────────────────────────────────────── */
+.cp-support-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.cp-support-card {
+  background: #FAFCFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 24px;
+  text-align: center;
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+@media (hover: hover) {
+  .cp-support-card:hover {
+    transform: translateY(-2px);
+    border-color: #214ECF;
+    box-shadow: 0 8px 20px rgba(33, 78, 207, 0.06);
+  }
+}
+
+/* ── Keyframe Animations ───────────────────────────────────────── */
+@keyframes cpFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Responsive Media Queries ──────────────────────────────────── */
+@media (max-width: 1100px) {
+  .cp-snapshot-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .cp-page-wrapper {
+    padding: 24px 16px 60px;
+  }
+  .cp-container {
+    width: min(100% - 24px, 1260px);
+  }
+  .cp-header-block {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .cp-snapshot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cp-support-grid {
+    grid-template-columns: 1fr;
+  }
+  .cp-task-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .cp-page-wrapper {
+    padding: 20px 12px 50px;
+  }
+  .cp-container {
+    width: 100%;
+  }
+  .cp-snapshot-grid {
+    grid-template-columns: 1fr;
+  }
+  .cp-tab-btn {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,191 @@
+/* SECTION 19 — KEPWE DARK FOOTER STYLES */
+
+.kepwe-footer-dark {
+  background-color: #0A0E1A;
+  color: #94A3B8;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 70px 24px 36px;
+  font-family: 'Inter', sans-serif;
+  margin-top: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.kepwe-footer-container {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.kepwe-footer-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 60px;
+  margin-bottom: 56px;
+}
+
+/* Left Brand Block */
+.kepwe-footer-brand-block {
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.footer-logo-link {
+  display: inline-block;
+  text-decoration: none;
+  margin-bottom: 18px;
+  transition: transform 0.2s ease;
+}
+
+.footer-logo-link:hover {
+  transform: scale(1.02);
+}
+
+.footer-brand-logo-img {
+  height: 64px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 4px 16px rgba(33, 78, 207, 0.25));
+}
+
+.footer-brand-tagline {
+  color: #94A3B8;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  margin: 0 0 20px 0;
+}
+
+.footer-brand-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.footer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #E2E8F0;
+}
+
+.badge-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #17E7C0;
+  box-shadow: 0 0 8px rgba(23, 231, 192, 0.9);
+}
+
+/* 4 COLUMN GRID */
+.kepwe-footer-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 36px;
+}
+
+.footer-col-heading {
+  color: #FFFFFF;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 18px 0;
+  font-family: 'Inter', sans-serif;
+}
+
+.footer-col-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-link-item {
+  color: #94A3B8;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 180ms ease, transform 180ms ease;
+  display: inline-block;
+}
+
+.footer-link-item:hover {
+  color: #214ECF;
+  transform: translateX(2px);
+}
+
+/* BOTTOM COPYRIGHT STRIP */
+.kepwe-footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 28px;
+  font-size: 0.82rem;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.kepwe-footer-bottom p {
+  margin: 0;
+}
+
+.footer-bottom-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-bottom-links a {
+  color: #64748B;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-bottom-links a:hover {
+  color: #94A3B8;
+}
+
+@media (max-width: 960px) {
+  .kepwe-footer-main {
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .kepwe-footer-brand-block {
+    max-width: 100%;
+  }
+
+  .kepwe-footer-grid {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .kepwe-footer-dark {
+    padding: 50px 20px 30px;
+  }
+
+  .kepwe-footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+
+  .footer-brand-logo-img {
+    height: 52px;
+  }
+}

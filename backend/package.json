@@ -1,0 +1,31 @@
+{
+  "name": "kepwe-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node db/migrate.js && node scripts/bootstrap-admin.js && node src/server.js",
+    "migrate": "node db/migrate.js",
+    "bootstrap-admin": "node scripts/bootstrap-admin.js",
+    "test": "node --test",
+    "verify:prompt2": "node scripts/test-prompt2-e2e.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
+    "razorpay": "2.9.6",
+    "zod": "^3.23.8"
+  }
+}

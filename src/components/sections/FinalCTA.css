@@ -1,0 +1,127 @@
+/* Final CTA Stylesheet - Very Light Kepwe Blue Background #F0F4FE */
+.final-cta-section {
+  background-color: #FFFFFF;
+  padding: 96px 0;
+}
+
+@media (min-width: 1024px) {
+  .final-cta-section {
+    padding: 112px 0;
+  }
+}
+
+.final-cta-card {
+  background-color: #F0F4FE;
+  border: 1px solid rgba(33, 78, 207, 0.15);
+  border-radius: 20px;
+  padding: 64px 32px;
+  text-align: center;
+  max-width: 1000px;
+  margin: 0 auto;
+  box-shadow: 0 12px 32px -8px rgba(33, 78, 207, 0.08);
+}
+
+@media (max-width: 640px) {
+  .final-cta-card {
+    padding: 44px 20px;
+  }
+}
+
+.cta-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #214ECF;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.cta-headline {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(2rem, 3.8vw + 0.5rem, 3.25rem);
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+
+.cta-headline-blue {
+  color: #214ECF;
+}
+
+.cta-subtext {
+  font-size: 1.1rem;
+  color: #667085;
+  line-height: 1.6;
+  margin-bottom: 36px;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cta-buttons-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (max-width: 480px) {
+  .cta-buttons-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .cta-btn-main,
+  .cta-btn-sec {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+.cta-btn-main {
+  background-color: #214ECF !important;
+  color: #FFFFFF !important;
+  border-radius: 8px !important;
+  height: 50px !important;
+  min-height: 46px !important;
+  padding: 0 28px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(33, 78, 207, 0.25) !important;
+  transition: transform 0.2s ease, background-color 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.cta-btn-main:hover {
+  background-color: #1A3EB4 !important;
+  transform: translateY(-2px) !important;
+}
+
+.cta-btn-sec {
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+  border: 1px solid #E4E7EC !important;
+  border-radius: 8px !important;
+  height: 50px !important;
+  min-height: 46px !important;
+  padding: 0 26px !important;
+  font-weight: 600 !important;
+  transition: transform 0.2s ease, border-color 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.cta-btn-sec:hover {
+  border-color: #214ECF !important;
+  transform: translateY(-2px) !important;
+}

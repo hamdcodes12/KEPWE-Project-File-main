@@ -1,0 +1,456 @@
+# PROMPT 1 — IndexPilot Algo Dashboard & Authentication
+
+We already have an existing **IndexPilot website/application**.
+
+Do NOT create a separate website.
+
+Add a new section called:
+
+**IndexPilot Algo**
+
+The goal of this phase is to build the complete **working client-side Algo Dashboard and authentication system**.
+
+## 1. IMPORTANT
+
+Before making changes:
+
+* Inspect the existing project.
+* Identify frontend framework.
+* Identify backend.
+* Identify database.
+* Identify existing authentication.
+* Identify routing structure.
+* Reuse existing components and architecture wherever possible.
+* Do NOT break any existing IndexPilot functionality.
+
+This must be a real working implementation, not a static UI mockup.
+
+---
+
+# 2. NAVIGATION
+
+Add a new navigation item:
+
+**IndexPilot Algo**
+
+Clicking it should open:
+
+`/indexpilot-algo`
+
+If the user is not logged in, redirect them to Login.
+
+---
+
+# 3. WORKING SIGNUP
+
+Create a real Signup page.
+
+Fields:
+
+* Full Name
+* Mobile Number
+* Email
+* Password
+* Confirm Password
+* Terms & Conditions checkbox
+
+Button:
+
+**Create Account**
+
+Requirements:
+
+* Backend validation
+* Required-field validation
+* Email validation
+* Mobile validation
+* Password validation
+* Password confirmation
+* Duplicate email detection
+* Duplicate mobile detection
+* User stored in database
+* Password securely hashed
+
+After successful signup:
+
+**Account created successfully**
+
+Then redirect to Login or automatically authenticate the user.
+
+Do NOT use fake/local-only authentication.
+
+---
+
+# 4. WORKING LOGIN
+
+Create a real Login page.
+
+Fields:
+
+* Email/Mobile
+* Password
+
+Buttons:
+
+**Login**
+
+**Forgot Password**
+
+**Create Account**
+
+Authentication must happen through the backend/database.
+
+Create secure session/token handling.
+
+---
+
+# 5. SESSION MANAGEMENT
+
+The user should remain logged in after page refresh.
+
+Implement:
+
+* Secure authentication
+* Session persistence
+* Auth state management
+* Logout
+* Protected routes
+
+Logout must:
+
+* Invalidate/clear authentication
+* Clear sensitive client state
+* Redirect to Login
+
+---
+
+# 6. PROTECTED ROUTES
+
+Create:
+
+```text
+/indexpilot-algo
+/indexpilot-algo/dashboard
+/indexpilot-algo/strategies
+/indexpilot-algo/backtest
+/indexpilot-algo/paper-trading
+/indexpilot-algo/trades
+/indexpilot-algo/positions
+/indexpilot-algo/settings
+```
+
+All must require authentication.
+
+---
+
+# 7. INDEXPILOT ALGO DASHBOARD
+
+Create a modern fintech-style dashboard matching the existing IndexPilot design.
+
+Header:
+
+**Kepwe IndexPilot Algo**
+
+Show:
+
+* User profile
+* Broker connection status
+* Algo status
+* Logout
+
+---
+
+# 8. DASHBOARD CARDS
+
+Create:
+
+### Available Balance
+
+`₹0.00`
+
+### Today's P&L
+
+`₹0.00`
+
+### Open Positions
+
+`0`
+
+### Today's Trades
+
+`0`
+
+### Algo Status
+
+`STOPPED`
+
+These values must eventually come from backend/database.
+
+Do NOT hardcode fake trading results.
+
+---
+
+# 9. ALGO CONTROLS
+
+Add:
+
+**START ALGO**
+
+**STOP ALGO**
+
+Buttons should communicate with the backend.
+
+Example state:
+
+```text
+STOPPED
+ACTIVE
+PAUSED
+```
+
+When the user clicks Start:
+
+Backend:
+
+`algo_status = ACTIVE`
+
+When Stop:
+
+Backend:
+
+`algo_status = STOPPED`
+
+---
+
+# 10. BROKER SECTION
+
+Create:
+
+## Connect Your Broker
+
+Two cards:
+
+### Angel One
+
+* Open Account
+* Connect Account
+
+### Lemonn
+
+* Open Account
+* Connect Account
+
+For now, create the architecture for broker adapters.
+
+If production API credentials are unavailable, use clearly labelled mock/sandbox connection states.
+
+Do NOT fake a real broker connection.
+
+Do NOT ask clients to provide broker passwords/PINs directly to Kepwe.
+
+---
+
+# 11. STRATEGY CARD
+
+Show:
+
+## Kepwe NIFTY Pulse 5M
+
+Details:
+
+* NIFTY 50
+* Intraday Scalping
+* 5 Minute
+* Risk/Reward: 1:2
+* Maximum Trades: 3/day
+
+Button:
+
+**View Strategy**
+
+---
+
+# 12. CLIENT SETTINGS
+
+Create:
+
+## Algo Settings
+
+Fields:
+
+* Trading Capital
+* Risk Per Trade
+* Risk/Reward
+* Maximum Trades/Day
+* Maximum Consecutive Losses
+* Daily Loss Limit
+
+Risk options:
+
+* 0.5%
+* 1%
+* 2%
+* 5%
+
+5% must be labelled:
+
+**High Risk**
+
+Save button:
+
+**Save Settings**
+
+Settings must be stored per user in the database.
+
+---
+
+# 13. POSITIONS
+
+Create:
+
+## Open Positions
+
+Table:
+
+| Symbol | Side | Quantity | Entry | Current | SL | Target | P&L | Status |
+
+Initially show an empty state if no real/paper position exists.
+
+---
+
+# 14. TRADE HISTORY
+
+Create:
+
+## Trade History
+
+Columns:
+
+* Date
+* Time
+* Symbol
+* Strategy
+* Side
+* Entry
+* Exit
+* Quantity
+* P&L
+* Status
+
+Add filters:
+
+* Date
+* Strategy
+* BUY/SELL
+* Profit/Loss
+
+---
+
+# 15. ACTIVITY LOG
+
+Create:
+
+## Algo Activity
+
+Example events:
+
+* Algo started
+* Algo stopped
+* Strategy selected
+* Risk settings changed
+* Broker connected
+* Order submitted
+* Order executed
+* Stop loss hit
+* Target hit
+
+Events should eventually come from backend activity logs.
+
+---
+
+# 16. BACKEND APIs
+
+Create/reuse APIs such as:
+
+```text
+POST /api/auth/signup
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/me
+
+GET  /api/algo/dashboard
+GET  /api/algo/strategies
+
+POST /api/algo/start
+POST /api/algo/stop
+
+GET  /api/algo/settings
+PUT  /api/algo/settings
+
+GET  /api/algo/positions
+GET  /api/algo/trades
+GET  /api/algo/activity
+
+POST /api/broker/connect
+GET  /api/broker/status
+```
+
+Use authentication middleware for protected APIs.
+
+---
+
+# 17. DATABASE
+
+Create/reuse:
+
+```text
+users
+sessions
+broker_accounts
+strategies
+algo_settings
+positions
+trades
+activity_logs
+```
+
+Passwords must be securely hashed.
+
+Never store plaintext passwords.
+
+Never expose broker secrets to frontend.
+
+---
+
+# 18. RESPONSIVE DESIGN
+
+Dashboard must work on:
+
+* Desktop
+* Laptop
+* Tablet
+* Mobile
+
+Use responsive cards/tables/navigation.
+
+---
+
+# 19. ACCEPTANCE CRITERIA
+
+This phase is complete only when:
+
+* Signup works with backend.
+* User is saved to database.
+* Login works.
+* Logout works.
+* Authentication persists after refresh.
+* Protected routes work.
+* User-specific settings work.
+* Algo Start/Stop works.
+* Dashboard receives backend data.
+* Broker connection architecture exists.
+* Strategy card works.
+* Positions and trade-history pages work.
+* Existing IndexPilot features remain unaffected.
+
+Do NOT stop at frontend design. Implement the complete working foundation.

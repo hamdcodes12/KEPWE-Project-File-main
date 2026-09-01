@@ -1,0 +1,62 @@
+/* Custom Mouse Cursor Stylesheet */
+.custom-cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background-color: #17E7C0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99999;
+  transform: translate(-50%, -50%);
+  transition: width 0.15s ease, height 0.15s ease, background-color 0.15s ease;
+  box-shadow: 0 0 10px #17E7C0, 0 0 20px rgba(23, 231, 192, 0.6);
+}
+
+.custom-cursor-dot.hovered {
+  width: 12px;
+  height: 12px;
+  background-color: #38BDF8;
+  box-shadow: 0 0 15px #38BDF8, 0 0 25px rgba(56, 189, 248, 0.8);
+}
+
+.custom-cursor-dot.active {
+  transform: translate(-50%, -50%) scale(0.7);
+}
+
+.custom-cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid rgba(23, 231, 192, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99998;
+  transform: translate(-50%, -50%);
+  transition: width 0.2s ease, height 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  background: rgba(23, 231, 192, 0.03);
+  backdrop-filter: blur(1px);
+}
+
+.custom-cursor-ring.hovered {
+  width: 54px;
+  height: 54px;
+  border-color: rgba(56, 189, 248, 0.7);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.custom-cursor-ring.active {
+  width: 28px;
+  height: 28px;
+  border-color: #17E7C0;
+}
+
+@media (pointer: coarse) {
+  .custom-cursor-dot,
+  .custom-cursor-ring {
+    display: none !important;
+  }
+}

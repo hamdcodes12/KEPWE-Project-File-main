@@ -1,0 +1,72 @@
+# Render Blueprint — KEPWE (single-service deployment)
+# Docs: https://render.com/docs/blueprint-spec
+#
+# This defines ONE web service that:
+#   1. Builds the React/Vite frontend into `dist/`
+#   2. Installs the Express backend dependencies
+#   3. Runs the Express server, which serves the built frontend AND the
+#      `/api/*` routes from the same process/port.
+#
+# To use: push this repo to GitHub/GitLab, then in the Render dashboard
+# choose "New +" -> "Blueprint" and point it at this repo. Render will read
+# this file automatically. Secret values (marked sync: false) must be filled
+# in manually in the Render dashboard after the service is created.
+
+services:
+  - type: web
+    name: kepwe-app
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm run render-build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render sets PORT automatically; the app reads it via process.env.PORT.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kepwe-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: ADMIN_BOOTSTRAP_ENABLED
+        value: "true"
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_BOOTSTRAP_RESET_PASSWORD
+        value: "false"
+      - key: CORS_ORIGINS
+        value: ""
+      - key: VITE_API_BASE_URL
+        value: /api
+      - key: VITE_APP_NAME
+        value: "KEPWE - Everything Your Business Needs"
+      - key: VITE_APP_ENV
+        value: production
+      - key: UPSTOX_API_KEY
+        sync: false
+      - key: UPSTOX_API_SECRET
+        sync: false
+      - key: UPSTOX_ACCESS_TOKEN
+        sync: false
+      - key: UPSTOX_REDIRECT_URI
+        sync: false
+      - key: UPSTOX_TIMEOUT_MS
+        value: "8000"
+      - key: UPSTOX_CACHE_TTL_MS
+        value: "60000"
+      - key: BROKER_TOKEN_ENCRYPTION_KEY
+        sync: false
+
+databases:
+  - name: kepwe-db
+    plan: free
+    region: oregon

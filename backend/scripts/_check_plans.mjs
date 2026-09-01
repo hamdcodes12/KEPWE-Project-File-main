@@ -1,0 +1,11 @@
+import dotenv from 'dotenv';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import pg from 'pg';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, '../../.env') });
+const client = new pg.Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+await client.connect();
+const r = await client.query("SELECT name, display_name, ui_name, price_inr FROM plans WHERE is_indexpilot=TRUE ORDER BY sort_order");
+console.table(r.rows);
+await client.end();

@@ -1,0 +1,157 @@
+.how-kepwe-works-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+  position: relative;
+}
+
+.how-works-header {
+  max-width: 700px;
+  margin: 0 auto 60px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.how-works-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #EFF4FF;
+  border: 1px solid rgba(33, 78, 207, 0.18);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #214ECF;
+}
+
+.how-works-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #214ECF;
+}
+
+.how-works-title {
+  font-size: clamp(2rem, 3.8vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #111827;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.how-works-subtitle {
+  font-size: clamp(0.96rem, 1.3vw, 1.12rem);
+  color: #667085;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* Steps Layout */
+.how-steps-wrapper {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.steps-connector-line {
+  position: absolute;
+  top: 40px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, #214ECF 0%, #3B82F6 50%, #12B76A 100%);
+  opacity: 0.35;
+  z-index: 0;
+}
+
+.how-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  position: relative;
+  z-index: 1;
+}
+
+.how-step-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.02);
+}
+
+.how-step-card:hover {
+  transform: translateY(-4px);
+  border-color: #214ECF;
+  box-shadow: 0 14px 32px -4px rgba(33, 78, 207, 0.1);
+}
+
+.step-badge-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.step-num-badge {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #214ECF;
+  background: #EFF4FF;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-family: var(--font-mono, monospace);
+}
+
+.step-icon-bubble {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #F0F4FE;
+  border: 1px solid rgba(33, 78, 207, 0.15);
+  display: grid;
+  place-items: center;
+}
+
+.step-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.step-subtitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #214ECF;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.step-description {
+  font-size: 0.88rem;
+  color: #667085;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .steps-connector-line {
+    display: none;
+  }
+  .how-steps-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}

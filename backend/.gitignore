@@ -1,0 +1,12 @@
+node_modules/
+
+# Environment secrets — never commit real credentials
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+server.log
+server.err
+npm-debug.log*
