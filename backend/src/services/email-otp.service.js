@@ -20,7 +20,7 @@ function createOtp() {
 }
 
 function fromAddress() {
-  return process.env.OTP_FROM_EMAIL || 'KEPWE <otp@mail.kepwe.in>';
+  return process.env.OTP_FROM_EMAIL || 'KEPWE <help@kepwe.in>';
 }
 
 async function sendViaResend({ email, otp }) {
