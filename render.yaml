@@ -65,6 +65,10 @@ services:
         value: "60000"
       - key: BROKER_TOKEN_ENCRYPTION_KEY
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: OTP_FROM_EMAIL
+        value: "KEPWE <otp@mail.kepwe.in>"
 
 databases:
   - name: kepwe-db

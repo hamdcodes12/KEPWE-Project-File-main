@@ -1,4 +1,4 @@
-const REQUIRED_IN_PRODUCTION = ['DATABASE_URL'];
+const REQUIRED_IN_PRODUCTION = ['DATABASE_URL', 'RESEND_API_KEY'];
 
 export function validateRuntimeEnvironment() {
   if (process.env.NODE_ENV !== 'production') return;

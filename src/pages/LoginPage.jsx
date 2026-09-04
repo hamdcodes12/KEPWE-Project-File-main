@@ -6,7 +6,7 @@ import { Mail, Lock, Eye, EyeOff, Check, User, AlertCircle, CheckCircle2 } from 
 import './LoginPage.css';
 
 const LoginPage = () => {
-  const { login } = useApp();
+  const { requestEmailOtp, verifyEmailOtp } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -16,16 +16,25 @@ const LoginPage = () => {
   const preservedAuthQuery = location.search || '';
   const redirectPath = getSafeReturnPath(searchParams.get('returnTo'), '/app/dashboard');
 
-  const [form, setForm] = useState({ identifier: '', password: '', rememberMe: false });
+  const [form, setForm] = useState({ identifier: '', otp: '', rememberMe: false });
+  const [otpStep, setOtpStep] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+
+  React.useEffect(() => {
+    if (!resendIn) return undefined;
+    const timer = window.setInterval(() => setResendIn((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [resendIn]);
 
   const validate = () => {
     const e = {};
     if (!form.identifier.trim()) e.identifier = 'Enter your email or mobile number.';
-    if (!form.password || form.password.length < 6) e.password = 'Password must be at least 6 characters.';
+    if (!/^\S+@\S+\.\S+$/.test(form.identifier.trim())) e.identifier = 'Enter a valid email address.';
+    if (otpStep && !/^\d{6}$/.test(form.otp)) e.otp = 'Enter the 6-digit verification code.';
     return e;
   };
 
@@ -36,9 +45,17 @@ const LoginPage = () => {
     setErrors({});
     setIsLoading(true);
     try {
-      // Await the real backend login result (POST /api/auth/login)
-      const result = await login(form.identifier, form.password, form.rememberMe);
+      const result = otpStep
+        ? await verifyEmailOtp({ email: form.identifier, purpose: 'login', challengeId: form.challengeId, otp: form.otp, rememberMe: form.rememberMe })
+        : await requestEmailOtp({ email: form.identifier, purpose: 'login' });
       if (result.success) {
+        if (!otpStep) {
+          setForm((current) => ({ ...current, otp: '', challengeId: result.challengeId }));
+          setResendIn(result.resendAvailableInSeconds || 30);
+          setOtpStep(true);
+          setIsLoading(false);
+          return;
+        }
         if (selectedProduct === 'business' && selectedPlan) {
           navigate(`/pricing?product=business&checkout=${encodeURIComponent(selectedPlan)}`, { replace: true });
           return;
@@ -46,9 +63,29 @@ const LoginPage = () => {
         setLoginSuccess(true);
         setTimeout(() => navigate(redirectPath, { replace: true }), 800);
       } else {
-        setErrors({ form: result.error || 'Login failed. Please try again.' });
+        setErrors({ form: result.error || 'Unable to send or verify the email code.' });
       }
     } catch (err) {
+      setErrors({ form: 'Unable to reach server. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!otpStep || isLoading || resendIn > 0) return;
+    setErrors({});
+    setIsLoading(true);
+    try {
+      const result = await requestEmailOtp({ email: form.identifier, purpose: 'login' });
+      if (result.success) {
+        setForm((current) => ({ ...current, otp: '', challengeId: result.challengeId }));
+        setResendIn(result.resendAvailableInSeconds || 30);
+      } else {
+        setResendIn(result.retryAfterSeconds || 0);
+        setErrors({ form: result.error || 'Unable to resend the email code.' });
+      }
+    } catch {
       setErrors({ form: 'Unable to reach server. Please try again.' });
     } finally {
       setIsLoading(false);
@@ -162,44 +199,37 @@ const LoginPage = () => {
                 )}
               </div>
 
-              {/* Password Field */}
-              <div className="fintech-form-group">
+              {otpStep && <div className="fintech-form-group">
                 <div className="fintech-label-row">
-                  <label htmlFor="login-password" className="fintech-label">
-                    Password
+                  <label htmlFor="login-otp" className="fintech-label">
+                    Email verification code
                   </label>
-                  <button type="button" className="fintech-forgot-link">
-                    Forgot password?
-                  </button>
                 </div>
                 <div className="fintech-input-wrapper">
                   <span className="fintech-input-icon-left">
-                    <Lock size={18} />
+                    <Mail size={18} />
                   </span>
                   <input
-                    id="login-password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    value={form.password}
-                    onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                    placeholder="Enter your password"
-                    className={`fintech-input ${errors.password ? 'fintech-input-error' : ''}`}
+                    id="login-otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={form.otp}
+                    onChange={(e) => setForm((p) => ({ ...p, otp: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                    placeholder="Enter 6-digit code"
+                    className={`fintech-input ${errors.otp ? 'fintech-input-error' : ''}`}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((p) => !p)}
-                    className="fintech-input-icon-right"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
                 </div>
-                {errors.password && (
+                {errors.otp && (
                   <div className="fintech-error-msg">
-                    <AlertCircle size={13} /> {errors.password}
+                    <AlertCircle size={13} /> {errors.otp}
                   </div>
                 )}
-              </div>
+                <p className="fintech-card-subheading" style={{ marginTop: '8px' }}>We sent a code to your email. It expires in 10 minutes.</p>
+                <button type="button" onClick={handleResend} disabled={isLoading || resendIn > 0} className="fintech-signup-link" style={{ marginTop: '8px', background: 'none', border: 0, padding: 0, cursor: resendIn > 0 ? 'default' : 'pointer' }}>
+                  {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+                </button>
+              </div>}
 
               {/* Custom Remember Me Checkbox */}
               <div
@@ -218,7 +248,7 @@ const LoginPage = () => {
                   'Signing in...'
                 ) : (
                   <>
-                    Sign In <span style={{ fontSize: '1.1rem', marginLeft: '2px' }}>→</span>
+                    {otpStep ? 'Verify and sign in' : 'Email me a sign-in code'} <span style={{ fontSize: '1.1rem', marginLeft: '2px' }}>→</span>
                   </>
                 )}
               </button>

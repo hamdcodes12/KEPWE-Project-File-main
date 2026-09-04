@@ -74,6 +74,7 @@ async function main() {
     await applySqlFile(client, join(__dirname, 'algo_additions.sql'), 'algo_additions.sql');
     await applySqlFile(client, join(__dirname, 'algo_engine_additions.sql'), 'algo_engine_additions.sql');
     await applySqlFile(client, join(__dirname, 'aadhaar_kyc_schema.sql'), 'aadhaar_kyc_schema.sql');
+    await applySqlFile(client, join(__dirname, 'email_otp_additions.sql'), 'email_otp_additions.sql');
     await applySqlFile(client, join(__dirname, 'ledger_schema.sql'), 'ledger_schema.sql');
 
     console.log('[migrate] Migration completed successfully.');

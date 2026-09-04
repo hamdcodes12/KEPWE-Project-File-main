@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { apiFetch, setTokens, getAccessToken, getRefreshToken, clearTokens, downloadAuthenticatedFile } from '../api/client';
+import { apiFetch, setTokens, getAccessToken, getRefreshToken, clearTokens, downloadAuthenticatedFile, requestEmailOtp as requestEmailOtpApi, verifyEmailOtp as verifyEmailOtpApi } from '../api/client';
 import { INDEXPILOT_SUBSCRIPTION_PLANS, INDEXPILOT_FREE_TIER } from '../data/mockData';
 
 const AppContext = createContext(null);
@@ -103,6 +103,31 @@ export const AppProvider = ({ children }) => {
       setAuthState({ isLoggedIn: true, user, rememberMe, isLoading: false });
       return { success: true, user };
     }
+  };
+
+  const requestEmailOtp = async (data) => {
+    const res = await requestEmailOtpApi(data);
+    return res.ok
+      ? { success: true, ...res.data }
+      : { success: false, error: res.data?.error || 'Could not send verification code.', retryAfterSeconds: res.data?.retryAfterSeconds || 0 };
+  };
+
+  const verifyEmailOtp = async (data) => {
+    const res = await verifyEmailOtpApi(data);
+    if (!res.ok || !res.data?.accessToken) {
+      return { success: false, error: res.data?.error || 'Verification failed. Please try again.' };
+    }
+    setTokens(res.data.accessToken, res.data.refreshToken);
+    const u = res.data.user;
+    const user = {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      plan: u.subscription?.plan || u.plan || 'Free Trial',
+      role: u.role,
+    };
+    setAuthState({ isLoggedIn: true, user, rememberMe: Boolean(data.rememberMe), isLoading: false });
+    return { success: true, user };
   };
 
   const signup = async (name, email, password, mobile = null) => {
@@ -827,6 +852,8 @@ export const AppProvider = ({ children }) => {
         // Auth
         authState,
         login,
+        requestEmailOtp,
+        verifyEmailOtp,
         signup,
         logout,
         // Domain

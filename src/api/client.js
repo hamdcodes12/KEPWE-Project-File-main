@@ -25,6 +25,14 @@ export function clearAuthState() {
   clearTokens();
 }
 
+export async function requestEmailOtp(data) {
+  return apiFetch('/auth/email-otp/request', { method: 'POST', body: data, auth: false });
+}
+
+export async function verifyEmailOtp(data) {
+  return apiFetch('/auth/email-otp/verify', { method: 'POST', body: data, auth: false });
+}
+
 export async function downloadAuthenticatedFile(path) {
   let response = await fetch(`${API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${getAccessToken()}` },

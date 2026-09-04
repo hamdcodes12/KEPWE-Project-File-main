@@ -53,7 +53,7 @@ export function serializeUser(row) {
   };
 }
 
-export async function registerUser({ name, email, password, mobile }, reqInfo = {}) {
+export async function registerUser({ name, email, password, mobile, emailVerified = false }, reqInfo = {}) {
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedMobile = mobile?.replace(/[\s-]/g, '') || null;
 
@@ -89,10 +89,10 @@ export async function registerUser({ name, email, password, mobile }, reqInfo = 
     let insertUser;
     try {
       insertUser = await client.query(
-        `INSERT INTO users (email, password_hash, full_name, mobile, plan)
-         VALUES ($1, $2, $3, $4, 'Free Trial')
+        `INSERT INTO users (email, password_hash, full_name, mobile, email_verified, plan)
+         VALUES ($1, $2, $3, $4, $5, 'Free Trial')
          RETURNING id, email, full_name, mobile, role, plan, email_verified, is_active, created_at`,
-        [normalizedEmail, passwordHash, name.trim(), normalizedMobile]
+        [normalizedEmail, passwordHash, name.trim(), normalizedMobile, Boolean(emailVerified)]
       );
     } catch (insertErr) {
       // Handle the race condition where two requests for the same email are
@@ -223,6 +223,47 @@ export async function loginUser({ identifier, password, rememberMe }, reqInfo = 
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function registerVerifiedEmailUser({ name, email, mobile }, reqInfo = {}) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedMobile = mobile?.replace(/[\s-]/g, '') || null;
+  const password = crypto.randomBytes(32).toString('hex');
+  return registerUser({ name, email: normalizedEmail, password, mobile: normalizedMobile, emailVerified: true }, reqInfo);
+}
+
+export async function loginWithVerifiedEmail(email, rememberMe = false, reqInfo = {}) {
+  const result = await pool.query(
+    `SELECT id, email, password_hash, full_name, mobile, role, plan, email_verified, is_active
+     FROM users WHERE email = $1`,
+    [email.trim().toLowerCase()]
+  );
+  if (result.rows.length === 0) {
+    const error = new Error('No KEPWE account exists for this email address.');
+    error.statusCode = 404;
+    throw error;
+  }
+  const user = result.rows[0];
+  if (!user.is_active) {
+    const error = new Error('This account has been deactivated');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const plainRefreshToken = await createSession(client, user.id, !!rememberMe, reqInfo.userAgent, reqInfo.ip);
+    await client.query('UPDATE users SET email_verified = TRUE, updated_at = NOW() WHERE id = $1', [user.id]);
+    await client.query('COMMIT');
+    const accessToken = signAccessToken({ ...user, email_verified: true });
+    return { user: serializeUser({ ...user, email_verified: true }), accessToken, refreshToken: plainRefreshToken };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
   } finally {
     client.release();
   }

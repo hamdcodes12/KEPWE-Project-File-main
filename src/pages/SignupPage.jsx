@@ -19,7 +19,7 @@ import {
 import './SignupPage.css';
 
 const SignupPage = () => {
-  const { signup } = useApp();
+  const { requestEmailOtp, verifyEmailOtp } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -29,20 +29,25 @@ const SignupPage = () => {
   const preservedAuthQuery = location.search || '';
   const redirectPath = getSafeReturnPath(searchParams.get('returnTo'), '/onboarding');
 
-  const [form, setForm] = useState({ name: '', email: '', mobile: '', password: '', confirmPassword: '', termsAccepted: false });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', mobile: '', otp: '', termsAccepted: false, challengeId: '' });
+  const [otpStep, setOtpStep] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+
+  React.useEffect(() => {
+    if (!resendIn) return undefined;
+    const timer = window.setInterval(() => setResendIn((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [resendIn]);
 
   const validate = () => {
     const e = {};
     if (!form.name.trim() || form.name.trim().length < 2) e.name = 'Enter your full name (min 2 characters).';
     if (!form.email || !/\S+@\S+\.\S+/.test(form.email)) e.email = 'Enter a valid email address.';
     if (!/^\+?[0-9\s-]{10,15}$/.test(form.mobile.trim())) e.mobile = 'Enter a valid 10–15 digit mobile number.';
-    if (!form.password || form.password.length < 8) e.password = 'Password must be at least 8 characters.';
-    if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match.';
+    if (otpStep && !/^\d{6}$/.test(form.otp)) e.otp = 'Enter the 6-digit verification code.';
     if (!form.termsAccepted) e.terms = 'You must accept the Terms of Use and Privacy Policy.';
     return e;
   };
@@ -54,9 +59,17 @@ const SignupPage = () => {
     setErrors({});
     setIsLoading(true);
     try {
-      // Await the real backend signup result (POST /api/auth/register)
-      const result = await signup(form.name.trim(), form.email, form.password, form.mobile.trim() || null);
+      const result = otpStep
+        ? await verifyEmailOtp({ email: form.email, purpose: 'signup', challengeId: form.challengeId, otp: form.otp })
+        : await requestEmailOtp({ email: form.email, purpose: 'signup', name: form.name.trim(), mobile: form.mobile.trim() });
       if (result.success) {
+        if (!otpStep) {
+          setForm((current) => ({ ...current, otp: '', challengeId: result.challengeId }));
+          setResendIn(result.resendAvailableInSeconds || 30);
+          setOtpStep(true);
+          setIsLoading(false);
+          return;
+        }
         if (selectedProduct === 'business' && selectedPlan) {
           navigate(`/pricing?product=business&checkout=${encodeURIComponent(selectedPlan)}`, { replace: true });
           return;
@@ -64,9 +77,29 @@ const SignupPage = () => {
         setSuccess(true);
         setTimeout(() => navigate(redirectPath, { replace: true }), 900);
       } else {
-        setErrors({ form: result.error || 'Registration failed. Please try again.' });
+        setErrors({ form: result.error || 'Unable to send or verify the email code.' });
       }
     } catch (err) {
+      setErrors({ form: 'Unable to reach server. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!otpStep || isLoading || resendIn > 0) return;
+    setErrors({});
+    setIsLoading(true);
+    try {
+      const result = await requestEmailOtp({ email: form.email, purpose: 'signup', name: form.name.trim(), mobile: form.mobile.trim() });
+      if (result.success) {
+        setForm((current) => ({ ...current, otp: '', challengeId: result.challengeId }));
+        setResendIn(result.resendAvailableInSeconds || 30);
+      } else {
+        setResendIn(result.retryAfterSeconds || 0);
+        setErrors({ form: result.error || 'Unable to resend the email code.' });
+      }
+    } catch {
       setErrors({ form: 'Unable to reach server. Please try again.' });
     } finally {
       setIsLoading(false);
@@ -180,69 +213,27 @@ const SignupPage = () => {
                 )}
               </div>
 
-              {/* Password */}
-              <div className="signup-form-group">
-                <label htmlFor="signup-password" className="signup-label">Password</label>
+              {otpStep && <div className="signup-form-group">
+                <label htmlFor="signup-otp" className="signup-label">Email verification code</label>
                 <div className="signup-input-wrap">
-                  <span className="signup-input-icon-left">
-                    <Lock size={18} strokeWidth={2} />
-                  </span>
+                  <span className="signup-input-icon-left"><Mail size={18} strokeWidth={2} /></span>
                   <input
-                    id="signup-password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    value={form.password}
-                    onChange={(e) => setForm(p => ({ ...p, password: e.target.value }))}
-                    placeholder="Min 8 characters"
-                    className={`signup-input has-right-icon ${errors.password ? 'input-error' : ''}`}
+                    id="signup-otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={form.otp}
+                    onChange={(e) => setForm((p) => ({ ...p, otp: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                    placeholder="Enter 6-digit code"
+                    className={`signup-input ${errors.otp ? 'input-error' : ''}`}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(p => !p)}
-                    className="signup-input-icon-right"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
                 </div>
-                {errors.password && (
-                  <div className="signup-error-msg">
-                    <AlertCircle size={12} /> {errors.password}
-                  </div>
-                )}
-              </div>
-
-              {/* Confirm Password */}
-              <div className="signup-form-group">
-                <label htmlFor="signup-confirm" className="signup-label">Confirm Password</label>
-                <div className="signup-input-wrap">
-                  <span className="signup-input-icon-left">
-                    <ShieldCheck size={18} strokeWidth={2} />
-                  </span>
-                  <input
-                    id="signup-confirm"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    value={form.confirmPassword}
-                    onChange={(e) => setForm(p => ({ ...p, confirmPassword: e.target.value }))}
-                    placeholder="Repeat your password"
-                    className={`signup-input has-right-icon ${errors.confirmPassword ? 'input-error' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(p => !p)}
-                    className="signup-input-icon-right"
-                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <div className="signup-error-msg">
-                    <AlertCircle size={12} /> {errors.confirmPassword}
-                  </div>
-                )}
-              </div>
+                {errors.otp && <div className="signup-error-msg"><AlertCircle size={12} /> {errors.otp}</div>}
+                <p className="signup-card-subheading" style={{ marginTop: '8px' }}>We sent a code to your email. It expires in 10 minutes.</p>
+                <button type="button" onClick={handleResend} disabled={isLoading || resendIn > 0} className="signup-signin-link" style={{ marginTop: '8px', background: 'none', border: 0, padding: 0, cursor: resendIn > 0 ? 'default' : 'pointer' }}>
+                  {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+                </button>
+              </div>}
 
               {/* Terms Checkbox */}
               <div className="signup-terms-row" onClick={() => setForm(p => ({ ...p, termsAccepted: !p.termsAccepted }))}>
@@ -269,7 +260,7 @@ const SignupPage = () => {
                 disabled={isLoading}
                 className="signup-submit-btn"
               >
-                <span>{isLoading ? 'Creating account...' : 'Create Account & Continue'}</span>
+                <span>{isLoading ? (otpStep ? 'Verifying code...' : 'Sending code...') : (otpStep ? 'Verify Email & Create Account' : 'Email me a signup code')}</span>
                 {!isLoading && (
                   <span className="btn-arrow-icon">
                     <ArrowRight size={18} strokeWidth={2.2} />
