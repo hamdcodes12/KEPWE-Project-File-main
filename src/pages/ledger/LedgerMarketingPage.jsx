@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useApp } from '../../context/AppContext';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -146,6 +147,7 @@ const LEDGER_FAQS = [
 
 export default function LedgerMarketingPage() {
   const navigate = useNavigate();
+  const { authState } = useApp();
 
   // Interactive State
   const [dashboardMode, setDashboardMode] = useState('business');
@@ -154,6 +156,15 @@ export default function LedgerMarketingPage() {
 
   const toggleFaq = (index) => {
     setOpenFaq(openFaq === index ? null : index);
+  };
+
+  const handleExploreLedger = () => {
+    if (authState.isLoggedIn) {
+      navigate('/dashboard');
+      return;
+    }
+
+    navigate('/login?returnTo=%2Fdashboard');
   };
 
   return (
@@ -187,10 +198,10 @@ export default function LedgerMarketingPage() {
                   <span>Start Free</span>
                   <ArrowRight size={17} />
                 </Link>
-                <a href="#command-center" className="ledger-btn-secondary">
+                <button type="button" onClick={handleExploreLedger} className="ledger-btn-secondary">
                   <span>Explore Kepwe Ledger</span>
                   <ChevronDown size={16} />
-                </a>
+                </button>
               </div>
 
               <div className="ledger-hero-trust-row">

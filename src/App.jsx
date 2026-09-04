@@ -215,6 +215,7 @@ function App() {
           <Route path="/quant/dashboard/:section" element={<ProtectedQuantRoute />} />
 
           {/* ── KEPWE LEDGER workspace (Authenticated) ─────────────── */}
+          <Route path="/dashboard" element={<ProtectedLedgerRoute><LedgerDashboardPage /></ProtectedLedgerRoute>} />
           <Route path="/portal" element={<ProtectedLedgerRoute><LedgerDashboardPage /></ProtectedLedgerRoute>} />
           <Route path="/portal/:tab" element={<ProtectedLedgerRoute><LedgerDashboardPage /></ProtectedLedgerRoute>} />
           <Route path="/ledger/app" element={<ProtectedLedgerRoute><LedgerDashboardPage /></ProtectedLedgerRoute>} />

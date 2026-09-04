@@ -1585,7 +1585,7 @@ export async function createCategory(userId, data) {
 export async function getLedgerSettings(userId) {
   if (hasDb()) {
     const res = await pool.query(`SELECT * FROM ledger_settings WHERE user_id = $1`, [userId]);
-    if (res.rows.length > 0) return res.rows[0];
+    if (res.rows.length > 0) return mapLedgerSettingsRow(res.rows[0]);
   }
   return {
     userId,
@@ -1597,6 +1597,26 @@ export async function getLedgerSettings(userId) {
     fiscalYearStart: '04-01',
     notifyOverdue: true,
     notifyPayments: true,
+  };
+}
+
+function mapLedgerSettingsRow(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    companyId: row.company_id,
+    businessName: row.business_name || '',
+    gstin: row.gstin || '',
+    pan: row.pan || '',
+    currency: row.currency || 'INR',
+    currencySymbol: row.currency_symbol || '₹',
+    fiscalYearStart: row.fiscal_year_start || '04-01',
+    defaultAccountId: row.default_account_id || '',
+    notifyOverdue: row.notify_overdue ?? true,
+    notifyPayments: row.notify_payments ?? true,
+    preferences: row.preferences || {},
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -1631,7 +1651,7 @@ export async function updateLedgerSettings(userId, data) {
         data.notifyPayments ?? true,
       ]
     );
-    return res.rows[0];
+    return mapLedgerSettingsRow(res.rows[0]);
   }
   const updated = { ...data, userId };
   inMemoryStore.settings.set(userId, updated);
