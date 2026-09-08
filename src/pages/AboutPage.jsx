@@ -101,7 +101,7 @@ const AboutPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ background: '#F8FAFC', color: '#0F172A', minHeight: '100vh', padding: '60px 20px 100px', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ background: '#F8FAFC', color: '#0F172A', minHeight: '100vh', padding: '76px 20px 100px', fontFamily: "'Inter', sans-serif" }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <section style={{ textAlign: 'center', maxWidth: '900px', margin: '0 auto 52px' }}>
           <span style={{ background: '#E0E7FF', color: '#214ECF', fontSize: '0.82rem', fontWeight: 800, padding: '7px 16px', borderRadius: '9999px', letterSpacing: '0.08em', display: 'inline-block', textTransform: 'uppercase' }}>
@@ -298,7 +298,7 @@ const AboutPage = () => {
         <section style={{ marginBottom: '72px', background: 'linear-gradient(135deg, #0F172A 0%, #162B5A 100%)', color: '#FFFFFF', borderRadius: '22px', padding: '32px 24px' }}>
           <div style={{ textAlign: 'center', marginBottom: '18px' }}>
             <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#BFDBFE', fontWeight: 800 }}>Our Vision</span>
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>To Build Better Financial Technology for Everyone.</h2>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px', color: '#FFFFFF', WebkitTextFillColor: '#FFFFFF' }}>To Build Better Financial Technology for Everyone.</h2>
           </div>
           <p style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center', color: '#E2E8F0', fontSize: '1.08rem', lineHeight: '1.8' }}>
             We envision a future where financial technology is accessible, intelligent, connected and transparent. Our long-term ambition is to build financial technology infrastructure that helps people and businesses operate better, decide better and grow better.
