@@ -107,7 +107,7 @@ const AboutPage = () => {
           <span style={{ background: '#E0E7FF', color: '#214ECF', fontSize: '0.82rem', fontWeight: 800, padding: '7px 16px', borderRadius: '9999px', letterSpacing: '0.08em', display: 'inline-block', textTransform: 'uppercase' }}>
             KEPWE
           </span>
-          <h1 style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 900, lineHeight: '1.05', margin: '18px 0 18px' }}>
+          <h1 style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 900, lineHeight: '1.05', margin: '18px 0 18px', color: '#0F172A', WebkitTextFillColor: '#0F172A' }}>
             Build Better. Finance Smarter.
           </h1>
           <p style={{ color: '#475569', fontSize: '1.12rem', lineHeight: '1.75', maxWidth: '760px', margin: '0 auto' }}>

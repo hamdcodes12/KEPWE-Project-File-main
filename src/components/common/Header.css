@@ -74,6 +74,7 @@
 
 .site-header.light-glass-header .brand-name {
   color: #111827;
+  -webkit-text-fill-color: #111827;
 }
 
 .site-header.light-glass-header .nav-dropdown-btn,
