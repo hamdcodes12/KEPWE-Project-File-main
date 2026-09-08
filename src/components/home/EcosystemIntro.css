@@ -1,0 +1,59 @@
+.ecosystem-intro-section {
+  padding: 96px 0 80px 0;
+  background-color: #FFFFFF;
+  text-align: center;
+  position: relative;
+}
+
+.ecosystem-intro-container {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.intro-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #F0F4FE;
+  border: 1px solid rgba(33, 78, 207, 0.15);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #214ECF;
+}
+
+.intro-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #214ECF;
+}
+
+.intro-main-heading {
+  font-size: clamp(2rem, 4.2vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  color: #111827;
+  margin: 0;
+}
+
+.intro-body-copy {
+  font-size: clamp(1rem, 1.4vw, 1.18rem);
+  color: #667085;
+  line-height: 1.7;
+  max-width: 720px;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .ecosystem-intro-section {
+    padding: 64px 0 56px 0;
+  }
+}

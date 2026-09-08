@@ -1,0 +1,34 @@
+{
+  "name": "kepwe-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node db/migrate.js && node scripts/bootstrap-admin.js && node src/server.js",
+    "migrate": "node db/migrate.js",
+    "test": "node test/algo-engine.test.js && node test/ledger.test.js && node test/accounting-engine-production.test.js && node test/comprehensive-audit-e2e.test.js && node test/persistence-and-invariants.test.js && node test/runtime-smoke-and-security.test.js && node test/separate-product-auth.test.js && node test/quant-engine.test.js && node test/quant-platform-e2e-regression.js && node test/security-hardening.test.js",
+    "verify:prompt2": "node scripts/test-prompt2-e2e.js"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
+    "razorpay": "2.9.6",
+    "zod": "^3.23.8"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
+  }
+}

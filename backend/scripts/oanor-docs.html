@@ -1,0 +1,1265 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Docs — oanor</title>
+    <meta name="csrf-token" content="f9321878d2975bf69b2a841869e7e4fcc28b845276079c23977a2ce529d59ad9">
+
+                        <script nonce="O38loh9m5GCrQHXSGuO4nw">
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('consent', 'default', {
+        'ad_storage':         'denied',
+        'ad_user_data':       'denied',
+        'ad_personalization': 'denied',
+        'analytics_storage':  'denied',
+        'functionality_storage':    'granted',
+        'security_storage':         'granted',
+        'wait_for_update': 500
+      });
+      // Apply any stored choice BEFORE gtag.js fires so the very first event
+      // already reflects the user's previous decision.
+      (function () {
+        var m = document.cookie.match(/oanor_consent_v1=([^;]+)/);
+        if (!m) return;
+        try {
+          var c = JSON.parse(decodeURIComponent(m[1]));
+          gtag('consent', 'update', {
+            'ad_storage':         c.m ? 'granted' : 'denied',
+            'ad_user_data':       c.m ? 'granted' : 'denied',
+            'ad_personalization': c.m ? 'granted' : 'denied',
+            'analytics_storage':  c.a ? 'granted' : 'denied'
+          });
+        } catch (_) {}
+      })();
+      gtag('js', new Date());
+      gtag('config', 'AW-18132300794');
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18132300794"></script>
+    <meta name="description" content="Developer documentation for oanor API marketplace integrations, OpenAPI exports, API keys, quotas and gateway calls.">
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+    <meta name="theme-color" content="#0a0f1f">
+    <link rel="canonical" href="https://www.oanor.com/docs">
+        <link rel="alternate" hreflang="en" href="https://www.oanor.com/docs">
+        <link rel="alternate" hreflang="de" href="https://www.oanor.com/de/dokumentation">
+        <link rel="alternate" hreflang="it" href="https://www.oanor.com/it/documentazione">
+        <link rel="alternate" hreflang="fr" href="https://www.oanor.com/fr/documentation">
+        <link rel="alternate" hreflang="es" href="https://www.oanor.com/es/documentacion">
+        <link rel="alternate" hreflang="nl" href="https://www.oanor.com/nl/documentatie">
+        <link rel="alternate" hreflang="el" href="https://www.oanor.com/el/tekmiriosi">
+        <link rel="alternate" hreflang="x-default" href="https://www.oanor.com/docs">
+    <meta property="og:site_name" content="oanor">
+    <meta property="og:title" content="Docs — oanor">
+    <meta property="og:description" content="Developer documentation for oanor API marketplace integrations, OpenAPI exports, API keys, quotas and gateway calls.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.oanor.com/docs">
+    <meta property="og:locale" content="en_US">
+                    <meta property="og:locale:alternate" content="de_DE">
+                <meta property="og:locale:alternate" content="it_IT">
+                <meta property="og:locale:alternate" content="fr_FR">
+                <meta property="og:locale:alternate" content="es_ES">
+                <meta property="og:locale:alternate" content="nl_NL">
+                <meta property="og:locale:alternate" content="el_GR">
+            <meta property="og:image" content="https://www.oanor.com/assets/brand/social-card.png?v=20260507">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Docs — oanor">
+    <meta name="twitter:description" content="Developer documentation for oanor API marketplace integrations, OpenAPI exports, API keys, quotas and gateway calls.">
+    <meta name="twitter:image" content="https://www.oanor.com/assets/brand/social-card.png?v=20260507">
+        <script  type="application/ld+json" nonce="O38loh9m5GCrQHXSGuO4nw">{"@context":"https://schema.org","@type":"Organization","@id":"https://www.oanor.com/#organization","name":"oanor","alternateName":"oanor.com","description":"oanor is a privacy-first API marketplace built in the EU — buy and integrate APIs without leaking your upstream secrets, with hard quotas, transparent pricing, and a no-leak gateway.","url":"https://www.oanor.com/","logo":{"@type":"ImageObject","url":"https://www.oanor.com/assets/brand/oanor-mark.svg?v=20260507","width":512,"height":512},"image":"https://www.oanor.com/assets/brand/social-card.png?v=20260507","foundingDate":"2026","knowsAbout":["API marketplace","API gateway","OpenAPI","Rate limiting","Webhooks","GDPR-compliant APIs"],"contactPoint":{"@type":"ContactPoint","email":"hello@oanor.com","contactType":"customer support","availableLanguage":["English","German","Italian","French","Spanish","Dutch","Greek"],"areaServed":"EU"},"sameAs":[]}</script>
+        <script  type="application/ld+json" nonce="O38loh9m5GCrQHXSGuO4nw">{"@context":"https://schema.org","@type":"WebSite","@id":"https://www.oanor.com/#website","url":"https://www.oanor.com/","name":"oanor","publisher":{"@id":"https://www.oanor.com/#organization"},"inLanguage":"en","potentialAction":{"@type":"SearchAction","target":"https://www.oanor.com/marketplace?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
+        <script  type="application/ld+json" nonce="O38loh9m5GCrQHXSGuO4nw">{"@context":"https://schema.org","@type":"WebPage","@id":"https://www.oanor.com/docs#webpage","url":"https://www.oanor.com/docs","name":"Docs — oanor","description":"Developer documentation for oanor API marketplace integrations, OpenAPI exports, API keys, quotas and gateway calls.","inLanguage":"en","isPartOf":{"@id":"https://www.oanor.com/#website"},"publisher":{"@id":"https://www.oanor.com/#organization"}}</script>
+        <script  type="application/ld+json" nonce="O38loh9m5GCrQHXSGuO4nw">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"oanor","item":"https://www.oanor.com/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://www.oanor.com/docs"}]}</script>
+        <script  type="application/ld+json" nonce="O38loh9m5GCrQHXSGuO4nw">{"@context":"https://schema.org","@type":"CollectionPage","@id":"https://www.oanor.com/docs#collection","name":"API documentation on the oanor API marketplace","url":"https://www.oanor.com/docs","isPartOf":{"@id":"https://www.oanor.com/#website"},"about":{"@id":"https://www.oanor.com/#organization"},"mainEntity":{"@type":"ItemList","numberOfItems":24,"itemListElement":[{"@type":"ListItem","position":1,"name":"Automation Preflight API - Withdrawn","url":"https://www.oanor.com/docs/automation-preflight"},{"@type":"ListItem","position":2,"name":"WEMIX API","url":"https://www.oanor.com/docs/wemix-api"},{"@type":"ListItem","position":3,"name":"Monad API","url":"https://www.oanor.com/docs/monad-api"},{"@type":"ListItem","position":4,"name":"Superposition API","url":"https://www.oanor.com/docs/superposition-api"},{"@type":"ListItem","position":5,"name":"Matchain API","url":"https://www.oanor.com/docs/matchain-api"},{"@type":"ListItem","position":6,"name":"Bahamut API","url":"https://www.oanor.com/docs/bahamut-api"},{"@type":"ListItem","position":7,"name":"Towns API","url":"https://www.oanor.com/docs/towns-api"},{"@type":"ListItem","position":8,"name":"Kaia API","url":"https://www.oanor.com/docs/kaia-api"},{"@type":"ListItem","position":9,"name":"ZERO Network API","url":"https://www.oanor.com/docs/zero-api"},{"@type":"ListItem","position":10,"name":"Funki API","url":"https://www.oanor.com/docs/funki-api"},{"@type":"ListItem","position":11,"name":"XPLA API","url":"https://www.oanor.com/docs/xpla-api"},{"@type":"ListItem","position":12,"name":"Meter API","url":"https://www.oanor.com/docs/meter-api"},{"@type":"ListItem","position":13,"name":"Rollux API","url":"https://www.oanor.com/docs/rollux-api"},{"@type":"ListItem","position":14,"name":"Songbird API","url":"https://www.oanor.com/docs/songbird-api"},{"@type":"ListItem","position":15,"name":"Sifchain API","url":"https://www.oanor.com/docs/sifchain-api"},{"@type":"ListItem","position":16,"name":"Desmos API","url":"https://www.oanor.com/docs/desmos-api"},{"@type":"ListItem","position":17,"name":"Shentu API","url":"https://www.oanor.com/docs/shentu-api"},{"@type":"ListItem","position":18,"name":"Moldova Inflation \u0026 CPI API","url":"https://www.oanor.com/docs/moldova-cpi-api"},{"@type":"ListItem","position":19,"name":"Carbon API","url":"https://www.oanor.com/docs/carbon-api"},{"@type":"ListItem","position":20,"name":"Fetch.ai API","url":"https://www.oanor.com/docs/fetchai-api"},{"@type":"ListItem","position":21,"name":"Moldova Foreign Trade API","url":"https://www.oanor.com/docs/moldova-trade-api"},{"@type":"ListItem","position":22,"name":"Oraichain API","url":"https://www.oanor.com/docs/oraichain-api"},{"@type":"ListItem","position":23,"name":"Åland Consumer Price Index API","url":"https://www.oanor.com/docs/aland-stats-api"},{"@type":"ListItem","position":24,"name":"Sophon Chain API","url":"https://www.oanor.com/docs/sophon-api"}]},"description":"Developer documentation for oanor API marketplace integrations, OpenAPI exports, API keys, quotas and gateway calls."}</script>
+        <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg?v=20260507">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png?v=20260507">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260507">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/brand/apple-touch-icon.png?v=20260507">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script nonce="O38loh9m5GCrQHXSGuO4nw">
+      // No-Flash Theme-Init: muss vor jedem CSS-Load laufen, sonst flackert die Page beim Switch.
+      (function () {
+        try {
+          var saved = localStorage.getItem('oanor.theme'); // 'light' | 'dark' | 'system'
+          var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = saved === 'dark' || (saved !== 'light' && systemDark);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      /* === Theme-Tokens (Sprint 27 — Dark-Mode-Refactor) ===
+         RGB-Tripel als CSS-Vars, damit Tailwind's `rgb(var(--c-...) / <alpha-value>)`-Format
+         opacity-modifier wie `bg-ink-50/60` weiterhin funktionieren lässt. Im html.dark
+         invertieren wir die ink-Skala (ink-50 ↔ ink-900 etc). Brand-Farben bleiben fix. */
+      :root {
+        --c-ink-50:  246 247 250;
+        --c-ink-100: 236 238 244;
+        --c-ink-200: 214 219 230;
+        --c-ink-300: 179 188 205;
+        --c-ink-400: 126 138 163;
+        --c-ink-500: 88 99 120;
+        --c-ink-600: 65 75 94;
+        --c-ink-700: 45 53 72;
+        --c-ink-800: 26 31 48;
+        --c-ink-900: 10 15 31;
+        --c-surface:  255 255 255; /* "bg-white" Token — sauber switchbar im Dark */
+        --c-surface-2:248 250 252; /* leicht abgesetzte Surfaces */
+      }
+      html.dark {
+        color-scheme: dark;
+        --c-ink-50:  20 25 40;
+        --c-ink-100: 30 36 53;
+        --c-ink-200: 49 58 81;
+        --c-ink-300: 75 87 113;
+        --c-ink-400: 122 134 160;
+        --c-ink-500: 158 168 188;
+        --c-ink-600: 188 196 213;
+        --c-ink-700: 214 220 232;
+        --c-ink-800: 236 239 246;
+        --c-ink-900: 248 250 253;
+        --c-surface:  26 31 48;
+        --c-surface-2: 17 22 36;
+      }
+    </style>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography" data-cfasync="false"></script>
+    <script nonce="O38loh9m5GCrQHXSGuO4nw">
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+            },
+            colors: {
+              brand: {
+                50:  '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
+                400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
+                800: '#3730a3', 900: '#312e81',
+              },
+              ink: {
+                50:  'rgb(var(--c-ink-50) / <alpha-value>)',
+                100: 'rgb(var(--c-ink-100) / <alpha-value>)',
+                200: 'rgb(var(--c-ink-200) / <alpha-value>)',
+                300: 'rgb(var(--c-ink-300) / <alpha-value>)',
+                400: 'rgb(var(--c-ink-400) / <alpha-value>)',
+                500: 'rgb(var(--c-ink-500) / <alpha-value>)',
+                600: 'rgb(var(--c-ink-600) / <alpha-value>)',
+                700: 'rgb(var(--c-ink-700) / <alpha-value>)',
+                800: 'rgb(var(--c-ink-800) / <alpha-value>)',
+                900: 'rgb(var(--c-ink-900) / <alpha-value>)',
+              },
+              surface: 'rgb(var(--c-surface) / <alpha-value>)',
+              surface2: 'rgb(var(--c-surface-2) / <alpha-value>)',
+            },
+            boxShadow: {
+              soft: '0 10px 30px -12px rgba(15,23,42,0.12)',
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      [x-cloak] { display: none !important; }
+      html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+      body { background-color: #ffffff; color: rgb(var(--c-ink-800)); }
+      html.dark body { background-color: rgb(var(--c-surface-2)); color: rgb(var(--c-ink-800)); }
+
+      /* === Mobile-UX-Polish === */
+      html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+      /* Prevent layout-jank von off-screen content */
+      body { overflow-x: hidden; }
+      /* iOS: rubber-band-bounce in modals stoppen */
+      .overscroll-contain { overscroll-behavior: contain; }
+      /* Touch-target Mindestgröße — gilt für jedes <button>/<a> mit `tap-target` Klasse */
+      .tap-target { min-height: 40px; min-width: 40px; }
+      /* Code-Blöcke: kein-horizontal-scrolling auf Mobile, weiche Umbrüche */
+      pre code { white-space: pre; word-break: break-word; }
+      /* Mobile-form-inputs: 16px font-size verhindert iOS-zoom-on-focus */
+      @media (max-width: 640px) {
+        input[type="text"], input[type="email"], input[type="password"],
+        input[type="url"], input[type="number"], input[type="search"],
+        input[type="tel"], textarea, select { font-size: 16px !important; }
+      }
+
+      /* === Dark-Mode-Override für Tailwind built-in `white` Tokens ===
+         `bg-white` ist hardcoded #fff. Wir mappen es global auf die surface-Variable.
+         `text-white` bleibt explizit weiß (Buttons mit text-white auf bg-ink-900).
+         Statt jede Opacity-Stufe einzeln zu listen nutzen wir einen Attribute-Selector
+         der alle `bg-white*` Varianten matcht — auch `supports-[backdrop-filter]:bg-white/70`,
+         `hover:bg-white/50`, `focus:bg-white` etc. Spezifische Cases mit fester Alpha
+         werden danach überschrieben. */
+      html.dark [class*="bg-white"] { background-color: rgb(var(--c-surface)) !important; }
+      html.dark .bg-white\/95,
+      html.dark .supports-\[backdrop-filter\]\:bg-white\/95,
+      html.dark .hover\:bg-white\/95:hover { background-color: rgb(var(--c-surface) / 0.95) !important; }
+      html.dark .bg-white\/90,
+      html.dark .supports-\[backdrop-filter\]\:bg-white\/90,
+      html.dark .hover\:bg-white\/90:hover { background-color: rgb(var(--c-surface) / 0.90) !important; }
+      html.dark .bg-white\/85,
+      html.dark .supports-\[backdrop-filter\]\:bg-white\/85,
+      html.dark .hover\:bg-white\/85:hover { background-color: rgb(var(--c-surface) / 0.85) !important; }
+      html.dark .bg-white\/80,
+      html.dark .supports-\[backdrop-filter\]\:bg-white\/80,
+      html.dark .hover\:bg-white\/80:hover { background-color: rgb(var(--c-surface) / 0.80) !important; }
+      html.dark .bg-white\/70,
+      html.dark .supports-\[backdrop-filter\]\:bg-white\/70,
+      html.dark .hover\:bg-white\/70:hover { background-color: rgb(var(--c-surface) / 0.70) !important; }
+      html.dark .bg-white\/60,
+      html.dark .supports-\[backdrop-filter\]\:bg-white\/60,
+      html.dark .hover\:bg-white\/60:hover { background-color: rgb(var(--c-surface) / 0.60) !important; }
+      html.dark .bg-white\/50,
+      html.dark .hover\:bg-white\/50:hover { background-color: rgb(var(--c-surface) / 0.50) !important; }
+      html.dark .bg-white\/40,
+      html.dark .hover\:bg-white\/40:hover { background-color: rgb(var(--c-surface) / 0.40) !important; }
+      html.dark .bg-white\/20 { background-color: rgb(var(--c-surface) / 0.20) !important; }
+      html.dark .bg-white\/10 { background-color: rgb(var(--c-surface) / 0.10) !important; }
+
+      /* Hero-/Onboarding-Gradients hatten `via-white` und `from-...-100 via-white to-...-200`
+         Stops, die im Dark-Mode peinlich sind. Wir tonen sie konsequent dunkel. */
+      html.dark .via-white         { --tw-gradient-via: rgb(var(--c-surface)); }
+      html.dark .gradient-mesh {
+        background:
+          radial-gradient(60% 60% at 20% 10%, rgba(99,102,241,.22) 0%, transparent 60%),
+          radial-gradient(50% 60% at 90% 0%, rgba(168,85,247,.18) 0%, transparent 60%),
+          radial-gradient(50% 60% at 50% 100%, rgba(56,189,248,.14) 0%, transparent 60%);
+      }
+      .gradient-mesh {
+        background:
+          radial-gradient(60% 60% at 20% 10%, rgba(99,102,241,.18) 0%, transparent 60%),
+          radial-gradient(50% 60% at 90% 0%, rgba(168,85,247,.14) 0%, transparent 60%),
+          radial-gradient(50% 60% at 50% 100%, rgba(56,189,248,.10) 0%, transparent 60%);
+      }
+      .grid-bg {
+        background-image:
+          linear-gradient(to right, rgba(15,23,42,0.04) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(15,23,42,0.04) 1px, transparent 1px);
+        background-size: 32px 32px;
+      }
+      html.dark .grid-bg {
+        background-image:
+          linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+      }
+      pre code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+      /* Skeleton — verwendet ink-Tokens, daher automatisch dark-aware */
+      .skeleton {
+        background: linear-gradient(90deg,
+          rgb(var(--c-ink-100)) 0%,
+          rgb(var(--c-ink-200)) 50%,
+          rgb(var(--c-ink-100)) 100%);
+        background-size: 200% 100%;
+        animation: oanor-shimmer 1.4s linear infinite;
+        border-radius: 4px;
+      }
+      @keyframes oanor-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+      /* README-Markdown — alles über ink-Tokens, automatisch dark-aware */
+      .readme-prose { color: rgb(var(--c-ink-700)); line-height: 1.65; font-size: 0.95rem; }
+      .readme-prose > * + * { margin-top: 1rem; }
+      .readme-prose h1, .readme-prose h2, .readme-prose h3, .readme-prose h4 {
+        color: rgb(var(--c-ink-900)); font-weight: 700; line-height: 1.3;
+        margin-top: 2rem; margin-bottom: 0.5rem;
+      }
+      .readme-prose h1 { font-size: 1.875rem; }
+      .readme-prose h2 { font-size: 1.5rem; border-bottom: 1px solid rgb(var(--c-ink-200)); padding-bottom: 0.4rem; }
+      .readme-prose h3 { font-size: 1.25rem; }
+      .readme-prose h4 { font-size: 1.05rem; }
+      .readme-prose p { margin: 0.85rem 0; }
+      .readme-prose a { color: #4338ca; text-decoration: underline; text-underline-offset: 2px; }
+      html.dark .readme-prose a { color: #a5b4fc; }
+      .readme-prose a:hover { color: #312e81; }
+      html.dark .readme-prose a:hover { color: #c7d2fe; }
+      .readme-prose strong { color: rgb(var(--c-ink-900)); font-weight: 600; }
+      .readme-prose em { font-style: italic; }
+      .readme-prose ul, .readme-prose ol { padding-left: 1.5rem; margin: 0.85rem 0; }
+      .readme-prose ul { list-style: disc; }
+      .readme-prose ol { list-style: decimal; }
+      .readme-prose li { margin: 0.3rem 0; }
+      .readme-prose li > p { margin: 0; }
+      .readme-prose code:not(pre code) {
+        background: rgb(var(--c-ink-100)); color: rgb(var(--c-ink-700));
+        padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.875em;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .readme-prose pre {
+        background: #0a0f1f; color: #eceef4; padding: 1rem; border-radius: 0.5rem;
+        overflow-x: auto; font-size: 0.85rem; margin: 1rem 0;
+      }
+      .readme-prose pre code { background: transparent; color: inherit; padding: 0; }
+      .readme-prose blockquote {
+        border-left: 4px solid rgb(var(--c-ink-300)); padding: 0.25rem 1rem;
+        color: rgb(var(--c-ink-500)); margin: 1rem 0; font-style: italic;
+        background: rgb(var(--c-ink-100));
+      }
+      .readme-prose hr { border: none; border-top: 1px solid rgb(var(--c-ink-200)); margin: 2rem 0; }
+      .readme-prose img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5rem 0; }
+      .readme-prose table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.9rem; }
+      .readme-prose th, .readme-prose td { border: 1px solid rgb(var(--c-ink-200)); padding: 0.5rem 0.75rem; text-align: left; }
+      .readme-prose th { background: rgb(var(--c-ink-100)); }
+
+      /* `bg-ink-900` ist der Primary-Solid (Logo-Square, Primary-Buttons, Code-Pills).
+         Im Dark-Mode würde die invertierte ink-Skala sie hell machen — hier explizit
+         dunkel halten, damit text-white weiterhin lesbar bleibt. */
+      html.dark .bg-ink-900 { background-color: #0a0f1f !important; color: #f6f7fa; }
+
+      /* Code-block context: ink-scale is inverted in dark mode for normal UI,
+         but a bg-ink-900 block is always a dark code editor — its inner text
+         and the header strip on top of it need their light-mode values back,
+         otherwise we get dark-on-dark and a white header bar that breaks the
+         dark layout (reported on the subscription quick-start dialog). */
+      html.dark .bg-ink-900.text-ink-100,
+      html.dark .bg-ink-900 .text-ink-100 { color: rgb(236, 238, 244) !important; }
+      html.dark .bg-ink-900.text-ink-200,
+      html.dark .bg-ink-900 .text-ink-200 { color: rgb(214, 219, 230) !important; }
+      html.dark .bg-ink-900.text-ink-300,
+      html.dark .bg-ink-900 .text-ink-300 { color: rgb(179, 188, 205) !important; }
+      html.dark .bg-ink-900.text-ink-400,
+      html.dark .bg-ink-900 .text-ink-400 { color: rgb(126, 138, 163) !important; }
+      html.dark .bg-ink-900 .bg-ink-800 { background-color: #1a1f30 !important; }
+      html.dark .bg-ink-900 .border-ink-800 { border-color: #1a1f30 !important; }
+      html.dark .hover\:bg-ink-800:hover { background-color: #1a1f30 !important; }
+      html.dark .text-ink-900.bg-ink-900,
+      html.dark .bg-ink-900 .text-white { color: #f6f7fa !important; }
+
+      /* Form-Elemente — Tailwind-Forms-Plugin setzt default white bg */
+      html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]),
+      html.dark select,
+      html.dark textarea {
+        background-color: rgb(var(--c-surface)) !important;
+        color: rgb(var(--c-ink-800)) !important;
+        border-color: rgb(var(--c-ink-200)) !important;
+      }
+      html.dark input::placeholder, html.dark textarea::placeholder { color: rgb(var(--c-ink-400)); }
+
+      /* Hero/Onboarding/Featured-Gradient-Stops mit fixen Farben (`from-brand-100 via-white to-brand-200`)
+         haben keine alpha-fähige Token. Wir tonen sie im Dark-Mode global ab. */
+      html.dark .from-brand-100  { --tw-gradient-from: rgb(67 56 202 / 0.25) var(--tw-gradient-from-position); }
+      html.dark .from-brand-200  { --tw-gradient-from: rgb(67 56 202 / 0.35) var(--tw-gradient-from-position); }
+      html.dark .from-brand-50   { --tw-gradient-from: rgb(67 56 202 / 0.18) var(--tw-gradient-from-position); }
+      html.dark .to-brand-100    { --tw-gradient-to:   rgb(67 56 202 / 0.25) var(--tw-gradient-to-position); }
+      html.dark .to-brand-200    { --tw-gradient-to:   rgb(67 56 202 / 0.35) var(--tw-gradient-to-position); }
+      html.dark .from-amber-100  { --tw-gradient-from: rgb(180 83 9 / 0.30) var(--tw-gradient-from-position); }
+      html.dark .to-amber-200    { --tw-gradient-to:   rgb(180 83 9 / 0.40) var(--tw-gradient-to-position); }
+      html.dark .border-amber-200 { border-color: rgb(180 83 9 / 0.50) !important; }
+      html.dark .bg-amber-50     { background-color: rgb(180 83 9 / 0.15) !important; }
+      html.dark .bg-amber-100    { background-color: rgb(180 83 9 / 0.25) !important; }
+      html.dark .text-amber-700, html.dark .text-amber-800 { color: rgb(252 211 77) !important; }
+      html.dark .border-emerald-200 { border-color: rgb(5 150 105 / 0.50) !important; }
+      html.dark .bg-emerald-50   { background-color: rgb(5 150 105 / 0.18) !important; }
+      html.dark .text-emerald-700, html.dark .text-emerald-800 { color: rgb(110 231 183) !important; }
+      html.dark .bg-red-50       { background-color: rgb(220 38 38 / 0.18) !important; }
+      html.dark .text-red-600, html.dark .text-red-700, html.dark .text-red-800 { color: rgb(252 165 165) !important; }
+      html.dark .bg-blue-50      { background-color: rgb(37 99 235 / 0.20) !important; }
+      html.dark .text-blue-700, html.dark .text-blue-800 { color: rgb(147 197 253) !important; }
+      html.dark .bg-yellow-50    { background-color: rgb(202 138 4 / 0.18) !important; }
+      html.dark .text-yellow-800 { color: rgb(253 224 71) !important; }
+      html.dark .border-yellow-200 { border-color: rgb(202 138 4 / 0.45) !important; }
+      html.dark .bg-brand-50     { background-color: rgb(67 56 202 / 0.18) !important; }
+      html.dark .bg-brand-100    { background-color: rgb(67 56 202 / 0.30) !important; }
+      html.dark .text-brand-700, html.dark .text-brand-800 { color: rgb(165 180 252) !important; }
+      html.dark .border-brand-200 { border-color: rgb(99 102 241 / 0.50) !important; }
+
+      /* Card-Hover bei `hover:bg-ink-50/40` etc. funktioniert automatisch durch invertierte ink-Skala. */
+    </style>
+    <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+    <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.7/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" defer></script>
+    <script nonce="O38loh9m5GCrQHXSGuO4nw">
+      document.addEventListener('DOMContentLoaded', function () {
+        document.body.addEventListener('htmx:configRequest', function (evt) {
+          var t = document.querySelector('meta[name="csrf-token"]');
+          if (t) evt.detail.headers['X-Csrf-Token'] = t.getAttribute('content');
+        });
+      });
+    </script>
+                </head>
+<body class="flex min-h-full flex-col font-sans text-ink-800 antialiased">
+        <header x-data="{ mobile: false }" class="sticky top-0 z-40 border-b border-ink-100/80 bg-white/85 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-3.5">
+            <div class="flex items-center gap-10">
+                <a href="/" class="group inline-flex items-center gap-2 text-ink-900">
+                    <img src="/assets/brand/oanor-mark.svg?v=20260507" alt="" class="h-8 w-8 rounded-lg" width="32" height="32">
+                    <span class="text-base font-bold tracking-tight">oanor</span>
+                </a>
+                <nav class="hidden items-center gap-7 text-sm font-medium text-ink-600 lg:flex">
+                    <a href="/marketplace" class="hover:text-ink-900">Marketplace</a>
+                    <a href="/pricing" class="hover:text-ink-900">Pricing</a>
+                    <a href="/features" class="hover:text-ink-900">Features</a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-3">
+                                    <a href="/login" class="hidden rounded-md px-3 py-1.5 text-sm font-medium text-ink-700 hover:bg-ink-50 lg:inline">Sign in</a>
+                    <a href="/register" class="inline-flex items-center rounded-md bg-ink-900 px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-ink-800">Sign up free</a>
+                                <button @click="mobile = !mobile" class="inline-flex h-9 w-9 items-center justify-center rounded-md text-ink-700 hover:bg-ink-50 lg:hidden" aria-label="Menu">
+                    <svg x-show="!mobile" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
+                    <svg x-show="mobile" x-cloak class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+        </div>
+        <div x-show="mobile" x-cloak class="border-t border-ink-100 bg-white lg:hidden">
+            <div class="mx-auto flex max-w-7xl flex-col gap-1 px-6 py-3 text-sm">
+                <a href="/marketplace" class="rounded-md px-2 py-2 text-ink-700 hover:bg-ink-50">Marketplace</a>
+                <a href="/pricing" class="rounded-md px-2 py-2 text-ink-700 hover:bg-ink-50">Pricing</a>
+                <a href="/features" class="rounded-md px-2 py-2 text-ink-700 hover:bg-ink-50">Features</a>
+                                    <a href="/login" class="rounded-md px-2 py-2 text-ink-700 hover:bg-ink-50">Sign in</a>
+                            </div>
+        </div>
+    </header>
+    
+    
+    
+    <main class="flex-1">
+        <section class="border-b border-ink-100 bg-ink-50/40">
+    <div class="mx-auto max-w-6xl px-6 py-14">
+        <p class="text-xs font-semibold uppercase tracking-wide text-brand-700">Developer docs</p>
+        <h1 class="mt-3 max-w-3xl text-4xl font-extrabold tracking-tight text-ink-900 sm:text-5xl">Build against oanor APIs with keys, quotas and OpenAPI docs.</h1>
+        <p class="mt-4 max-w-2xl text-base leading-7 text-ink-600">Use this hub to inspect live API documentation, download OpenAPI specs, understand gateway authentication and move from discovery to integration.</p>
+        <div class="mt-6 flex flex-wrap gap-3">
+            <a href="/api/index.json" class="inline-flex items-center rounded-md bg-ink-900 px-4 py-2 text-sm font-semibold text-white hover:bg-ink-800">Open API catalog JSON</a>
+            <a href="/marketplace" class="inline-flex items-center rounded-md border border-ink-200 bg-white px-4 py-2 text-sm font-semibold text-ink-800 hover:bg-ink-50">Browse marketplace</a>
+        </div>
+    </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-6 py-12">
+    <div class="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+        <aside class="rounded-xl border border-ink-100 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-bold text-ink-900">Gateway basics</h2>
+            <p class="mt-2 text-sm leading-6 text-ink-600">Customers call api.oanor.com with a scoped oanor key. The upstream URL and provider secrets stay server-side.</p>
+            <div class="mt-5 rounded-lg bg-ink-900 p-4 font-mono text-xs leading-6 text-ink-100">
+                <p>GET https://api.oanor.com/{api}/{path}</p>
+                <p class="text-emerald-300">x-oanor-key: oanor_live_...</p>
+            </div>
+            <ul class="mt-5 space-y-2 text-sm text-ink-600">
+                <li>Keys are scoped to the subscribed API and customer account.</li>
+                <li>Plan limits, daily quota, monthly quota and rate limits are enforced before upstream traffic.</li>
+                <li>Every live API can expose a generated OpenAPI document for integration tooling.</li>
+            </ul>
+        </aside>
+
+        <div>
+            <div class="flex items-center justify-between gap-4">
+                <h2 class="text-lg font-bold text-ink-900">Live API docs</h2>
+                <a href="/marketplace" class="text-sm font-semibold text-brand-700 hover:text-brand-800">Marketplace →</a>
+            </div>
+                            <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/automation-preflight</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Automation Preflight API - Withdrawn</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">This Oanor listing is withdrawn and its gateway is unavailable. Use the official TinyOps Studio product page for current access.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/automation-preflight" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/automation-preflight/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/automation-preflight" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/wemix-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">WEMIX API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for WEMIX (chain id 1111) — the gaming-focused public Layer-1 built by Wemade, whose native token is WEMIX — served directly from public EVM JSON-RPC nodes with multi-node failover. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the WEMIX balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole WEMIX with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and game-economy analytics across the WEMIX ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/wemix-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/wemix-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/wemix-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/monad-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Monad API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for Monad (chain id 143) — the high-performance, parallel-execution Layer-1 designed for thousands of transactions per second, whose native token is MON — served directly from public EVM JSON-RPC nodes with multi-node failover. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the MON balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole MON with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the Monad ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/monad-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/monad-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/monad-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/superposition-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Superposition API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for Superposition (chain id 55244) — an Arbitrum-Orbit DeFi Layer-3 with ETH gas and on-chain yield-bearing Super Assets — served directly from the public Superposition JSON-RPC with server-side resilience. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the ETH balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole ETH with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and DeFi analytics across the Superposition and Arbitrum-Orbit ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/superposition-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/superposition-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/superposition-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/matchain-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Matchain API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for Matchain (chain id 698) — the BNB-Chain-secured Layer-2 focused on decentralised identity and social, where gas is paid in BNB — served directly from the public Matchain JSON-RPC with server-side resilience. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the BNB balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole BNB with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the Matchain identity and social ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/matchain-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/matchain-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/matchain-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/bahamut-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Bahamut API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for Bahamut (chain id 5165) — the Proof-of-Stake-and-Activity Layer-1 by Fastex, whose native token is FTN — served directly from public EVM JSON-RPC nodes with multi-node failover. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the FTN balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole FTN with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the Bahamut and Fastex ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/bahamut-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/bahamut-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/bahamut-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/towns-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Towns API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for Towns (chain id 550) — an OP-Stack Layer-2 that powers decentralised group chat and on-chain social spaces, with gas paid in ETH — served directly from the public Towns JSON-RPC with server-side resilience. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the ETH balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole ETH with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the Towns social ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/towns-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/towns-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/towns-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/kaia-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Kaia API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for Kaia (chain id 8217) — the public Layer-1 formed by the merger of Klaytn and Finschia, whose native token is KAIA — served directly from public JSON-RPC nodes with multi-node failover. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the KAIA balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole KAIA with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the Kaia, Klaytn and Finschia ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/kaia-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/kaia-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/kaia-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/zero-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">ZERO Network API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for ZERO Network (chain id 543210) — the Zerion-built ZK-Stack Layer-3 that uses ETH for gas and offers human-readable addresses — served directly from public JSON-RPC nodes with multi-node failover. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the ETH balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole ETH with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the ZERO Network ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/zero-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/zero-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/zero-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/funki-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Funki API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for Funki (chain id 33979) — an OP-Stack Layer-2 built for gaming and social applications, with gas paid in ETH — served directly from the public Funki JSON-RPC with server-side resilience. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the ETH balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole ETH with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the Funki gaming and social ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/funki-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/funki-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/funki-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/xpla-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">XPLA API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for XPLA (chain id 37) — the Cosmos-built gaming and entertainment Layer-1 from Com2uS, whose native token is XPLA, served through its Dimension EVM via public JSON-RPC nodes with multi-node failover. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the XPLA balance and outgoing transaction count for any EVM address, converted from base wei (18 decimals) into whole XPLA with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the XPLA gaming and NFT ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/xpla-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/xpla-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/xpla-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/meter-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Meter API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for Meter (chain id 82) — the HotStuff-BFT proof-of-stake Layer-1 whose native gas token is MTR — served directly from public EVM JSON-RPC nodes with multi-node failover. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the MTR balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole MTR with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the Meter ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/meter-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/meter-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/meter-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/rollux-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Rollux API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for Rollux (chain id 570) — the Syscoin Layer-2 secured by Bitcoin merge-mining, whose gas token is SYS — served directly from public Layer-2 JSON-RPC nodes with multi-node failover. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the SYS balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole SYS with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the Syscoin and Rollux ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/rollux-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/rollux-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/rollux-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/songbird-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Songbird API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live EVM on-chain data for Songbird (chain id 19) — the canary network of the Flare blockchain, whose native token is SGB — served directly from public C-chain JSON-RPC nodes with multi-node failover. The status endpoint returns the chain and network id, the latest block height and the node client version. The block endpoint returns a block by number (or the latest) with its hash, parent hash, timestamp, transaction count, gas used and gas limit, miner and size. The gas endpoint returns the current gas price in both wei and gwei. The balance endpoint returns the SGB balance and outgoing transaction count for any address, converted from base wei (18 decimals) into whole SGB with exact big-integer scaling. Every figure is read live from the chain over JSON-RPC — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for explorers, wallet and dashboard tooling, gas trackers, address monitors and analytics apps across the Flare and Songbird ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/songbird-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/songbird-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/songbird-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/sifchain-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Sifchain API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live on-chain data for Sifchain (chain id sifchain-1) — the Cosmos-SDK Layer-1 omni-chain decentralised exchange, whose native token is ROWAN — served directly from public LCD/REST nodes with multi-node failover. The status endpoint returns the latest block height and time, chain id, the staking bond denom and the current minting inflation rate. The validators endpoint lists the active bonded validator set ranked by stake, each with its moniker, operator address, self-plus-delegated ROWAN, commission rate and jailed flag. The supply endpoint returns the total ROWAN supply, the amount bonded in staking and the resulting bonded ratio. The governance endpoint returns the most recent on-chain proposals with their id, title, status and voting window. ROWAN uses an 18-decimal base denomination which is converted to whole ROWAN with exact big-integer scaling, and every figure is read live from the chain — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for staking dashboards, validator and delegator tooling, explorers, governance trackers and portfolio or analytics apps across the Cosmos and cross-chain DEX ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/sifchain-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/sifchain-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/sifchain-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/desmos-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Desmos API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live on-chain data for Desmos (chain id desmos-mainnet) — the Cosmos-SDK Layer-1 purpose-built for decentralised social networking, whose native token is DSM — served directly from public LCD/REST nodes with multi-node failover. The status endpoint returns the latest block height and time, chain id, the staking bond denom and the current minting inflation rate. The validators endpoint lists the active bonded validator set ranked by stake, each with its moniker, operator address, self-plus-delegated DSM, commission rate and jailed flag. The supply endpoint returns the total DSM supply, the amount bonded in staking and the resulting bonded ratio. The governance endpoint returns the most recent on-chain proposals with their id, title, status and voting window. Token amounts are converted from base micro-DSM (6 decimals) into whole DSM, and every figure is read live from the chain — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for staking dashboards, validator and delegator tooling, explorers, governance trackers and portfolio or analytics apps across the Cosmos and decentralised-social ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/desmos-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/desmos-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/desmos-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/shentu-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Shentu API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live on-chain data for Shentu (chain id shentu-2.2) — the security-focused Cosmos-SDK Layer-1 of the CertiK ecosystem, whose native token is CTK — served directly from public LCD/REST nodes with multi-node failover. The status endpoint returns the latest block height and time, chain id, the staking bond denom and the current minting inflation rate. The validators endpoint lists the active bonded validator set ranked by stake, each with its moniker, operator address, self-plus-delegated CTK, commission rate and jailed flag. The supply endpoint returns the total CTK supply, the amount bonded in staking and the resulting bonded ratio. The governance endpoint returns the most recent on-chain proposals with their id, title, status and voting window. Token amounts are converted from base micro-CTK (6 decimals) into whole CTK, and every figure is read live from the chain — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for staking dashboards, validator and delegator tooling, explorers, governance trackers and portfolio or analytics apps across the Cosmos and security-infrastructure ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/shentu-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/shentu-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/shentu-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/moldova-cpi-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Moldova Inflation &amp; CPI API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Official consumer-price inflation for the Republic of Moldova — sourced live from the National Bureau of Statistics of Moldova via its public PxWeb statbank (tables PRE012600, PRE012200 and PRE012800). The cpi endpoint returns the latest reported month with headline year-on-year inflation and the month-on-month price change. The series endpoint returns the monthly history of year-on-year and month-on-month inflation, parameterised by the number of months. The groups endpoint breaks the latest month down across the major divisions — food goods, non-food goods and services — each with its year-on-year rate, showing where price pressure sits. The core endpoint returns Moldova&apos;s core-inflation measures, computed by excluding volatile components such as food, energy and regulated prices, each with year-on-year and month-on-month change — the gauges central banks watch for underlying trend. All figures are published directly by the statistics bureau, not modelled, and refreshed from source behind a short server-side cache with keep-warm. Ideal for macro and emerging-market dashboards, CIS and EU-candidate economics trackers, cost-of-living and monetary-policy tools, and fintech needing a clean structured inflation feed for a market the big aggregators rarely cover at monthly resolution. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/moldova-cpi-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/moldova-cpi-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/moldova-cpi-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/carbon-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Carbon API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live on-chain data for Carbon (chain id carbon-1) — the Switcheo-built Cosmos-SDK Layer-1 for decentralised derivatives and spot trading, whose native token is SWTH — served directly from public LCD/REST nodes with multi-node failover. The status endpoint returns the latest block height and time, chain id, the staking bond denom and the current minting inflation rate. The validators endpoint lists the active bonded validator set ranked by stake, each with its moniker, operator address, self-plus-delegated SWTH, commission rate and jailed flag. The supply endpoint returns the total SWTH supply, the amount bonded in staking and the resulting bonded ratio. The governance endpoint returns the most recent on-chain proposals with their id, title, status and voting window. SWTH uses an 8-decimal base denomination which is converted to whole SWTH with exact big-integer scaling, and every figure is read live from the chain — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for staking dashboards, validator and delegator tooling, explorers, governance trackers and portfolio or analytics apps across the Cosmos and DeFi ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/carbon-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/carbon-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/carbon-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/fetchai-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Fetch.ai API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live on-chain data for Fetch.ai (chain id fetchhub-4) — the Cosmos-SDK Layer-1 behind the Artificial Superintelligence Alliance, whose native token is FET — served directly from public LCD/REST nodes with multi-node failover. The status endpoint returns the latest block height and time, chain id, the staking bond denom and the current minting inflation rate. The validators endpoint lists the active bonded validator set ranked by stake, each with its moniker, operator address, self-plus-delegated FET, commission rate and jailed flag. The supply endpoint returns the total FET supply, the amount bonded in staking and the resulting bonded ratio. The governance endpoint returns the most recent on-chain proposals with their id, title, status and voting window. FET uses an 18-decimal base denomination (afet) which is converted to whole FET with exact big-integer scaling, and every figure is read live from the chain — nothing bundled or modelled — behind a short server-side cache with keep-warm so the feed stays fast and fresh. Ideal for staking dashboards, validator and delegator tooling, explorers, governance trackers and portfolio or analytics apps across the Cosmos and AI-blockchain ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/fetchai-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/fetchai-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/fetchai-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/moldova-trade-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Moldova Foreign Trade API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Official foreign-trade statistics for the Republic of Moldova — exports, imports and the trade balance — sourced live from the National Bureau of Statistics of Moldova via its public PxWeb statbank (table EXT015000), all values in millions of US dollars. The trade endpoint returns the latest reported month with exports, imports, the trade balance and the export-to-import cover ratio. The series endpoint returns the monthly history of exports, imports and balance, parameterised by the number of months. The partners endpoint breaks the latest month down by partner-country group — total, CIS countries, the European Union and the rest of the world — each with its exports, imports and balance, showing where Moldova trades. The annual endpoint returns full-year totals for exports, imports and balance across recent years. Figures are published directly by the statistics bureau, not modelled, and refreshed from source with a short server-side cache and keep-warm. Ideal for macro and trade dashboards, emerging-market and CIS/EU economics trackers, supply-chain and current-account analysis, and fintech needing a clean structured trade feed for a market the big aggregators rarely cover at monthly resolution. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/moldova-trade-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/moldova-trade-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/moldova-trade-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/oraichain-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Oraichain API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Live on-chain data for Oraichain — the AI-oracle Layer-1 built on the Cosmos SDK, whose native token is ORAI — served directly from public LCD/REST nodes with multi-node failover. The status endpoint returns the latest block height and time, chain id, the staking bond denom and the current minting inflation rate. The validators endpoint lists the active bonded validator set ranked by stake, each with its moniker, operator address, self-plus-delegated ORAI tokens, commission rate and jailed flag. The supply endpoint returns the total ORAI supply, the amount bonded in staking and the resulting bonded ratio. The governance endpoint returns the most recent on-chain proposals with their id, title, status and voting window. Token amounts are converted from base micro-ORAI (6 decimals) into whole ORAI, and all figures are read live from the chain — nothing is bundled or modelled — with a short server-side cache and keep-warm so the feed stays fast and fresh. Ideal for staking dashboards, validator and delegator tooling, explorers, governance trackers and portfolio or analytics apps covering the Cosmos and AI-blockchain ecosystem. Live keyless upstream. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/oraichain-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/oraichain-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/oraichain-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/aland-stats-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Åland Consumer Price Index API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Official consumer-price-index and inflation data for the Åland Islands — the autonomous, Swedish-speaking, euro-area region of Finland — sourced live from Statistics and Research Åland (ÅSUB), the regional statistics authority, via its public PxWeb API (table KO010). The overall endpoint returns the latest headline CPI level (index base 2025 = 100) together with month-on-month and year-on-year change. The series endpoint returns the full monthly history of the headline index with monthly and annual change, parameterised by the number of months. The divisions endpoint breaks the basket down across the thirteen COICOP groups — food, alcohol &amp; tobacco, clothing, housing &amp; utilities, furnishings, health, transport, communication, recreation &amp; culture, education, restaurants &amp; hotels, miscellaneous and personal care — each with its index level and annual change. The drivers endpoint ranks those same divisions by their annual impact in percentage points, showing exactly which categories are pushing Åland inflation up or down. Figures are published directly by ÅSUB, not modelled or estimated, and are refreshed from source. Ideal for macro and regional-economics dashboards, cost-of-living and salary tools, Nordic and euro-area inflation trackers, and fintech that needs a clean, structured CPI feed for a market the big aggregators ignore. Live keyless upstream, short server-side cache. 5 endpoints.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/aland-stats-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/aland-stats-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/aland-stats-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                            <li class="rounded-xl border border-ink-100 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-soft">
+                            <p class="font-mono text-xs text-brand-700">api.oanor.com/sophon-api</p>
+                            <h3 class="mt-2 text-base font-bold text-ink-900">Sophon Chain API</h3>
+                            <p class="mt-2 line-clamp-2 text-sm leading-6 text-ink-500">Real-time on-chain data for Sophon (chain-id 50104), a ZK Layer-2 built on the zkSync Elastic Chain stack and focused on consumer and entertainment apps, where gas is paid in the native SOPH token. The status endpoint returns the chain id, network id, latest block height, native symbol and node client version so you can confirm the chain is live and synced. The block endpoint returns a block by decimal or 0x-hex height — or the latest block when no height is given — with its hash, parent hash, timestamp (raw and ISO), transaction count, gas used and limit, base fee and miner. The gas endpoint returns the current gas price in both wei and gwei at the latest block. The balance endpoint returns the native SOPH balance (in wei and human-readable units) and the transaction count (nonce) for any 0x address. The meta endpoint documents the chain id, decimals and ecosystem. Reads a live Sophon JSON-RPC node directly, so values are current to the latest block. Live, nothing stored. 5 endpoints. This serves native-coin and chain data; for ERC-20 token balances or contract calls use a dedicated token/contract API.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="/docs/sophon-api" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">Docs</a>
+                                <a href="/docs/sophon-api/openapi.json" class="rounded-md border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-50">OpenAPI</a>
+                                <a href="/api/sophon-api" class="rounded-md bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">Try it live</a>
+                            </div>
+                        </li>
+                                    </ul>
+                    </div>
+    </div>
+</section>
+    </main>
+
+    <div x-data x-show="$store.dialog.open" x-cloak
+         class="fixed inset-0 z-[70] flex items-center justify-center bg-ink-950/45 px-4 py-6 backdrop-blur-sm"
+         @keydown.escape.window="$store.dialog.cancel()"
+         aria-live="polite">
+        <div class="w-full max-w-md overflow-hidden rounded-xl border border-ink-100 bg-white shadow-2xl ring-1 ring-black/5"
+             x-transition:enter="transition ease-out duration-150"
+             x-transition:enter-start="opacity-0 translate-y-2 scale-[0.98]"
+             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+             x-transition:leave="transition ease-in duration-100"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0 translate-y-1 scale-[0.99]">
+            <div class="border-b border-ink-100 bg-ink-50/70 px-5 py-4">
+                <p class="text-sm font-semibold text-ink-900" x-text="$store.dialog.title"></p>
+            </div>
+            <div class="space-y-4 px-5 py-5">
+                <p class="text-sm leading-6 text-ink-700" x-text="$store.dialog.message"></p>
+                <input x-show="$store.dialog.kind === 'prompt'"
+                       x-ref="dialogInput"
+                       x-model="$store.dialog.value"
+                       @keydown.enter.prevent="$store.dialog.confirm()"
+                       type="text"
+                       class="block w-full rounded-md border-ink-200 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500"
+                       :placeholder="$store.dialog.placeholder">
+            </div>
+            <div class="flex items-center justify-end gap-2 border-t border-ink-100 bg-white px-5 py-3">
+                <button type="button"
+                        x-show="$store.dialog.kind !== 'alert'"
+                        @click="$store.dialog.cancel()"
+                        class="rounded-md border border-ink-200 bg-white px-3.5 py-2 text-sm font-semibold text-ink-700 hover:bg-ink-50">
+                    Cancel                </button>
+                <button type="button"
+                        @click="$store.dialog.confirm()"
+                        class="rounded-md bg-ink-900 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-ink-800"
+                        x-text="$store.dialog.confirmLabel"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST-CONTAINER (oben rechts, fixed, z-50)
+         Solid background per level — must NOT use bg-{color}-50 because the
+         dark-mode CSS overrides those to low-alpha tints, which leaks the
+         page content through floating overlays. We pin to surface tokens and
+         use the colored border + icon as the level signal. -->
+    <div x-data class="pointer-events-none fixed inset-0 top-4 z-50 flex flex-col items-end gap-2 px-4">
+        <template x-for="t in $store.toast.items" :key="t.id">
+            <div class="pointer-events-auto w-full max-w-sm overflow-hidden rounded-md border-2 bg-white shadow-lg ring-1 ring-black/5"
+                 :class="{
+                   'border-emerald-500': t.level === 'success',
+                   'border-red-500': t.level === 'error',
+                   'border-amber-500': t.level === 'warning',
+                   'border-ink-300': t.level === 'info' || !t.level,
+                 }"
+                 x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-x-2" x-transition:enter-end="opacity-100 translate-x-0"
+                 x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                <div class="flex items-start gap-3 px-4 py-3">
+                    <span class="mt-0.5 flex-none"
+                          :class="{
+                            'text-emerald-600': t.level === 'success',
+                            'text-red-600': t.level === 'error',
+                            'text-amber-600': t.level === 'warning',
+                            'text-ink-500': t.level === 'info' || !t.level,
+                          }">
+                        <svg x-show="t.level === 'success'" class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.7-9.3l-4.5 4.5-2.4-2.4 1.4-1.4 1 1 3.1-3.1 1.4 1.4z"/></svg>
+                        <svg x-show="t.level === 'error'" class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM9 5h2v6H9V5zm0 8h2v2H9v-2z"/></svg>
+                        <svg x-show="t.level === 'warning'" class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.1 2.5L1.6 16.5A1 1 0 0 0 2.5 18h15a1 1 0 0 0 .9-1.5L10.9 2.5a1 1 0 0 0-1.8 0zM9 7h2v5H9V7zm0 6h2v2H9v-2z"/></svg>
+                        <svg x-show="t.level === 'info' || !t.level" class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM9 7h2v6H9V7zm0-3h2v2H9V4z"/></svg>
+                    </span>
+                    <p class="flex-1 text-sm text-ink-900" x-text="t.message"></p>
+                    <button type="button" @click="$store.toast.remove(t.id)" class="flex-none text-ink-400 hover:text-ink-700"
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+                    </button>
+                </div>
+            </div>
+        </template>
+    </div>
+
+	    <script nonce="O38loh9m5GCrQHXSGuO4nw">
+	      document.addEventListener('alpine:init', () => {
+	        window.oanorErrorMessages = {"unauthenticated":"Please sign in again.","forbidden":"You do not have permission to do that.","not_found":"We could not find that item.","not_found_or_revoked":"This key no longer exists or was revoked.","csrf_failed":"Your session expired. Reload the page and try again.","invalid_credentials":"Email or password is wrong.","email_not_verified":"Verify your email first.","email_unverified":"Verify your email address to use this feature.","two_factor_required":"Enter your 2FA code.","rate_limit_exceeded":"Too many attempts. Try again later.","invalid_url":"Enter a valid HTTPS URL.","no_events":"Select at least one event.","bad_body":"The request body could not be read.","unknown_type":"Unknown setting type.","upload_failed":"Upload failed. Choose a file and try again.","file_too_large":"The file is too large.","unsupported_type":"This file type is not supported.","hash_failed":"File verification failed. Try again.","storage_unavailable":"Storage is currently unavailable.","move_failed":"The uploaded file could not be saved.","user_not_found":"No user with this email was found.","invalid_role":"Choose a valid role.","no_team":"Create or select a team first.","id_doc_required":"Upload an ID document to continue.","invalid_slug":"Use a valid slug.","unavailable":"This action is currently unavailable.","plan_not_found":"This plan is no longer available.","cannot_subscribe_to_own_api":"You own this API, so you already have access without a subscription.","missing_slug":"Missing API slug.","not_eligible":"You can rate APIs after a successful call.","invalid_stars":"Choose a rating from 1 to 5 stars.","unsupported":"This action is not supported yet.","emitter_unavailable":"Webhook delivery is currently unavailable.","submit_failed":"Submit failed. Check the form and try again.","init_failed":"Setup could not be started.","register_failed":"Registration could not be completed.","verify_failed":"Verification failed. Try again.","invalid_code":"The code is invalid or expired.","failed":"Action failed. Try again."};
+	        window.oanorErrorFallback = "Something went wrong. Please try again — if it keeps failing, contact support@oanor.com.";
+	        window.oanorHttpError = "Request failed with status __STATUS__.";
+	        window.oanorErrorMessage = function (payload, fallback) {
+	          const data = payload && typeof payload === 'object' ? payload : {};
+	          const code = String(data.error || data.status || '').trim();
+	          if (code && window.oanorErrorMessages && window.oanorErrorMessages[code]) return window.oanorErrorMessages[code];
+	          if (data.message && !/^[a-z0-9_.-]+$/i.test(String(data.message))) return String(data.message);
+	          if (data.message && window.oanorErrorMessages && window.oanorErrorMessages[String(data.message)]) return window.oanorErrorMessages[String(data.message)];
+	          if (data.httpStatus) return window.oanorHttpError.replace('__STATUS__', data.httpStatus);
+	          return fallback || window.oanorErrorFallback;
+	        };
+	        window.oanorErrorFromResponse = async function (res, fallback) {
+	          const data = await res.json().catch(() => ({}));
+	          data.httpStatus = res.status;
+	          return window.oanorErrorMessage(data, fallback);
+	        };
+	        Alpine.store('dialog', {
+	          open: false,
+	          kind: 'confirm',
+	          title: "Confirm action",
+	          message: '',
+	          value: '',
+	          placeholder: "Enter value…",
+	          confirmLabel: "Confirm",
+	          _resolve: null,
+	          show(kind, options) {
+	            this.kind = kind;
+	            this.title = options.title || (kind === 'alert' ? "Notice" : (kind === 'prompt' ? "Input required" : "Confirm action"));
+	            this.message = options.message || '';
+	            this.value = options.value || '';
+	            this.placeholder = options.placeholder || "Enter value…";
+	            this.confirmLabel = options.confirmLabel || (kind === 'alert' ? "Continue" : "Confirm");
+	            this.open = true;
+	            this.$nextTick && this.$nextTick(() => {});
+	            return new Promise((resolve) => {
+	              this._resolve = resolve;
+	              setTimeout(() => {
+	                const input = document.querySelector('[x-ref="dialogInput"]');
+	                if (kind === 'prompt' && input) input.focus();
+	              }, 30);
+	            });
+	          },
+	          confirm() {
+	            const result = this.kind === 'prompt' ? this.value : true;
+	            this.close(result);
+	          },
+	          cancel() {
+	            this.close(this.kind === 'prompt' ? null : false);
+	          },
+	          close(result) {
+	            this.open = false;
+	            const resolve = this._resolve;
+	            this._resolve = null;
+	            if (resolve) resolve(result);
+	          },
+	        });
+	        window.oanorConfirm = (message, options = {}) => Alpine.store('dialog').show('confirm', { ...options, message });
+	        window.oanorAlert = (message, options = {}) => Alpine.store('dialog').show('alert', { ...options, message });
+	        window.oanorPrompt = (message, options = {}) => Alpine.store('dialog').show('prompt', { ...options, message });
+	        Alpine.store('toast', {
+          items: [],
+          push(level, message, ttl) {
+            const id = Date.now() + Math.random();
+            this.items.push({ id, level, message, ttl: ttl ?? 4000 });
+            // Cap auf 5 sichtbare — älteste fliegt
+            while (this.items.length > 5) this.items.shift();
+            // auto-dismiss (außer error: bleibt bis manueller close)
+            if (level !== 'error') {
+              setTimeout(() => this.remove(id), ttl ?? 4000);
+            }
+          },
+          remove(id) {
+            const i = this.items.findIndex(t => t.id === id);
+            if (i >= 0) this.items.splice(i, 1);
+          },
+        });
+        // Globale window.toast() shortcut
+        window.toast = (level, message, ttl) => Alpine.store('toast').push(level, message, ttl);
+
+        // Async-Button-State-Mixin: liefert submitState ('idle' | 'loading' | 'success' | 'error')
+        // + runWithState(asyncFn) für saubere Idle→Spinner→Check/×→Idle Choreografie.
+        // Spread via `x-data="{ ...btnStateMixin(), …deinComponent }"`.
+        window.btnStateMixin = function () {
+          return {
+            submitState: 'idle',
+            _submitResetTimer: null,
+            _resetSubmitState() {
+              if (this._submitResetTimer) {
+                clearTimeout(this._submitResetTimer);
+                this._submitResetTimer = null;
+              }
+            },
+            _scheduleSubmitReset(ms) {
+              this._resetSubmitState();
+              this._submitResetTimer = setTimeout(() => {
+                this.submitState = 'idle';
+                this._submitResetTimer = null;
+              }, ms ?? 1500);
+            },
+            async runWithState(fn, opts) {
+              this._resetSubmitState();
+              this.submitState = 'loading';
+              let ok = true;
+              try {
+                const result = await fn();
+                if (result === false) ok = false;
+              } catch (e) {
+                ok = false;
+                if (opts && opts.onError) { try { opts.onError(e); } catch (_) {} }
+              } finally {
+                this.submitState = ok ? 'success' : 'error';
+                this._scheduleSubmitReset(opts && opts.resetMs);
+              }
+              return ok;
+            },
+          };
+        };
+
+        // Quick-Copy: jedes [data-copy] kopiert das wertvollste Ziel — Reihenfolge:
+        //   1. data-copy-target="…"            → direkter String, gewinnt immer.
+        //      Wird benutzt wenn data-copy als ID/Slug genutzt wird, der echte
+        //      Wert aber separat steht (z.B. OpenAPI/llms-URLs).
+        //   2. data-copy="#sel"                → DOM-Node abrufen, value || textContent.
+        //   3. data-copy="…konkreter String…"  → den Wert direkt kopieren.
+        //   4. (kein data-copy gesetzt)        → Button-Text.
+        document.addEventListener('click', async (e) => {
+          const el = e.target.closest('[data-copy], [data-copy-target]');
+          if (!el) return;
+          e.preventDefault();
+          const target = el.getAttribute('data-copy-target');
+          const ref = el.getAttribute('data-copy');
+          let text = '';
+          if (target) {
+            text = target;
+          } else if (ref && ref.startsWith('#')) {
+            const node = document.querySelector(ref);
+            text = node ? (node.value || node.textContent || '') : '';
+          } else if (ref) {
+            text = ref;
+          } else {
+            text = el.textContent || '';
+          }
+          try {
+            await navigator.clipboard.writeText(text.trim());
+            window.toast('success', "Copied");
+            const orig = el.getAttribute('data-copy-orig') || el.innerHTML;
+            el.setAttribute('data-copy-orig', orig);
+            const done = el.getAttribute('data-copy-done');
+            if (done) {
+              el.innerHTML = done;
+              setTimeout(() => { el.innerHTML = orig; }, 1500);
+            }
+          } catch (err) {
+            window.toast('error', "Copy failed");
+          }
+        });
+
+        // Theme-Toggle (Sprint 24 / Paket A) — Light/System/Dark per LocalStorage.
+        Alpine.data('themeToggle', () => ({
+          mode: 'system',
+          init() {
+            this.mode = localStorage.getItem('oanor.theme') || 'system';
+            this.apply();
+            // System-Mode: bei OS-Switch live umschalten
+            if (window.matchMedia) {
+              window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                if (this.mode === 'system') this.apply();
+              });
+            }
+          },
+          set(m) {
+            this.mode = m;
+            if (m === 'system') localStorage.removeItem('oanor.theme');
+            else localStorage.setItem('oanor.theme', m);
+            this.apply();
+          },
+          apply() {
+            const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const dark = this.mode === 'dark' || (this.mode === 'system' && sysDark);
+            document.documentElement.classList.toggle('dark', dark);
+          },
+        }));
+
+        // Notification-Bell-Component (lazy-load der Items beim Open)
+        Alpine.data('notificationBell', () => ({
+          open: false, count: 0, items: [], loading: false, _loaded: false,
+          init() {
+            // Counter-fetch beim Page-Load — plus visibility-aware refresh:
+            // wenn der User vom anderen Tab zurückkommt, sofort aktualisieren;
+            // sonst alle 60s im Hintergrund.
+            const refreshCount = () => fetch('/auth/notifications/unread')
+              .then(r => r.json())
+              .then(d => this.count = d.count || 0)
+              .catch(() => {});
+            refreshCount();
+            document.addEventListener('visibilitychange', () => {
+              if (document.visibilityState === 'visible') refreshCount();
+            });
+            setInterval(() => {
+              if (document.visibilityState === 'visible') refreshCount();
+            }, 60000);
+          },
+          toggleOpen() {
+            this.open = !this.open;
+            if (this.open && !this._loaded) this.loadItems();
+          },
+          loadItems() {
+            this.loading = true;
+            fetch('/auth/notifications/unread?preview=5')
+              .then(r => r.json())
+              .then(d => { this.items = d.items || []; this._loaded = true; })
+              .catch(() => {})
+              .finally(() => { this.loading = false; });
+          },
+          resolveLink(link) {
+            if (!link) return '/notifications';
+            if (!link.startsWith('/')) return link;
+            // Strip leading /xx/ if present, re-prefix with current locale
+            return '' + link.replace(/^\/[a-z]{2}\//, '/');
+          },
+        }));
+
+        // Form-Dirty-Schutz: jede x-data-Komponente kann ein 'dirty: false'-Prop
+        // setzen + ein <form ... data-dirty-guard>. Bei Page-Leave warnen wir.
+        // Nutzung im Form: data-dirty-guard, dann jeder input @change="dirty = true"
+        // oder @input="dirty = true". Manuelle Markierung nach Save: dirty = false.
+        Alpine.magic('markDirty', () => function (el, value) {
+          // Helper für inline-handlers: $markDirty($el, true)
+          // Damit @input="$markDirty($el, true)" reicht.
+          let scope = el;
+          while (scope && !scope.hasAttribute('data-dirty-guard')) scope = scope.parentElement;
+          if (scope) scope._dirty = !!value;
+        });
+
+        window.addEventListener('beforeunload', (e) => {
+          const dirty = Array.from(document.querySelectorAll('[data-dirty-guard]')).some(el => el._dirty);
+          if (dirty) {
+            // Browser zeigen einen generischen Standard-Dialog. Custom-Text wird seit ~2018 ignoriert.
+            e.preventDefault();
+            e.returnValue = '';
+          }
+        });
+
+        // Keyboard-Shortcuts (Linear/Stripe-Style)
+        // Filter ignored input contexts.
+        const isTyping = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+        let gPressed = false; let gTimer = null;
+        const kbdRoutes = {
+          dashboard: '/dashboard',
+          keys: '/developer/keys',
+          usage: '/usage',
+          webhooks: '/developer/webhooks',
+          projects: '/admin/projects',
+          analytics: '/analytics',
+          marketplace: '/marketplace',
+        };
+        const goTo = (route) => { window.location.href = kbdRoutes[route] || route; };
+        document.addEventListener('keydown', (e) => {
+          if (e.metaKey || e.ctrlKey || e.altKey) return;
+          if (isTyping(document.activeElement)) {
+            if (e.key === 'Escape' && document.activeElement.blur) document.activeElement.blur();
+            return;
+          }
+          if (e.key === '?') {
+            e.preventDefault();
+            const m = document.getElementById('kbd-cheatsheet');
+            if (m) m.showModal && m.showModal();
+            return;
+          }
+          if (e.key === '/') {
+            const inp = document.querySelector('[data-kbd-search]');
+            if (inp) { e.preventDefault(); inp.focus(); }
+            return;
+          }
+          if (e.key === 'n') {
+            const btn = document.querySelector('[data-kbd-new]');
+            if (btn) { e.preventDefault(); btn.click(); }
+            return;
+          }
+          if (e.key === 'g') { gPressed = true; if (gTimer) clearTimeout(gTimer); gTimer = setTimeout(() => gPressed = false, 1200); return; }
+          if (gPressed) {
+            gPressed = false;
+            if (e.key === 'd') { e.preventDefault(); goTo('dashboard'); return; }
+            if (e.key === 'k') { e.preventDefault(); goTo('keys'); return; }
+            if (e.key === 'u') { e.preventDefault(); goTo('usage'); return; }
+            if (e.key === 'w') { e.preventDefault(); goTo('webhooks'); return; }
+            if (e.key === 'p') { e.preventDefault(); goTo('projects'); return; }
+            if (e.key === 'a') { e.preventDefault(); goTo('analytics'); return; }
+            if (e.key === 'm') { e.preventDefault(); goTo('marketplace'); return; }
+          }
+        });
+      });
+    </script>
+
+        <footer class="border-t border-ink-100 bg-ink-50/60">
+        <div class="mx-auto max-w-7xl px-6 py-12">
+            <div class="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-6">
+                <div class="col-span-2">
+                    <a href="/" class="inline-flex items-center gap-2 text-ink-900">
+                        <img src="/assets/brand/oanor-mark.svg?v=20260507" alt="" class="h-8 w-8 rounded-lg" width="32" height="32">
+                        <span class="text-base font-bold tracking-tight">oanor</span>
+                    </a>
+                    <p class="mt-3 max-w-xs text-sm text-ink-500">A marketplace for APIs. Built so the upstream secret never leaks.</p>
+                </div>
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wide text-ink-500">Product</h4>
+                    <ul class="mt-3 space-y-2 text-sm text-ink-700">
+                        <li><a href="/marketplace" class="hover:text-ink-900">Marketplace</a></li>
+                        <li><a href="/categories" class="hover:text-ink-900">Categories</a></li>
+                        <li><a href="/pricing" class="hover:text-ink-900">Pricing</a></li>
+                        <li><a href="/roadmap" class="hover:text-ink-900">Roadmap</a></li>
+                        <li><a href="/changelog" class="hover:text-ink-900">Changelog</a></li>
+                        <li><a href="/features" class="hover:text-ink-900">Features</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wide text-ink-500">Solutions</h4>
+                    <ul class="mt-3 space-y-2 text-sm text-ink-700">
+                        <li><a href="/buyers" class="hover:text-ink-900">For buyers</a></li>
+                        <li><a href="/providers" class="hover:text-ink-900">For providers</a></li>
+                        <li><a href="/trust" class="hover:text-ink-900">Trust center</a></li>
+                        <li><a href="/compliance" class="hover:text-ink-900">Compliance</a></li>
+                        <li><a href="/support" class="hover:text-ink-900">Support</a></li>
+                        <li><a href="/help" class="hover:text-ink-900">Help center</a></li>
+                        <li><a href="/community" class="hover:text-ink-900">Community</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wide text-ink-500">Developers</h4>
+                    <ul class="mt-3 space-y-2 text-sm text-ink-700">
+                        <li><a href="https://api.oanor.com" class="hover:text-ink-900">api.oanor.com</a></li>
+                        <li><a href="/sitemap.xml" class="hover:text-ink-900">Sitemap</a></li>
+                        <li><a href="/llms.txt" class="hover:text-ink-900">llms.txt</a></li>
+                        <li><a href="/api/index.json" class="hover:text-ink-900">API catalog</a></li>
+                        <li><a href="/status" class="hover:text-ink-900">Status</a></li>
+                        <li><a href="/register" class="hover:text-ink-900">Get an API key</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wide text-ink-500">Company</h4>
+                    <ul class="mt-3 space-y-2 text-sm text-ink-700">
+                        <li><a href="/about" class="hover:text-ink-900">About</a></li>
+                        <li><a href="/contact" class="hover:text-ink-900">Contact</a></li>
+                        <li><a href="/cdn-cgi/l/email-protection#335b565f5f5c735c525d5c411d505c5e" class="hover:text-ink-900"><span class="__cf_email__" data-cfemail="bfd7dad3d3d0ffd0ded1d0cd91dcd0d2">[email&#160;protected]</span></a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wide text-ink-500">Legal</h4>
+                    <ul class="mt-3 space-y-2 text-sm text-ink-700">
+                        <li><a href="/privacy" class="hover:text-ink-900">Privacy</a></li>
+                        <li><a href="/terms" class="hover:text-ink-900">Terms</a></li>
+                        <li><a href="/imprint" class="hover:text-ink-900">Imprint</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-10 flex flex-col gap-3 border-t border-ink-100 pt-6 text-xs text-ink-500 md:flex-row md:items-center md:justify-between">
+                <span>© 2026 oanor. Built secure, kept clean.</span>
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="font-mono text-[11px] text-ink-400">EU&nbsp;·&nbsp;GDPR-ready&nbsp;·&nbsp;No-leak gateway</span>
+                    <div x-data="themeToggle()" x-init="init()" class="inline-flex items-center gap-1 rounded-md border border-ink-200 bg-white px-1 py-0.5">
+                        <button type="button" @click="set('light')" :class="mode === 'light' ? 'bg-ink-900 text-white' : 'text-ink-600 hover:bg-ink-50'" class="rounded px-2 py-0.5 font-medium" title="Light"><svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/></svg></button>
+                        <button type="button" @click="set('system')" :class="mode === 'system' ? 'bg-ink-900 text-white' : 'text-ink-600 hover:bg-ink-50'" class="rounded px-2 py-0.5 font-medium" title="System"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4" stroke-linecap="round"/></svg></button>
+                        <button type="button" @click="set('dark')" :class="mode === 'dark' ? 'bg-ink-900 text-white' : 'text-ink-600 hover:bg-ink-50'" class="rounded px-2 py-0.5 font-medium" title="Dark"><svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+                    </div>
+                    <div class="inline-flex items-center gap-1 rounded-md border border-ink-200 bg-white px-1 py-0.5">
+                                                    <a href="/docs" class="bg-ink-900 text-white rounded px-2 py-0.5 font-medium" lang="en" title="English">EN</a>
+                                                    <a href="/de/dokumentation" class="text-ink-600 hover:bg-ink-50 rounded px-2 py-0.5 font-medium" lang="de" title="Deutsch">DE</a>
+                                                    <a href="/it/documentazione" class="text-ink-600 hover:bg-ink-50 rounded px-2 py-0.5 font-medium" lang="it" title="Italiano">IT</a>
+                                                    <a href="/fr/documentation" class="text-ink-600 hover:bg-ink-50 rounded px-2 py-0.5 font-medium" lang="fr" title="Français">FR</a>
+                                                    <a href="/es/documentacion" class="text-ink-600 hover:bg-ink-50 rounded px-2 py-0.5 font-medium" lang="es" title="Español">ES</a>
+                                                    <a href="/nl/documentatie" class="text-ink-600 hover:bg-ink-50 rounded px-2 py-0.5 font-medium" lang="nl" title="Nederlands">NL</a>
+                                                    <a href="/el/tekmiriosi" class="text-ink-600 hover:bg-ink-50 rounded px-2 py-0.5 font-medium" lang="el" title="Ελληνικά">EL</a>
+                                            </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+            <div id="oanor-consent-banner"
+         x-data="oanorConsent()"
+         x-init="init()"
+         x-cloak
+         x-show="needsBanner"
+         class="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:left-auto sm:right-4 sm:bottom-4 sm:max-w-md">
+        <div class="rounded-2xl border border-ink-200 bg-white shadow-xl">
+            <div class="p-5">
+                <h2 class="text-sm font-semibold text-ink-900">Your cookie choices</h2>
+                <p class="mt-2 text-xs leading-5 text-ink-600">
+                    We use cookies to keep oanor.com running, measure usage, and improve Google Ads campaigns. You decide what we may store.                    <a href="/privacy" class="text-brand-700 hover:text-brand-800">Privacy details</a>
+                </p>
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                    <button type="button" @click="acceptAll()" class="inline-flex items-center justify-center rounded-md bg-ink-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-ink-800">Accept all</button>
+                    <button type="button" @click="rejectAll()" class="inline-flex items-center justify-center rounded-md border border-ink-200 bg-white px-3.5 py-2 text-xs font-semibold text-ink-700 hover:bg-ink-50">Reject all</button>
+                    <button type="button" @click="showCustomize = true" class="ml-auto text-xs font-medium text-brand-700 hover:text-brand-800">Customize</button>
+                </div>
+            </div>
+
+            <!-- Customize modal — 3 categories -->
+            <div x-show="showCustomize" x-cloak @click.self="showCustomize = false"
+                 class="fixed inset-0 z-[60] grid place-items-center bg-ink-900/50 p-4">
+                <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+                    <header class="flex items-center justify-between border-b border-ink-100 px-5 py-4">
+                        <h3 class="text-base font-semibold text-ink-900">Cookie preferences</h3>
+                        <button type="button" @click="showCustomize = false" class="text-ink-400 hover:text-ink-900">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+                        </button>
+                    </header>
+                    <div class="space-y-4 p-5">
+                        <div class="flex items-start justify-between gap-3 rounded-lg border border-ink-100 bg-ink-50/50 p-3">
+                            <div>
+                                <p class="text-sm font-semibold text-ink-900">Necessary</p>
+                                <p class="mt-0.5 text-xs leading-5 text-ink-600">Session, login and CSRF cookies. Cannot be turned off — the site doesn&apos;t work without them.</p>
+                            </div>
+                            <span class="mt-1 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Always on</span>
+                        </div>
+                        <label class="flex items-start justify-between gap-3 rounded-lg border border-ink-100 p-3 cursor-pointer">
+                            <div>
+                                <p class="text-sm font-semibold text-ink-900">Analytics</p>
+                                <p class="mt-0.5 text-xs leading-5 text-ink-600">Helps us understand which pages people use, so we can fix friction and stop building things nobody opens.</p>
+                            </div>
+                            <input type="checkbox" x-model="prefs.a" class="mt-1 h-5 w-5 rounded border-ink-300 text-ink-900 focus:ring-ink-900">
+                        </label>
+                        <label class="flex items-start justify-between gap-3 rounded-lg border border-ink-100 p-3 cursor-pointer">
+                            <div>
+                                <p class="text-sm font-semibold text-ink-900">Marketing</p>
+                                <p class="mt-0.5 text-xs leading-5 text-ink-600">Lets Google Ads measure which campaigns brought you here. No personal profile is built on oanor — only conversion signals.</p>
+                            </div>
+                            <input type="checkbox" x-model="prefs.m" class="mt-1 h-5 w-5 rounded border-ink-300 text-ink-900 focus:ring-ink-900">
+                        </label>
+                    </div>
+                    <footer class="flex items-center justify-end gap-2 border-t border-ink-100 bg-ink-50/40 px-5 py-3">
+                        <button type="button" @click="showCustomize = false" class="text-xs font-medium text-ink-600 hover:text-ink-900">Cancel</button>
+                        <button type="button" @click="savePrefs()" class="rounded-md bg-ink-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-ink-800">Save preferences</button>
+                    </footer>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script nonce="O38loh9m5GCrQHXSGuO4nw">
+      function oanorConsent() {
+        return {
+          needsBanner: false,
+          showCustomize: false,
+          prefs: { a: false, m: false },
+          init() {
+            var m = document.cookie.match(/oanor_consent_v1=([^;]+)/);
+            if (!m) {
+              this.needsBanner = true;
+              return;
+            }
+            try {
+              var c = JSON.parse(decodeURIComponent(m[1]));
+              this.prefs = { a: !!c.a, m: !!c.m };
+            } catch (_) {
+              this.needsBanner = true;
+            }
+          },
+          save(a, m) {
+            var v = { a: !!a, m: !!m, ts: Math.floor(Date.now()/1000), v: 1 };
+            document.cookie = 'oanor_consent_v1=' + encodeURIComponent(JSON.stringify(v))
+              + '; Path=/; Max-Age=' + (12*30*86400) + '; SameSite=Lax; Secure';
+            if (window.gtag) {
+              window.gtag('consent', 'update', {
+                ad_storage:         m ? 'granted' : 'denied',
+                ad_user_data:       m ? 'granted' : 'denied',
+                ad_personalization: m ? 'granted' : 'denied',
+                analytics_storage:  a ? 'granted' : 'denied'
+              });
+            }
+            this.prefs = { a: !!a, m: !!m };
+            this.needsBanner = false;
+            this.showCustomize = false;
+          },
+          acceptAll()  { this.save(true,  true); },
+          rejectAll()  { this.save(false, false); },
+          savePrefs()  { this.save(this.prefs.a, this.prefs.m); }
+        };
+      }
+    </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" nonce="O38loh9m5GCrQHXSGuO4nw" data-cf-beacon='{"version":"2024.11.0","token":"e436d3c70421464aa8b7181d3d924c35","r":1}' crossorigin="anonymous"></script>
+</body>
+</html>

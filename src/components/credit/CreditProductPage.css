@@ -1,0 +1,1460 @@
+/* ==========================================================================
+   KEPWE CREDIT — ULTRA-PREMIUM DESIGN SYSTEM (Matches Kepwe Brand Architecture)
+   Theme: Pure White (#FFFFFF), Primary CTA (#214ECF), Light Surfaces (#F7F9FC),
+   Border (#E4E7EC), Subtle Glow Shadows, and Glassmorphic Elements.
+   ========================================================================== */
+
+.credit-product-page {
+  background-color: #FFFFFF;
+  color: #111827;
+  font-family: var(--font-ui, 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ── CONTAINER ─────────────────────────────────────────────────────── */
+.credit-product-page .container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── 01. SUB-NAVBAR ─────────────────────────────────────────────────── */
+.credit-sub-navbar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid #E4E7EC;
+  padding: 14px 0;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.03);
+}
+
+.credit-nav-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.credit-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #111827;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.025em;
+  transition: opacity 0.15s ease;
+}
+
+.brand-logo-link:hover {
+  opacity: 0.9;
+}
+
+.brand-badge {
+  background: #F0F4FE;
+  color: #214ECF;
+  border: 1px solid #D0D5DD;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.credit-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.c-nav-link {
+  background: none;
+  border: none;
+  color: #475467;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 0;
+  position: relative;
+  transition: color 0.15s ease;
+}
+
+.c-nav-link:hover {
+  color: #214ECF;
+}
+
+.c-nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: #214ECF;
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.c-nav-link:hover::after {
+  width: 100%;
+}
+
+.credit-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.c-nav-login-link {
+  color: #475467;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.c-nav-login-link:hover {
+  color: #111827;
+  background: #F7F9FC;
+}
+
+.c-nav-track-link {
+  color: #214ECF;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: #F0F4FE;
+  border: 1px solid #D0D5DD;
+  transition: all 0.15s ease;
+}
+
+.c-nav-track-link:hover {
+  background: #E0EAFF;
+  border-color: #214ECF;
+}
+
+.nav-cta-btn {
+  padding: 9px 18px !important;
+  font-size: 0.85rem !important;
+  border-radius: 8px !important;
+}
+
+/* ── BUTTON STYLES (Primary #214ECF) ───────────────────────────────── */
+.btn-credit-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #214ECF;
+  color: #FFFFFF;
+  border: 1px solid #214ECF;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 13px 26px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(33, 78, 207, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+}
+
+.btn-credit-primary:hover {
+  background-color: #1A3EB4;
+  border-color: #1A3EB4;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(33, 78, 207, 0.35);
+}
+
+.btn-credit-primary:active {
+  transform: translateY(0);
+}
+
+.btn-credit-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #FFFFFF;
+  color: #344054;
+  border: 1.5px solid #D0D5DD;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 13px 26px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-credit-secondary:hover {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #111827;
+  transform: translateY(-2px);
+}
+
+.btn-lg {
+  padding: 15px 32px;
+  font-size: 1.025rem;
+}
+
+/* ── 02. HERO SECTION ─────────────────────────────────────────────── */
+.credit-hero-section {
+  padding: 88px 0 108px;
+  background-color: #FFFFFF;
+  position: relative;
+  border-bottom: 1px solid #E4E7EC;
+  background-image: 
+    radial-gradient(circle at 90% 10%, rgba(33, 78, 207, 0.05) 0%, transparent 50%),
+    radial-gradient(#214ECF 0.6px, transparent 0.6px);
+  background-size: 100% 100%, 24px 24px;
+}
+
+.credit-hero-grid {
+  display: grid;
+  grid-template-columns: 1.12fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.credit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #F0F4FE;
+  color: #214ECF;
+  border: 1px solid #D0D5DD;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 6px rgba(33, 78, 207, 0.06);
+}
+
+.credit-hero-headline {
+  font-size: clamp(2.5rem, 4.4vw, 3.75rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+  color: #111827;
+  margin-bottom: 20px;
+}
+
+.headline-accent {
+  color: #214ECF;
+  background: linear-gradient(135deg, #214ECF 0%, #0284C7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.credit-hero-sub {
+  font-size: 1.125rem;
+  color: #667085;
+  line-height: 1.65;
+  max-width: 520px;
+  margin-bottom: 36px;
+}
+
+.credit-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.credit-trust-strip-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.825rem;
+  color: #475467;
+  font-weight: 600;
+}
+
+.trust-dot-icon {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #12B76A;
+  box-shadow: 0 0 6px rgba(18, 183, 106, 0.5);
+}
+
+/* Hero Visual: UI Mockup Card */
+.hero-ui-mockup-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 22px;
+  box-shadow: 0 24px 54px -12px rgba(16, 24, 40, 0.08), 0 8px 20px -4px rgba(16, 24, 40, 0.04);
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-ui-mockup-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 32px 64px -12px rgba(33, 78, 207, 0.12);
+}
+
+.mockup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #F2F4F7;
+}
+
+.mockup-brand-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.mockup-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #214ECF;
+  background: #F0F4FE;
+  border: 1px solid #D0D5DD;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.mockup-field-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.m-field-label {
+  font-size: 0.775rem;
+  color: #667085;
+  font-weight: 600;
+}
+
+.m-amount-display {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+.mockup-slider {
+  width: 100%;
+  height: 6px;
+  background: #E4E7EC;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  accent-color: #214ECF;
+  margin-top: 4px;
+}
+
+.mockup-slider-bounds {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #98A2B3;
+  font-weight: 600;
+}
+
+.m-tenure-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.m-tenure-val {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #214ECF;
+}
+
+.m-tenure-pills {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.m-pill-btn {
+  background: #FFFFFF;
+  border: 1px solid #D0D5DD;
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #344054;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.m-pill-btn:hover {
+  border-color: #214ECF;
+  background: #F0F4FE;
+}
+
+.m-pill-btn.active {
+  background: #214ECF;
+  color: #FFFFFF;
+  border-color: #214ECF;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(33, 78, 207, 0.25);
+}
+
+.mockup-emi-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #F0F4FE;
+  border: 1px solid #D0D5DD;
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+
+.m-emi-lbl {
+  font-size: 0.825rem;
+  color: #475467;
+  font-weight: 600;
+}
+
+.m-emi-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #214ECF;
+  font-variant-numeric: tabular-nums;
+}
+
+.mockup-cta-btn {
+  width: 100%;
+}
+
+.mockup-footer-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #667085;
+}
+
+/* ── 03. TRUST STRIP SECTION ──────────────────────────────────────── */
+.credit-trust-strip-section {
+  padding: 68px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.trust-strip-header {
+  margin-bottom: 36px;
+}
+
+.trust-strip-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+}
+
+.trust-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.trust-strip-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.02);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.trust-strip-card:hover {
+  transform: translateY(-3px);
+  border-color: #214ECF;
+  box-shadow: 0 10px 24px -4px rgba(33, 78, 207, 0.08);
+}
+
+.ts-indicator-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #214ECF;
+  box-shadow: 0 0 6px rgba(33, 78, 207, 0.4);
+  margin-bottom: 4px;
+}
+
+.ts-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.ts-desc {
+  font-size: 0.875rem;
+  color: #667085;
+  line-height: 1.5;
+}
+
+/* ── COMMON SECTION HEADINGS ──────────────────────────────────────── */
+.section-head {
+  max-width: 760px;
+  margin: 0 auto 52px;
+}
+
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #214ECF;
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+.eyebrow-blue-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #214ECF;
+  box-shadow: 0 0 6px rgba(33, 78, 207, 0.4);
+}
+
+.section-title {
+  font-size: clamp(2rem, 3.2vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #111827;
+  line-height: 1.18;
+  margin-bottom: 14px;
+}
+
+.section-sub {
+  font-size: 1.075rem;
+  color: #667085;
+  line-height: 1.65;
+}
+
+/* ── 04. PROBLEM → SOLUTION ────────────────────────────────────────── */
+.credit-problem-solution-section {
+  padding: 104px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.problem-solution-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: 36px;
+}
+
+.comp-col {
+  border-radius: 20px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  transition: transform 0.2s ease;
+}
+
+.traditional-col {
+  background: #FFFBFB;
+  border: 1.5px solid #FECDCA;
+}
+
+.kepwe-col {
+  background: #F0F4FE;
+  border: 1.5px solid #D0D5DD;
+  box-shadow: 0 16px 40px -8px rgba(33, 78, 207, 0.1);
+}
+
+.col-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.725rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 5px 12px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.traditional-badge {
+  background: #FEE4E2;
+  color: #B42318;
+}
+
+.kepwe-badge {
+  background: #E0EAFF;
+  color: #214ECF;
+}
+
+.col-heading {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+}
+
+.comp-points-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comp-point-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.comp-point-item.negative {
+  color: #7A271A;
+}
+
+.comp-point-item.positive {
+  color: #1E3A8A;
+  font-weight: 600;
+}
+
+.cross-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #FECDCA;
+  color: #B42318;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.check-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #214ECF;
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(33, 78, 207, 0.35);
+}
+
+/* ── 05. HOW IT WORKS ──────────────────────────────────────────────── */
+.credit-how-it-works-section {
+  padding: 104px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.steps-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 52px;
+}
+
+.step-feature-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 18px;
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.03);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.step-feature-card:hover {
+  transform: translateY(-5px);
+  border-color: #214ECF;
+  box-shadow: 0 16px 32px -4px rgba(33, 78, 207, 0.1);
+}
+
+.step-num-tag {
+  font-size: 0.725rem;
+  font-weight: 800;
+  color: #214ECF;
+  letter-spacing: 0.08em;
+}
+
+.step-icon-wrap {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: #F0F4FE;
+  border: 1px solid #D0D5DD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0 6px;
+}
+
+.step-card-title {
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+
+.step-card-desc {
+  font-size: 0.885rem;
+  color: #667085;
+  line-height: 1.6;
+}
+
+/* ── 06. LOAN USE CASES ────────────────────────────────────────────── */
+.credit-usecases-section {
+  padding: 104px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.usecases-2x3-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.usecase-item-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.02);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.usecase-item-card:hover {
+  transform: translateY(-4px);
+  border-color: #214ECF;
+  box-shadow: 0 12px 28px rgba(33, 78, 207, 0.08);
+}
+
+.uc-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #F0F4FE;
+  border: 1px solid #D0D5DD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.uc-card-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.uc-card-desc {
+  font-size: 0.885rem;
+  color: #667085;
+  line-height: 1.55;
+}
+
+.usecase-disclaimer-wrap {
+  margin-top: 40px;
+}
+
+.usecase-disclaimer {
+  font-size: 0.8rem;
+  color: #98A2B3;
+  max-width: 680px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* ── 07. WHY KEPWE CREDIT ──────────────────────────────────────────── */
+.credit-why-section {
+  padding: 104px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.why-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.why-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 18px;
+  padding: 34px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.02);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.why-card:hover {
+  transform: translateY(-4px);
+  border-color: #214ECF;
+  box-shadow: 0 14px 30px rgba(33, 78, 207, 0.08);
+}
+
+.why-icon-box {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background-color: #F0F4FE;
+  border: 1px solid #D0D5DD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.why-card-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.why-card-desc {
+  font-size: 0.925rem;
+  color: #667085;
+  line-height: 1.6;
+}
+
+/* ── 08. ELIGIBILITY SECTION ───────────────────────────────────────── */
+.credit-eligibility-factors-section {
+  padding: 104px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.eligibility-box-card {
+  max-width: 960px;
+  margin: 0 auto;
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 24px;
+  padding: 52px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.03);
+}
+
+.factors-pills-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.factor-pill-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 16px 20px;
+  transition: border-color 0.15s ease;
+}
+
+.factor-pill-item:hover {
+  border-color: #214ECF;
+}
+
+.factor-bullet {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #F0F4FE;
+  border: 1px solid #D0D5DD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.factor-texts {
+  font-size: 0.9rem;
+  color: #475467;
+  line-height: 1.5;
+}
+
+.factor-name {
+  color: #111827;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.eligibility-cta-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid #E4E7EC;
+  padding-top: 32px;
+}
+
+.eligibility-hint {
+  font-size: 0.8rem;
+  color: #667085;
+  font-weight: 500;
+}
+
+/* ── 09. LOAN CALCULATOR ───────────────────────────────────────────── */
+.credit-calc-section {
+  padding: 104px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.calc-master-card {
+  max-width: 1000px;
+  margin: 0 auto;
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 24px;
+  padding: 48px;
+  box-shadow: 0 16px 40px rgba(16, 24, 40, 0.04);
+}
+
+.calc-layout-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 52px;
+  align-items: center;
+}
+
+.calc-sliders-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.calc-slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.c-slider-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.c-head-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.c-head-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #214ECF;
+  font-variant-numeric: tabular-nums;
+}
+
+.calc-range-slider {
+  width: 100%;
+  height: 8px;
+  background: #E4E7EC;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  accent-color: #214ECF;
+}
+
+.c-slider-bounds {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #98A2B3;
+  font-weight: 600;
+}
+
+.calc-rate-info-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 30px;
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+}
+
+.rate-lbl {
+  color: #667085;
+}
+
+.rate-val {
+  font-weight: 800;
+  color: #214ECF;
+}
+
+.rate-sub {
+  color: #98A2B3;
+  font-size: 0.75rem;
+}
+
+/* Results Box in Calculator */
+.calc-results-col {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 20px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.04);
+}
+
+.res-card-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #667085;
+  letter-spacing: 0.08em;
+}
+
+.res-emi-display {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.res-emi-num {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #214ECF;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.res-emi-sub {
+  font-size: 1rem;
+  color: #667085;
+  font-weight: 600;
+}
+
+.res-breakdown-table {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 0;
+  border-top: 1px solid #F2F4F7;
+  border-bottom: 1px solid #F2F4F7;
+  font-size: 0.875rem;
+}
+
+.res-row {
+  display: flex;
+  justify-content: space-between;
+  color: #475467;
+}
+
+.res-row.highlight {
+  color: #111827;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.calc-cta-btn {
+  width: 100%;
+}
+
+.res-legal-note {
+  font-size: 0.725rem;
+  color: #98A2B3;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* ── 10. TRUST / SECURITY ──────────────────────────────────────────── */
+.credit-security-section {
+  padding: 104px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.security-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.security-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.02);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.security-card:hover {
+  transform: translateY(-4px);
+  border-color: #214ECF;
+}
+
+.sec-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #F0F4FE;
+  border: 1px solid #D0D5DD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.sec-card-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.sec-card-desc {
+  font-size: 0.885rem;
+  color: #667085;
+  line-height: 1.55;
+}
+
+/* ── 11. LENDER / PARTNER ECOSYSTEM ────────────────────────────────── */
+.credit-ecosystem-section {
+  padding: 104px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.ecosystem-card {
+  max-width: 960px;
+  margin: 0 auto;
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 24px;
+  padding: 52px;
+}
+
+.eco-badges-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin: 40px 0;
+}
+
+.eco-badge-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.02);
+}
+
+.eco-badge-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.eco-badge-sub {
+  font-size: 0.8rem;
+  color: #667085;
+  line-height: 1.4;
+}
+
+.eco-legal-disclaimer-box {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 14px;
+  padding: 18px 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: 0.825rem;
+  color: #78350F;
+  line-height: 1.55;
+}
+
+/* ── 12. FAQ SECTION ───────────────────────────────────────────────── */
+.credit-faq-section {
+  padding: 104px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.faq-accordion-container {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.faq-accordion-item {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 22px 28px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.faq-accordion-item:hover {
+  border-color: #214ECF;
+}
+
+.faq-accordion-item.open {
+  border-color: #214ECF;
+  box-shadow: 0 6px 20px rgba(33, 78, 207, 0.07);
+}
+
+.faq-q-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.faq-question {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.faq-chevron {
+  color: #667085;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.faq-accordion-item.open .faq-chevron {
+  transform: rotate(180deg);
+  color: #214ECF;
+}
+
+.faq-a-body {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #F2F4F7;
+  font-size: 0.925rem;
+  color: #475467;
+  line-height: 1.65;
+}
+
+/* ── 13. FINAL HIGH CONVERSION BLUE SECTION ─────────────────────────── */
+.credit-final-cta-section {
+  padding: 104px 0;
+  background-color: #FFFFFF;
+}
+
+.final-blue-cta-box {
+  background: linear-gradient(135deg, #214ECF 0%, #173DB0 100%);
+  border-radius: 28px;
+  padding: 72px 40px;
+  max-width: 960px;
+  margin: 0 auto;
+  color: #FFFFFF;
+  box-shadow: 0 24px 60px -12px rgba(33, 78, 207, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.final-blue-cta-box::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.final-cta-headline {
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  font-weight: 800;
+  color: #FFFFFF;
+  margin-bottom: 14px;
+  letter-spacing: -0.03em;
+}
+
+.final-cta-subhead {
+  font-size: 1.18rem;
+  color: #E0EAFF;
+  margin-bottom: 36px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.final-cta-btn-wrap {
+  margin-bottom: 24px;
+}
+
+.btn-white-hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #FFFFFF;
+  color: #214ECF;
+  border: none;
+  font-size: 1.05rem;
+  font-weight: 800;
+  padding: 16px 36px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-white-hero-cta:hover {
+  transform: translateY(-2px);
+  background-color: #F8FAFC;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
+}
+
+.final-legal-disclaimer {
+  font-size: 0.8rem;
+  color: #C7D7FE;
+  max-width: 560px;
+  margin: 0 auto;
+  line-height: 1.45;
+}
+
+/* ── RESPONSIVE STYLES ─────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .credit-hero-grid,
+  .calc-layout-grid,
+  .problem-solution-grid {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+
+  .credit-nav-links {
+    display: none;
+  }
+
+  .steps-cards-grid,
+  .why-cards-grid,
+  .trust-strip-grid,
+  .security-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .usecases-2x3-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .credit-hero-section {
+    padding: 56px 0 72px;
+  }
+
+  .credit-hero-headline {
+    font-size: 2.25rem;
+  }
+
+  .steps-cards-grid,
+  .why-cards-grid,
+  .trust-strip-grid,
+  .security-cards-grid,
+  .usecases-2x3-grid,
+  .factors-pills-list,
+  .eco-badges-row {
+    grid-template-columns: 1fr;
+  }
+
+  .credit-hero-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .credit-hero-actions button {
+    width: 100% !important;
+  }
+
+  .calc-master-card,
+  .eligibility-box-card,
+  .ecosystem-card {
+    padding: 28px 20px;
+  }
+
+  .final-blue-cta-box {
+    padding: 48px 24px;
+  }
+
+  .final-cta-headline {
+    font-size: 1.85rem;
+  }
+}

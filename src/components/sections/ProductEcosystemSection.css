@@ -1,0 +1,163 @@
+/* Product Ecosystem Section Stylesheet */
+.product-ecosystem-section {
+  background-color: #FFFFFF;
+  padding: 96px 0;
+  border-top: 1px solid #E4E7EC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+@media (min-width: 1024px) {
+  .product-ecosystem-section {
+    padding: 112px 0;
+  }
+}
+
+.ecosystem-header {
+  max-width: 680px;
+  margin: 0 auto 56px;
+  text-align: center;
+}
+
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #214ECF;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.eyebrow-blue-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #214ECF;
+}
+
+.ecosystem-title {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(1.85rem, 3vw + 0.5rem, 2.75rem);
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.025em;
+  margin-bottom: 14px;
+}
+
+.ecosystem-subtitle {
+  font-size: 1.05rem;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.product-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Product Card Design (PDF Specs) */
+.product-ecosystem-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 32px 28px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.03);
+  display: flex;
+  flex-direction: column;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  position: relative;
+}
+
+/* Hover Interaction (Section 9 Specs) */
+.product-ecosystem-card:hover {
+  transform: translateY(-4px);
+  border-color: #D0D5DD;
+  box-shadow: 0 12px 28px -4px rgba(16, 24, 40, 0.08);
+}
+
+.card-top-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.blue-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #214ECF;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.product-ecosystem-card:hover .blue-indicator-dot {
+  transform: scale(1.25);
+  box-shadow: 0 0 8px rgba(33, 78, 207, 0.5);
+}
+
+.product-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #667085;
+  letter-spacing: 0.06em;
+}
+
+.product-card-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background-color: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.product-card-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.product-card-sub {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #214ECF;
+  margin-bottom: 12px;
+}
+
+.product-card-desc {
+  font-size: 0.925rem;
+  color: #667085;
+  line-height: 1.55;
+  margin-bottom: 28px;
+  flex: 1;
+}
+
+.product-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  font-size: 0.925rem;
+  font-weight: 700;
+  color: #214ECF;
+  transition: color 180ms ease;
+}
+
+.cta-arrow {
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.product-ecosystem-card:hover .cta-arrow {
+  transform: translateX(4px);
+}

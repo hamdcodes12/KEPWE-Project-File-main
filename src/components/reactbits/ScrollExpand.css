@@ -1,0 +1,200 @@
+.scroll-expand-section-root {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #0B0F19;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 24px 60px 24px;
+}
+
+.scroll-expand-asset-box {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.scroll-expand-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+}
+
+.scroll-expand-scrim-layer {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(11, 15, 25, 0.35) 0%, rgba(11, 15, 25, 0.72) 100%),
+              linear-gradient(180deg, rgba(11, 15, 25, 0.45) 0%, rgba(11, 15, 25, 0.15) 45%, rgba(11, 15, 25, 0.65) 100%);
+  pointer-events: none;
+}
+
+/* Centered Full-Screen Hero Content - 100% Transparent */
+.scroll-expand-center-container {
+  position: relative;
+  z-index: 2;
+  max-width: 860px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 0 20px;
+  background: transparent;
+}
+
+.expanded-eyebrow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #93C5FD;
+  background: rgba(33, 78, 207, 0.4);
+  border: 1px solid rgba(147, 197, 253, 0.45);
+  padding: 6px 18px;
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  text-transform: uppercase;
+}
+
+.expand-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #60A5FA;
+  box-shadow: 0 0 8px #60A5FA;
+}
+
+.expanded-big-title {
+  font-size: clamp(2.4rem, 5vw, 4.2rem);
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  margin: 0;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.expanded-sub-copy {
+  font-size: clamp(1rem, 1.5vw, 1.22rem);
+  color: #E2E8F0;
+  line-height: 1.65;
+  max-width: 680px;
+  margin: 0;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8), 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* Action Buttons Row */
+.expanded-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-expand-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #214ECF;
+  color: #FFFFFF;
+  font-size: 0.98rem;
+  font-weight: 700;
+  padding: 14px 28px;
+  border-radius: 10px;
+  border: 1px solid #214ECF;
+  cursor: pointer;
+  box-shadow: 0 6px 20px -2px rgba(33, 78, 207, 0.6);
+  transition: all 0.2s ease;
+}
+
+.btn-expand-primary:hover {
+  background-color: #1A3EB4;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -2px rgba(33, 78, 207, 0.8);
+}
+
+.btn-expand-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  font-size: 0.98rem;
+  font-weight: 700;
+  padding: 14px 26px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-expand-secondary:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: #FFFFFF;
+  transform: translateY(-2px);
+}
+
+.scroll-expand-benefits {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #CBD5E1;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.b-dot {
+  color: #60A5FA;
+}
+
+@media (max-width: 768px) {
+  .scroll-expand-section-root {
+    padding: 85px 16px 40px 16px;
+    min-height: 90vh;
+  }
+  .scroll-expand-center-container {
+    padding: 0 8px;
+    gap: 16px;
+  }
+  .expanded-big-title {
+    font-size: clamp(1.85rem, 7.5vw, 2.5rem);
+    line-height: 1.15;
+  }
+  .expanded-sub-copy {
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+  .expanded-btn-row {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+  .btn-expand-primary, .btn-expand-secondary {
+    width: 100%;
+    max-width: 280px;
+    padding: 12px 20px;
+    font-size: 0.92rem;
+    justify-content: center;
+  }
+  .scroll-expand-benefits {
+    font-size: 0.76rem;
+    gap: 8px;
+  }
+}
+
+

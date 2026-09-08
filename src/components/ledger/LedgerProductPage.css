@@ -1,0 +1,831 @@
+/* KEPWE LEDGER PREMIUM PRODUCT PAGE STYLES */
+
+.ledger-product-page {
+  background-color: #FFFFFF;
+  color: #111827;
+  font-family: var(--font-family-sans);
+  overflow-x: hidden;
+}
+
+/* 01. HERO SECTION */
+.ledger-hero-section {
+  padding: 80px 0 96px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.ledger-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+
+.ledger-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #F0F4FE;
+  color: #214ECF;
+  border: 1px solid #D0D5DD;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 24px;
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #214ECF;
+}
+
+.ledger-hero-headline {
+  font-size: 3.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  color: #111827;
+  margin-bottom: 20px;
+}
+
+.headline-accent {
+  color: #214ECF;
+}
+
+.ledger-hero-sub {
+  font-size: 1.125rem;
+  color: #667085;
+  line-height: 1.6;
+  max-width: 520px;
+  margin-bottom: 32px;
+}
+
+.ledger-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 40px;
+}
+
+.ledger-trust-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trust-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #475467;
+  font-weight: 500;
+}
+
+/* HERO ABSTRACT VISUAL */
+.ledger-hero-visual {
+  position: relative;
+}
+
+.ledger-visual-window {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px -8px rgba(16, 24, 40, 0.08);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.visual-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #F7F9FC;
+}
+
+.dots-group {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.dot.red { background-color: #F04438; }
+.dot.yellow { background-color: #F79009; }
+.dot.green { background-color: #12B76A; }
+
+.window-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #98A2B3;
+  letter-spacing: 0.1em;
+}
+
+.visual-summary-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.summary-card {
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-label {
+  font-size: 0.75rem;
+  color: #667085;
+  font-weight: 600;
+}
+
+.card-val-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.card-num {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.card-trend {
+  font-size: 0.725rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.card-trend.positive {
+  background: #ECFDF3;
+  color: #12B76A;
+}
+.card-trend.neutral {
+  background: #F0F4FE;
+  color: #214ECF;
+}
+
+.card-status-badge {
+  background: #ECFDF3;
+  color: #12B76A;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.card-foot {
+  font-size: 0.7rem;
+  color: #98A2B3;
+}
+
+.visual-chart-box {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.chart-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.chart-heading {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.chart-badge {
+  font-size: 0.7rem;
+  color: #214ECF;
+  background: #F0F4FE;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.ledger-chart-svg {
+  width: 100%;
+  height: 80px;
+}
+
+
+/* 02. CORE FEATURES (6 CARDS) */
+.ledger-features-section {
+  padding: 96px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #214ECF;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+.eyebrow-blue-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #214ECF;
+}
+
+.section-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #111827;
+  margin-bottom: 14px;
+}
+
+.section-sub {
+  font-size: 1.05rem;
+  color: #667085;
+  max-width: 600px;
+  margin: 0 auto 56px;
+  line-height: 1.5;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.feature-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 28px;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.02);
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  border-color: #D0D5DD;
+  box-shadow: 0 12px 24px -4px rgba(16, 24, 40, 0.06);
+}
+
+.feature-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: #F0F4FE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.feature-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.feature-card-desc {
+  font-size: 0.9rem;
+  color: #667085;
+  line-height: 1.55;
+}
+
+
+/* 03. BUSINESS INSIGHT SECTION */
+.ledger-insight-section {
+  padding: 104px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+.insight-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #111827;
+  margin-bottom: 16px;
+}
+
+.insight-desc {
+  font-size: 1.05rem;
+  color: #667085;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.insight-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bullet-item {
+  display: flex;
+  gap: 12px;
+  font-size: 0.925rem;
+  color: #475467;
+  line-height: 1.5;
+}
+
+.bullet-icon {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.insight-ui-card {
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.insight-ui-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ui-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.ui-status-tag {
+  background: #ECFDF3;
+  color: #12B76A;
+  font-size: 0.725rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.insight-ui-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ui-metric-box {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 10px;
+  padding: 16px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.m-label {
+  font-size: 0.75rem;
+  color: #667085;
+}
+
+.m-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.m-sub {
+  font-size: 0.7rem;
+  color: #98A2B3;
+}
+
+.insight-breakdown-bar {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.bar-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  color: #344054;
+}
+
+.bar-track {
+  height: 8px;
+  background: #F0F4FE;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: #214ECF;
+  border-radius: 999px;
+}
+
+
+/* 04. GST SECTION */
+.ledger-gst-section {
+  padding: 96px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.gst-card-block {
+  max-width: 900px;
+  margin: 0 auto;
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.03);
+}
+
+.gst-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+
+.gst-sub {
+  font-size: 1rem;
+  color: #667085;
+  margin-bottom: 36px;
+}
+
+.gst-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.gst-mini-card {
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.g-label {
+  font-size: 0.75rem;
+  color: #667085;
+  font-weight: 600;
+}
+
+.g-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.g-status {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.text-green { color: #12B76A; }
+.text-blue { color: #214ECF; }
+
+
+/* 05. FINANCIAL TABLE SECTION */
+.ledger-table-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.ledger-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  background: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(16, 24, 40, 0.02);
+}
+
+.ledger-financial-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.ledger-financial-table th {
+  background: #F7F9FC;
+  color: #475467;
+  font-weight: 700;
+  padding: 14px 20px;
+  border-bottom: 1px solid #E4E7EC;
+  white-space: nowrap;
+}
+
+.ledger-financial-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #F7F9FC;
+  color: #344054;
+  white-space: nowrap;
+}
+
+.ledger-financial-table tr:last-child td {
+  border-bottom: none;
+}
+
+.font-mono { font-family: monospace; font-size: 0.85rem; }
+.font-bold { font-weight: 700; }
+.text-main { color: #111827; }
+
+.category-pill {
+  background: #F0F4FE;
+  color: #214ECF;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.status-badge-table {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ECFDF3;
+  color: #12B76A;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+
+/* 06. UNDERSTAND YOUR NUMBERS SECTION */
+.ledger-understand-section {
+  padding: 96px 0;
+  background-color: #F7F9FC;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.understand-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.understand-sub {
+  font-size: 1.05rem;
+  color: #667085;
+  margin-bottom: 48px;
+}
+
+.understand-chart-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.03);
+}
+
+.chart-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.chart-card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.chart-card-sub {
+  font-size: 0.8rem;
+  color: #667085;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475467;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.legend-dot.blue { background-color: #214ECF; }
+.legend-dot.gray { background-color: #98A2B3; }
+
+.understand-big-chart {
+  width: 100%;
+  height: 160px;
+}
+
+
+/* 07. BUSINESS JOURNEY FLOW */
+.ledger-journey-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.journey-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  margin-bottom: 56px;
+}
+
+.journey-flow-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.journey-step {
+  flex: 1;
+  background: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+.step-num {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #214ECF;
+  margin-bottom: 8px;
+}
+
+.step-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.step-desc {
+  font-size: 0.825rem;
+  color: #667085;
+  line-height: 1.4;
+}
+
+.journey-arrow {
+  font-size: 1.25rem;
+  color: #214ECF;
+  font-weight: 800;
+}
+
+
+/* 08. FINAL CTA */
+.ledger-cta-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+}
+
+.ledger-cta-box {
+  background: #F0F4FE;
+  border: 1px solid #D0D5DD;
+  border-radius: 20px;
+  padding: 64px 32px;
+  text-align: center;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ledger-cta-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.ledger-cta-sub {
+  font-size: 1.1rem;
+  color: #475467;
+  margin-bottom: 32px;
+}
+
+.ledger-cta-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+
+/* RESPONSIVE MEDIA QUERIES */
+@media (max-width: 1024px) {
+  .ledger-hero-grid,
+  .insight-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .journey-flow-grid {
+    flex-direction: column;
+  }
+  .journey-arrow {
+    transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .ledger-hero-headline {
+    font-size: clamp(2rem, 5vw + 0.5rem, 2.5rem);
+  }
+
+  .features-grid,
+  .gst-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .visual-summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .ledger-hero-actions,
+  .ledger-cta-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .ledger-hero-actions button,
+  .ledger-cta-actions button {
+    width: 100% !important;
+  }
+
+  .ledger-cta-box {
+    padding: 40px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ledger-hero-section,
+  .ledger-features-section,
+  .ledger-insight-section,
+  .ledger-gst-section,
+  .ledger-table-section,
+  .ledger-understand-section,
+  .ledger-journey-section,
+  .ledger-cta-section {
+    padding: 56px 0;
+  }
+
+  .gst-card-block {
+    padding: 24px 16px;
+  }
+}

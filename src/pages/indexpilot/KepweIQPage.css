@@ -1,0 +1,306 @@
+/* ============================================================
+   KEPWE IQ — CLEAN WHITE THEME (BLUE ACCENTS)
+   ============================================================ */
+
+.kiq-page-container {
+  font-family: var(--font-ui, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  background-color: #FFFFFF;
+  color: #0F172A;
+  min-height: 100vh;
+  padding: 48px 20px 80px;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.kiq-content-wrapper {
+  max-width: 1020px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── 1. SCROLL REVEAL UTILITIES ────────────────────────────── */
+.kiq-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.kiq-reveal.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Factor card stagger reveal */
+.kiq-factor-card {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 180ms ease,
+    border-color 180ms ease;
+  will-change: opacity, transform;
+}
+
+.kiq-factor-card.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.kiq-factor-card:nth-child(1) { transition-delay: 0ms; }
+.kiq-factor-card:nth-child(2) { transition-delay: 60ms; }
+.kiq-factor-card:nth-child(3) { transition-delay: 120ms; }
+.kiq-factor-card:nth-child(4) { transition-delay: 180ms; }
+.kiq-factor-card:nth-child(5) { transition-delay: 240ms; }
+.kiq-factor-card:nth-child(6) { transition-delay: 300ms; }
+.kiq-factor-card:nth-child(7) { transition-delay: 360ms; }
+.kiq-factor-card:nth-child(8) { transition-delay: 420ms; }
+
+/* Table row stagger reveal */
+.kiq-table-row {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 400ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 180ms ease;
+  will-change: opacity, transform;
+}
+
+.kiq-table-row.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.kiq-table-row:nth-child(1) { transition-delay: 0ms; }
+.kiq-table-row:nth-child(2) { transition-delay: 50ms; }
+.kiq-table-row:nth-child(3) { transition-delay: 100ms; }
+.kiq-table-row:nth-child(4) { transition-delay: 150ms; }
+.kiq-table-row:nth-child(5) { transition-delay: 200ms; }
+
+/* ── 2. HEADER HERO ────────────────────────────────────────── */
+.kiq-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.kiq-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #EFF6FF;
+  color: #214ECF;
+  border: 1px solid #BFDBFE;
+  padding: 4px 14px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kiq-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: #0F172A;
+  margin: 16px 0 12px;
+}
+
+.kiq-subtitle {
+  font-size: 14px;
+  color: #64748B;
+  max-width: 720px;
+  margin: 0 auto;
+  line-height: 1.55;
+  font-weight: 400;
+}
+
+/* ── 3. SCORE DISPLAY CARD ──────────────────────────────────── */
+.kiq-score-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 36px 24px;
+  text-align: center;
+  margin-bottom: 40px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+
+.kiq-score-label {
+  font-size: 11px;
+  color: #214ECF;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.kiq-score-number {
+  font-size: clamp(48px, 8vw, 72px);
+  font-weight: 800;
+  color: #0F172A;
+  font-family: monospace;
+  line-height: 1;
+  margin: 12px 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+}
+
+.kiq-score-total {
+  font-size: clamp(18px, 3vw, 24px);
+  color: #64748B;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.kiq-status-pill {
+  display: inline-block;
+  background: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid #BFDBFE;
+  padding: 6px 18px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 12px;
+  margin-bottom: 14px;
+  transition: opacity 400ms ease;
+}
+
+.kiq-score-summary {
+  font-size: 13px;
+  color: #64748B;
+  max-width: 640px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* ── 4. 8 WEIGHTED FACTOR CARDS ─────────────────────────────── */
+.kiq-section-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #0F172A;
+  letter-spacing: -0.01em;
+}
+
+.kiq-factors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.kiq-factor-card {
+  background: #FFFFFF;
+  padding: 20px 18px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  box-sizing: border-box;
+}
+
+.kiq-factor-card:hover {
+  background: #F8FAFC;
+  border-color: #214ECF;
+}
+
+.kiq-factor-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #214ECF;
+  margin-bottom: 6px;
+}
+
+.kiq-factor-desc {
+  font-size: 13px;
+  color: #64748B;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* ── 5. SCORE BANDS TABLE ────────────────────────────────────── */
+.kiq-table-container {
+  background: #FFFFFF;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  margin-bottom: 40px;
+}
+
+.kiq-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.kiq-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.kiq-table th {
+  background: #F8FAFC;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 12px 18px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.kiq-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #0F172A;
+}
+
+.kiq-table-row:hover {
+  background: #F8FAFC;
+}
+
+.kiq-table-row.is-current-score-band {
+  background: #EFF6FF;
+  border-left: 4px solid #214ECF;
+}
+
+/* ── 6. METHODOLOGY BOX ──────────────────────────────────────── */
+.kiq-methodology-box {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-left: 4px solid #214ECF;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  padding: 20px 24px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.kiq-methodology-icon {
+  color: #214ECF;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.kiq-methodology-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+}
+
+.kiq-methodology-text {
+  font-size: 13px;
+  color: #64748B;
+  line-height: 1.5;
+  margin: 0;
+}

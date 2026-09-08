@@ -1,0 +1,237 @@
+/* Lifecycle Section Styles */
+.lifecycle-section {
+  padding: 60px 24px;
+  background: #FAFCFF;
+  color: #0F172A;
+  border-bottom: 1px solid #E2E8F0;
+  position: relative;
+  overflow: hidden;
+}
+
+.lifecycle-container {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.lifecycle-header {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto 60px auto;
+}
+
+.lifecycle-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  color: #2563EB;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  border-radius: 9999px;
+  margin-bottom: 16px;
+}
+
+.lifecycle-title {
+  font-size: clamp(2rem, 3.5vw, 2.8rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #0F172A;
+  margin-bottom: 16px;
+}
+
+.lifecycle-subtitle {
+  font-size: 1.05rem;
+  color: #475569;
+  line-height: 1.6;
+}
+
+/* Horizontal Track */
+.lifecycle-track-wrapper {
+  position: relative;
+  margin-bottom: 50px;
+  padding: 20px 0;
+}
+
+.lifecycle-track-line {
+  position: absolute;
+  top: 42px;
+  left: 5%;
+  right: 5%;
+  height: 4px;
+  background: #E2E8F0;
+  border-radius: 2px;
+  z-index: 1;
+}
+
+.lifecycle-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563EB 0%, #0284C7 100%);
+  border-radius: 2px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.3);
+}
+
+.lifecycle-nodes {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.lifecycle-node {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  width: 110px;
+  transition: transform 0.2s ease;
+}
+
+.lifecycle-node:hover {
+  transform: translateY(-2px);
+}
+
+.node-circle {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid #CBD5E1;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.lifecycle-node.active .node-circle {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+  transform: scale(1.15);
+}
+
+.lifecycle-node.past .node-circle {
+  background: #ECFDF5;
+  border-color: #059669;
+  color: #059669;
+}
+
+.node-phase {
+  font-size: 0.7rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #64748B;
+}
+
+.lifecycle-node.active .node-phase {
+  color: #2563EB;
+}
+
+.node-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #64748B;
+}
+
+.lifecycle-node.active .node-name {
+  color: #0F172A;
+}
+
+/* Detail Card */
+.lifecycle-detail-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  padding: 40px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
+  animation: fadeIn 0.35s ease forwards;
+}
+
+.detail-phase-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #2563EB;
+  letter-spacing: 0.12em;
+  margin-bottom: 8px;
+}
+
+.detail-stage-name {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #0F172A;
+  margin-bottom: 4px;
+}
+
+.detail-tagline {
+  display: inline-block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #2563EB;
+  margin-bottom: 16px;
+}
+
+.detail-desc {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: #475569;
+}
+
+.deliverables-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+}
+
+.deliverables-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deliverable-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #F8FAFC;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.chip-icon {
+  color: #2563EB;
+  flex-shrink: 0;
+}
+
+@media (max-width: 991px) {
+  .lifecycle-nodes {
+    overflow-x: auto;
+    padding-bottom: 16px;
+    justify-content: flex-start;
+    gap: 20px;
+  }
+  .lifecycle-track-line {
+    display: none;
+  }
+  .lifecycle-detail-card {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+}
