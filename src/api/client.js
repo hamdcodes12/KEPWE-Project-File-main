@@ -51,11 +51,13 @@ export async function deleteAvatarApi() {
 export async function downloadAuthenticatedFile(path) {
   let response = await fetch(`${API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${getAccessToken()}` },
+    credentials: 'include',
   });
 
   if (response.status === 401 && await tryRefresh()) {
     response = await fetch(`${API_BASE}${path}`, {
       headers: { Authorization: `Bearer ${getAccessToken()}` },
+      credentials: 'include',
     });
   }
 
@@ -92,6 +94,7 @@ export async function apiFetch(path, options = {}) {
     method,
     headers: h,
     body: body ? JSON.stringify(body) : undefined,
+    credentials: 'include',
   });
 
   if (res.status === 401 && auth) {
@@ -103,6 +106,7 @@ export async function apiFetch(path, options = {}) {
         method,
         headers: h,
         body: body ? JSON.stringify(body) : undefined,
+        credentials: 'include',
       });
     }
   }
@@ -145,6 +149,7 @@ export async function tryRefresh() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
+      credentials: 'include',
     });
 
     if (!res.ok) {
