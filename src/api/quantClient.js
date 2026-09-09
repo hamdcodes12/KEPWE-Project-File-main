@@ -98,3 +98,47 @@ export async function disconnectBroker(broker) {
     body: { broker },
   });
 }
+
+export async function fetchLemonnHoldings() {
+  return apiFetch('/broker/LEMONN/holdings');
+}
+
+export async function fetchLemonnPositions() {
+  return apiFetch('/broker/LEMONN/positions');
+}
+
+export async function fetchLemonnFunds() {
+  return apiFetch('/broker/LEMONN/funds');
+}
+
+export async function fetchLemonnOrderBook() {
+  return apiFetch('/broker/LEMONN/orderbook');
+}
+
+export async function fetchLemonnOrderLog(orderId) {
+  return apiFetch(`/broker/LEMONN/order-log/${encodeURIComponent(orderId)}`);
+}
+
+export async function fetchLemonnTradeBook(params = {}) {
+  return apiFetch(`/broker/LEMONN/tradebook?${new URLSearchParams(params).toString()}`);
+}
+
+export async function fetchLemonnTransactions(params = {}) {
+  return apiFetch(`/broker/LEMONN/transactions?${new URLSearchParams(params).toString()}`);
+}
+
+export async function fetchLemonnLtp(request) {
+  return apiFetch('/broker/LEMONN/market-data/ltp', { method: 'POST', body: request });
+}
+
+export async function fetchLemonnDepth(request) {
+  return apiFetch('/broker/LEMONN/market-data/depth', { method: 'POST', body: request });
+}
+
+export async function fetchLemonnChart(request) {
+  return apiFetch('/broker/LEMONN/market-data/chart', { method: 'POST', body: request });
+}
+
+export async function fetchLemonnHistoricalChart(request) {
+  return apiFetch('/broker/LEMONN/market-data/historical-chart', { method: 'POST', body: request });
+}

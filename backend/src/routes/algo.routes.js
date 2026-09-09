@@ -11,6 +11,7 @@ import { applyExecutionUpdate, createAndSubmitOrder, cancelOrder, modifyOrder } 
 import { comparePaperLedgers, comparePositions } from '../algo/reconciliation.js';
 import { runPaperMarketCycle } from '../algo/runner.js';
 import upstoxService from '../services/upstox.service.js';
+import { decryptBrokerSecret } from '../services/broker-token.service.js';
 
 const router = Router();
 router.use(['/algo', '/indexpilot'], requireProductAccess('indexpilot'));
@@ -221,7 +222,7 @@ async function assertMarketDataAvailable() {
 
 async function getLiveBroker(req, broker) {
   const readiness = getBrokerReadiness(broker, 'LIVE');
-  if (!readiness.enabled) {
+  if (broker !== 'LEMONN' && !readiness.enabled) {
     const error = new Error(readiness.reason || `${broker} is not configured for live execution`);
     error.statusCode = 503;
     throw error;
@@ -236,6 +237,22 @@ async function getLiveBroker(req, broker) {
     const error = new Error(`${broker} is not connected in LIVE mode`);
     error.statusCode = 409;
     throw error;
+  }
+  if (broker === 'LEMONN') {
+    const token = await pool.query(
+      `SELECT access_token_ciphertext
+       FROM broker_oauth_tokens t
+       JOIN broker_accounts a ON a.id = t.broker_account_id
+       WHERE t.user_id = $1 AND a.broker = 'LEMONN' AND a.status = 'CONNECTED'`,
+      [req.userId],
+    );
+    const encrypted = token.rows[0]?.access_token_ciphertext;
+    if (!encrypted) {
+      const error = new Error('LEMONN daily login is required before live execution');
+      error.statusCode = 409;
+      throw error;
+    }
+    return getBrokerAdapter(broker, 'LIVE', { accessToken: decryptBrokerSecret(encrypted) });
   }
   return getBrokerAdapter(broker, 'LIVE');
 }
@@ -893,6 +910,96 @@ router.get('/broker/:broker/positions', async (req, res, next) => {
   try {
     const adapter = await getLiveBroker(req, req.params.broker);
     res.json({ broker: req.params.broker, positions: await adapter.getPositions() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/broker/:broker/holdings', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    res.json({ broker: req.params.broker, holdings: await adapter.getHoldings() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/broker/:broker/funds', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    res.json({ broker: req.params.broker, funds: await adapter.getMargin() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/broker/:broker/orderbook', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    res.json({ broker: req.params.broker, orderbook: await adapter.getOrderBook() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/broker/:broker/order-log/:orderId', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    res.json({ broker: req.params.broker, orderLog: await adapter.getOrderLog(req.params.orderId) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/broker/:broker/tradebook', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    res.json({ broker: req.params.broker, trades: await adapter.getTradeBook(req.query) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/broker/:broker/transactions', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    res.json({ broker: req.params.broker, transactions: await adapter.getTransactionHistory({ fromDate: req.query.from_date, toDate: req.query.to_date, status: req.query.status, isFno: req.query.is_fno }) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/broker/:broker/market-data/ltp', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    res.json({ broker: req.params.broker, data: await adapter.getMarketData(req.body) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/broker/:broker/market-data/depth', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    res.json({ broker: req.params.broker, data: await adapter.getMarketDepth(req.body) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/broker/:broker/market-data/chart', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    res.json({ broker: req.params.broker, data: await adapter.getChartData(req.body) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/broker/:broker/market-data/historical-chart', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    res.json({ broker: req.params.broker, data: await adapter.getHistoricalData(req.body) });
   } catch (err) {
     next(err);
   }
