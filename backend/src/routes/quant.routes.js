@@ -9,7 +9,6 @@ import {
   evaluateNiftyQuantSignal,
   calculateNiftyPositionSize,
   runNiftyQuantBacktest,
-  generateNiftyBenchmarkCandles,
   validateLiveDeploymentGate,
 } from '../services/quant-engine.service.js';
 
@@ -24,7 +23,7 @@ router.use(requireProductAccess('quant'));
 async function ensureQuantUserRows(userId) {
   await pool.query(
     `INSERT INTO algo_settings (user_id, trading_capital, risk_per_trade, risk_reward, max_trades_per_day, max_consecutive_losses, daily_loss_limit)
-     VALUES ($1, 100000, 1, 2, 3, 2, 10000)
+     VALUES ($1, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT)
      ON CONFLICT (user_id) DO NOTHING`,
     [userId]
   );
@@ -58,14 +57,8 @@ router.get('/dashboard', async (req, res, next) => {
       pool.query('SELECT * FROM quant_strategies WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 5', [req.userId]),
     ]);
 
-    const settings = settingsRes.rows[0] || {
-      trading_capital: 100000,
-      risk_per_trade: 1.0,
-      risk_reward: 2.0,
-      max_trades_per_day: 3,
-      max_consecutive_losses: 2,
-      daily_loss_limit: 10000,
-    };
+    const settings = settingsRes.rows[0];
+    if (!settings) throw new Error('Quant settings are unavailable');
     const state = stateRes.rows[0] || { status: 'STOPPED' };
     const brokers = brokersRes.rows;
     const openPositionsCount = openPositionsRes.rows[0]?.count || 0;
@@ -115,21 +108,10 @@ router.get('/dashboard', async (req, res, next) => {
       })),
       feedStatus: {
         connected: false,
-        source: 'SANDBOX / SIMULATED',
-        label: 'Feed disconnected (Provider not configured)',
+        source: null,
+        label: 'No live market data available',
       },
-      strategies: userStrategies.length > 0 ? userStrategies : [
-        {
-          id: 'def-nifty-pulse',
-          name: NIFTY_QUANT_STRATEGY.name,
-          slug: NIFTY_QUANT_STRATEGY.slug,
-          version: NIFTY_QUANT_STRATEGY.version,
-          instrument: NIFTY_QUANT_STRATEGY.instrument,
-          status: 'READY',
-          riskReward: NIFTY_QUANT_STRATEGY.riskReward,
-          riskPct: NIFTY_QUANT_STRATEGY.defaultRiskPct,
-        },
-      ],
+      strategies: userStrategies,
     });
   } catch (err) {
     next(err);
@@ -329,7 +311,7 @@ const backtestRunSchema = z.object({
     low: z.number().positive(),
     close: z.number().positive(),
     volume: z.number().nonnegative().optional(),
-  })).optional(),
+  })).min(30, 'At least 30 historical candles are required.'),
 });
 
 /**
@@ -339,12 +321,8 @@ const backtestRunSchema = z.object({
 router.post('/backtest', validateBody(backtestRunSchema), async (req, res, next) => {
   try {
     const { capital, riskPct, optionType, lotSize, candles } = req.validatedBody;
-    const historicalCandles = Array.isArray(candles) && candles.length >= 30
-      ? candles
-      : generateNiftyBenchmarkCandles(160);
-
     const backtestResult = runNiftyQuantBacktest({
-      candles: historicalCandles,
+      candles,
       capital,
       riskPct,
       optionType,
@@ -401,7 +379,7 @@ router.get('/paper/status', async (req, res, next) => {
         side: p.side,
         quantity: p.quantity,
         entryPrice: Number(p.entry_price),
-        currentPrice: Number(p.entry_price) * 1.05, // simulated live tick
+        currentPrice: null,
         stopLoss: Number(p.stop_loss),
         target: Number(p.target),
         pnl: Number(p.pnl),

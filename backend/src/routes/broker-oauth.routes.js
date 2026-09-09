@@ -41,20 +41,26 @@ async function failOAuthSession(sessionId, failureCode) {
   );
 }
 
-async function claimOAuthState(state) {
+async function claimOAuthSession(state = null) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const result = await client.query(
-      `SELECT id, user_id, broker, redirect_uri
-       FROM broker_oauth_sessions
-       WHERE broker = $1
-         AND state_hash = $2
-         AND status = 'PENDING'
-         AND expires_at > NOW()
-       FOR UPDATE`,
-      [LEMONN, hashState(state)],
-    );
+    const result = state
+      ? await client.query(
+        `SELECT id, user_id, broker, redirect_uri
+         FROM broker_oauth_sessions
+         WHERE broker = $1 AND state_hash = $2 AND status = 'PENDING' AND expires_at > NOW()
+         FOR UPDATE`,
+        [LEMONN, hashState(state)],
+      )
+      : await client.query(
+        `SELECT id, user_id, broker, redirect_uri
+         FROM broker_oauth_sessions
+         WHERE broker = $1 AND status = 'PENDING' AND expires_at > NOW()
+         ORDER BY created_at DESC LIMIT 1
+         FOR UPDATE`,
+        [LEMONN],
+      );
     const session = result.rows[0];
     if (!session) {
       await client.query('ROLLBACK');
@@ -115,17 +121,18 @@ router.get(['/broker/lemonn/callback', '/lemonn/callback'], async (req, res, nex
 
   const { client_id: clientId, error } = parsed.data;
   const configuredClientId = String(process.env.LEMONN_CLIENT_ID || '').trim();
-  if (clientId && configuredClientId && clientId !== configuredClientId) {
+  if (!configuredClientId || !clientId || clientId !== configuredClientId) {
     return res.status(400).json({ error: 'Lemonn client ID does not match the configured application' });
   }
   const state = parsed.data.state || readCookie(req, 'lemonn_oauth_state');
   const requestToken = parsed.data.request_token || parsed.data.requestToken;
-  if (!state) return res.status(400).json({ error: 'OAuth state is required' });
 
   try {
-    const session = await claimOAuthState(state);
+    // LemonN does not return OAuth state; use the browser cookie when available,
+    // otherwise claim the newest unexpired single-use LemonN session.
+    const session = await claimOAuthSession(state);
     if (!session) {
-      return res.status(400).json({ error: 'Invalid or expired OAuth state' });
+      return res.status(400).json({ error: 'Invalid or expired LemonN OAuth session' });
     }
 
     if (error) {

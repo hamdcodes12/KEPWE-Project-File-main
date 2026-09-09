@@ -428,10 +428,82 @@ router.post('/broker/connect', validateBody(brokerSchema), async (req, res, next
   }
 });
 
+function isLemonnSessionRejected(error) {
+  return [401, 403].includes(Number(error?.statusCode));
+}
+
+async function validateStoredLemonnSession(row) {
+  if (!row.access_token_ciphertext) {
+    if (row.status === 'CONNECTED' || row.connection_mode === 'LIVE') {
+      await pool.query(
+        `UPDATE broker_accounts
+         SET status = 'NOT_CONNECTED', connection_mode = 'SANDBOX', updated_at = NOW()
+         WHERE id = $1`,
+        [row.id],
+      );
+    }
+    return { ...row, status: 'NOT_CONNECTED', mode: 'SANDBOX' };
+  }
+
+  let accessToken;
+  try {
+    accessToken = decryptBrokerSecret(row.access_token_ciphertext);
+  } catch {
+    await pool.query(
+      `UPDATE broker_accounts
+       SET status = 'NOT_CONNECTED', connection_mode = 'SANDBOX', updated_at = NOW()
+       WHERE id = $1`,
+      [row.id],
+    );
+    return { ...row, status: 'SESSION_EXPIRED', mode: 'LIVE' };
+  }
+
+  try {
+    const adapter = getBrokerAdapter('LEMONN', 'LIVE', { accessToken });
+    await adapter.validateSession();
+    if (row.status !== 'CONNECTED' || row.connection_mode !== 'LIVE') {
+      await pool.query(
+        `UPDATE broker_accounts
+         SET status = 'CONNECTED', connection_mode = 'LIVE', connected_at = COALESCE(connected_at, NOW()), updated_at = NOW()
+         WHERE id = $1`,
+        [row.id],
+      );
+    }
+    return { ...row, status: 'CONNECTED', mode: 'LIVE' };
+  } catch (error) {
+    if (!isLemonnSessionRejected(error)) throw error;
+    await pool.query(
+      `UPDATE broker_accounts
+       SET status = 'NOT_CONNECTED', connection_mode = 'SANDBOX', updated_at = NOW()
+       WHERE id = $1`,
+      [row.id],
+    );
+    return { ...row, status: 'SESSION_EXPIRED', mode: 'LIVE' };
+  }
+}
+
 router.get('/broker/status', async (req, res, next) => {
   try {
-    const result = await pool.query(`SELECT broker, status, connection_mode, connected_at FROM broker_accounts WHERE user_id = $1 ORDER BY broker`, [req.userId]);
-    res.json({ brokers: result.rows.map((row) => ({ broker: row.broker, status: row.status, mode: row.connection_mode, connectedAt: row.connected_at })) });
+    const result = await pool.query(
+      `SELECT a.id, a.broker, a.status, a.connection_mode, a.connected_at,
+              t.access_token_ciphertext
+       FROM broker_accounts a
+       LEFT JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
+       WHERE a.user_id = $1
+       ORDER BY a.broker`,
+      [req.userId],
+    );
+    const brokers = [];
+    for (const row of result.rows) {
+      const validated = row.broker === 'LEMONN' ? await validateStoredLemonnSession(row) : row;
+      brokers.push({
+        broker: validated.broker,
+        status: validated.status,
+        mode: validated.mode || validated.connection_mode,
+        connectedAt: validated.connected_at,
+      });
+    }
+    res.json({ brokers });
   } catch (err) {
     next(err);
   }
@@ -449,6 +521,13 @@ router.post('/broker/disconnect', validateBody(brokerSchema), async (req, res, n
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: `${broker} is not connected for this account.` });
+    }
+    if (broker === 'LEMONN') {
+      await pool.query(
+        `DELETE FROM broker_oauth_tokens
+         WHERE broker_account_id = (SELECT id FROM broker_accounts WHERE user_id = $1 AND broker = $2)`,
+        [req.userId, broker],
+      );
     }
     await pool.query(
       `UPDATE algo_states SET status = 'STOPPED', updated_at = NOW()
@@ -787,15 +866,10 @@ router.post('/broker/orders', validateBody(liveOrderSchema), async (req, res, ne
     }
     const adapter = await getLiveBroker(req, order.broker);
     const settings = serializeSettings((await pool.query('SELECT * FROM algo_settings WHERE user_id = $1', [req.userId])).rows[0]);
-    let marketPrice;
-    try {
-      marketPrice = await assertMarketDataAvailable();
-    } catch {
-      const reason = 'Verified market data is unavailable; live orders are blocked';
-      await stopForMarketDisconnect(req.userId, reason);
-      return res.status(503).json({ error: reason });
+    if (order.price === undefined) {
+      return res.status(400).json({ error: 'A verified LemonN market price is required before submitting a live order.' });
     }
-    const effectivePrice = order.price ?? marketPrice;
+    const effectivePrice = order.price;
     let availableMargin = settings.tradingCapital;
     try {
       const margin = await adapter.getMargin();
@@ -928,6 +1002,30 @@ router.get('/broker/:broker/funds', async (req, res, next) => {
   try {
     const adapter = await getLiveBroker(req, req.params.broker);
     res.json({ broker: req.params.broker, funds: await adapter.getMargin() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/broker/:broker/pnl', async (req, res, next) => {
+  try {
+    const adapter = await getLiveBroker(req, req.params.broker);
+    const positions = await adapter.getPositions();
+    const supportedUnrealized = positions
+      .map((position) => position?.unrealizedPnl ?? position?.unrealisedPnl ?? position?.pnl)
+      .filter((value) => value !== undefined && value !== null && Number.isFinite(Number(value)));
+    return res.json({
+      broker: req.params.broker,
+      realizedPnl: null,
+      unrealizedPnl: supportedUnrealized.length > 0
+        ? Number(supportedUnrealized.reduce((total, value) => total + Number(value), 0).toFixed(2))
+        : null,
+      realizedSupported: false,
+      unrealizedSupported: supportedUnrealized.length > 0,
+      message: supportedUnrealized.length > 0
+        ? 'Unrealized P&L is aggregated from provider position fields.'
+        : 'LemonN did not provide a documented P&L field for the current positions.',
+    });
   } catch (err) {
     next(err);
   }

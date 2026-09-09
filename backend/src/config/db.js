@@ -270,3 +270,10 @@ export function hasDb() {
   return true;
 }
 
+export async function closeEmbeddedDatabase() {
+  if (!pgliteInstance) return;
+  await pgliteInstance.close();
+  pgliteInstance = null;
+  pgliteReadyPromise = null;
+}
+

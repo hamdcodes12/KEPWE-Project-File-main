@@ -111,6 +111,10 @@ export async function fetchLemonnFunds() {
   return apiFetch('/broker/LEMONN/funds');
 }
 
+export async function fetchLemonnPnl() {
+  return apiFetch('/broker/LEMONN/pnl');
+}
+
 export async function fetchLemonnOrderBook() {
   return apiFetch('/broker/LEMONN/orderbook');
 }

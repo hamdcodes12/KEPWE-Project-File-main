@@ -298,6 +298,15 @@ app.use((err, req, res, next) => {
     return res.status(403).json({ error: 'CORS origin not allowed' });
   }
   logServerError('request.failed', err, req);
+  if (err.name === 'BrokerApiError' && err.statusCode === 401) {
+    return res.status(401).json({ error: 'LemonN session expired', code: 'LEMONN_SESSION_EXPIRED' });
+  }
+  if (err.name === 'BrokerApiError' && err.statusCode === 429) {
+    return res.status(429).json({ error: 'LemonN rate limit reached. Retry shortly.', code: 'LEMONN_RATE_LIMITED' });
+  }
+  if (err.name === 'BrokerApiError' && err.statusCode >= 500) {
+    return res.status(503).json({ error: 'LemonN provider is unavailable.', code: 'LEMONN_PROVIDER_UNAVAILABLE' });
+  }
   res.status(err.statusCode || 500).json({ error: 'Internal server error', requestId: req.requestId });
 });
 

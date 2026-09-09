@@ -62,6 +62,14 @@ import {
   fetchBrokerStatus,
   startLemonnOAuth,
   disconnectBroker,
+  fetchLemonnFunds,
+  fetchLemonnPositions,
+  fetchLemonnHoldings,
+  fetchLemonnOrderBook,
+  fetchLemonnTradeBook,
+  fetchLemonnLtp,
+  fetchLemonnHistoricalChart,
+  fetchLemonnPnl,
 } from '../../api/quantClient';
 import './QuantDashboardPage.css';
 
@@ -90,7 +98,9 @@ const navSections = [
       { key: 'paper-trading', label: 'Paper Trading', icon: Zap },
       { key: 'live', label: 'Live Deployment Gate', icon: Lock },
       { key: 'positions', label: 'Positions', icon: BriefcaseBusiness },
+      { key: 'holdings', label: 'Holdings', icon: WalletCards },
       { key: 'orders', label: 'Orders & History', icon: ListFilter },
+      { key: 'trades', label: 'Trades', icon: ListFilter },
       { key: 'portfolio', label: 'Portfolio & Funds', icon: WalletCards },
     ],
   },
@@ -181,12 +191,12 @@ function MarketTape() {
           <span key={name} className="quant-tape-item">
             <b>{name}</b>
             <em>—</em>
-            <small>Sandbox Mode</small>
+            <small>No live data</small>
           </span>
         ))}
       </div>
       <span className="quant-tape-status">
-        <span className="quant-status-dot muted" /> Feed Disconnected (Provider Not Configured)
+        <span className="quant-status-dot muted" /> No live market feed available
       </span>
     </div>
   );
@@ -827,16 +837,26 @@ function BacktestRunnerView() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [marketRequest, setMarketRequest] = useState({ symbol: 'NIFTY 50', exchange: 'NSE', interval: '5m', start_time: '', end_time: '' });
 
   const executeBacktest = async () => {
     setLoading(true);
     setError('');
     try {
+      if (!marketRequest.start_time || !marketRequest.end_time) {
+        throw new Error('Historical data unavailable: enter a start and end time.');
+      }
+      const marketResult = await fetchLemonnHistoricalChart(marketRequest);
+      if (!marketResult.ok) throw new Error(marketResult.data?.error || 'Historical data unavailable.');
+      const providerData = marketResult.data?.data?.data || marketResult.data?.data || {};
+      const candles = providerData.candles || providerData.data || [];
+      if (!Array.isArray(candles) || candles.length < 30) throw new Error('Historical data unavailable for this period.');
       const data = await runQuantBacktest({
         capital: Number(capital),
         riskPct: Number(riskPct),
         optionType,
         lotSize: Number(lotSize),
+        candles,
       });
       setResult(data);
     } catch (err) {
@@ -846,10 +866,6 @@ function BacktestRunnerView() {
     }
   };
 
-  useEffect(() => {
-    executeBacktest();
-  }, []);
-
   return (
     <div className="quant-page-view">
       <section className="quant-page-intro">
@@ -857,7 +873,7 @@ function BacktestRunnerView() {
           <span className="quant-eyebrow">QUANT LAB · AUDITED SIMULATION</span>
           <h1>Quantitative Backtesting Engine</h1>
           <p>
-            Simulate the NIFTY 50 Option Buyer strategy against benchmark historical candles with zero fabricated metrics.
+            Run the NIFTY 50 Option Buyer strategy only against supplied historical candles. No benchmark candles are fabricated.
           </p>
         </div>
         <div className="quant-page-action">
@@ -869,6 +885,22 @@ function BacktestRunnerView() {
 
       {/* Backtest Input Toolbar */}
       <div className="quant-backtest-toolbar">
+        <div className="quant-backtest-field">
+          <label>Provider Symbol</label>
+          <input type="text" value={marketRequest.symbol} onChange={(e) => setMarketRequest({ ...marketRequest, symbol: e.target.value })} />
+        </div>
+        <div className="quant-backtest-field">
+          <label>Exchange</label>
+          <input type="text" value={marketRequest.exchange} onChange={(e) => setMarketRequest({ ...marketRequest, exchange: e.target.value })} />
+        </div>
+        <div className="quant-backtest-field">
+          <label>Start Time</label>
+          <input type="datetime-local" value={marketRequest.start_time} onChange={(e) => setMarketRequest({ ...marketRequest, start_time: e.target.value })} />
+        </div>
+        <div className="quant-backtest-field">
+          <label>End Time</label>
+          <input type="datetime-local" value={marketRequest.end_time} onChange={(e) => setMarketRequest({ ...marketRequest, end_time: e.target.value })} />
+        </div>
         <div className="quant-backtest-field">
           <label>Capital (₹)</label>
           <input
@@ -1191,7 +1223,7 @@ function PaperTradingTerminalView({ onNavigate }) {
                       <td><span className="quant-mode-pill">{p.side}</span></td>
                       <td>{p.quantity}</td>
                       <td>₹{p.entryPrice}</td>
-                      <td>₹{p.currentPrice}</td>
+                      <td>{p.currentPrice == null ? 'No live price' : `₹${p.currentPrice}`}</td>
                       <td style={{ color: '#c53030' }}>₹{p.stopLoss}</td>
                       <td style={{ color: '#159975' }}>₹{p.target}</td>
                       <td style={{ color: p.pnl >= 0 ? '#159975' : '#c53030', fontWeight: 700 }}>
@@ -1504,14 +1536,22 @@ function RiskManagementView({ onNavigate }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function DashboardOverview({ onNavigate }) {
   const [dashData, setDashData] = useState(null);
+  const [brokerStatus, setBrokerStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchQuantDashboard()
-      .then((data) => setDashData(data))
+    Promise.all([fetchQuantDashboard(), fetchBrokerStatus()])
+      .then(([dashboard, status]) => {
+        setDashData(dashboard);
+        setBrokerStatus(status);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const lemonnConnected = brokerStatus?.brokers?.some(
+    (broker) => broker.broker === 'LEMONN' && broker.status === 'CONNECTED' && broker.mode === 'LIVE',
+  );
 
   return (
     <>
@@ -1528,7 +1568,7 @@ function DashboardOverview({ onNavigate }) {
         </div>
         <div className="quant-welcome-actions">
           <span className="quant-environment">
-            <span className="quant-status-dot muted" /> Simulated Environment
+            <span className={`quant-status-dot ${lemonnConnected ? 'active' : 'muted'}`} /> {lemonnConnected ? 'LemonN Connected' : 'No live provider connected'}
           </span>
           <button className="quant-button quant-button-primary" onClick={() => onNavigate('builder')}>
             <Plus size={15} /> New Strategy
@@ -1542,9 +1582,9 @@ function DashboardOverview({ onNavigate }) {
           <Link2 size={17} />
         </div>
         <div>
-          <strong>Truthful Provider Status: Sandbox Mode Active</strong>
+          <strong>{lemonnConnected ? 'LemonN live session verified' : 'No live provider session verified'}</strong>
           <p>
-            No fake balances or mock broker fills are fabricated. Historical backtests and paper simulations are fully operational.
+            {lemonnConnected ? 'Live provider data is available through the broker workspace.' : 'Connect LemonN to load live account and market data. Paper and backtest views remain explicitly simulated.'}
           </p>
         </div>
         <button className="quant-banner-link" onClick={() => onNavigate('broker')}>
@@ -1559,8 +1599,8 @@ function DashboardOverview({ onNavigate }) {
             <span>Trading Capital</span>
             <WalletCards size={16} />
           </div>
-          <strong>₹{(dashData?.capital || 100000).toLocaleString('en-IN')}</strong>
-          <small>Allocated risk budget</small>
+          <strong>{dashData?.capital == null ? 'No data' : `₹${Number(dashData.capital).toLocaleString('en-IN')}`}</strong>
+          <small>Configured risk budget</small>
         </div>
         <div className="quant-metric-card">
           <div className="quant-metric-top">
@@ -1577,16 +1617,16 @@ function DashboardOverview({ onNavigate }) {
             <span>Active Strategies</span>
             <Bot size={16} />
           </div>
-          <strong>{dashData?.strategies?.length || 1}</strong>
-          <small>NIFTY 50 Option Buyer</small>
+            <strong>{dashData?.strategies?.length ?? 'No data'}</strong>
+            <small>Saved strategies</small>
         </div>
         <div className="quant-metric-card">
           <div className="quant-metric-top">
             <span>Execution Status</span>
             <Gauge size={16} />
           </div>
-          <strong>{dashData?.algoStatus || 'STOPPED'}</strong>
-          <small>{dashData?.openPositions || 0} open positions</small>
+            <strong>{dashData?.algoStatus || 'No data'}</strong>
+            <small>{dashData?.openPositions == null ? 'No position data' : `${dashData.openPositions} open positions`}</small>
         </div>
       </div>
 
@@ -1614,7 +1654,7 @@ function DashboardOverview({ onNavigate }) {
             <span className="quant-mode-pill">BACKTEST</span>
           </div>
           <h3>Historical Backtest</h3>
-          <p>Simulate the EMA20/50 + VWAP breakout strategy against benchmark historical candles.</p>
+          <p>Simulate the EMA20/50 + VWAP breakout strategy against supplied historical candles.</p>
           <button className="quant-button quant-button-secondary quant-button-small" onClick={() => onNavigate('backtest')}>
             Open Backtest <ChevronRight size={14} />
           </button>
@@ -1718,6 +1758,7 @@ function BrokerConnectionView() {
   const lemonnReadiness = brokerState.readiness?.brokers?.find((broker) => broker.broker === 'LEMONN');
   const lemonnStatus = brokerState.status?.brokers?.find((broker) => broker.broker === 'LEMONN');
   const isConnected = lemonnStatus?.status === 'CONNECTED' && lemonnStatus?.mode === 'LIVE';
+  const isSessionExpired = lemonnStatus?.status === 'SESSION_EXPIRED';
 
   const handleLemonnConnect = async () => {
     setConnecting(true);
@@ -1759,11 +1800,11 @@ function BrokerConnectionView() {
         </div>
         <div>
           <span className="quant-eyebrow">ADAPTER STATE</span>
-          <h2>{isConnected ? 'Lemonn Connected' : 'Lemonn Disconnected'}</h2>
-          <p>{isConnected ? 'Backend verified a live LemonN session for this account.' : 'Live execution is unavailable until the backend verifies a LemonN session.'}</p>
+          <h2>{isConnected ? 'Lemonn Connected · Session Active' : isSessionExpired ? 'Lemonn Session Expired' : 'Lemonn Disconnected'}</h2>
+          <p>{isConnected ? 'Backend verified a live LemonN session for this account.' : isSessionExpired ? 'LemonN rejected the stored session. Reconnect to continue live execution.' : 'Live execution is unavailable until the backend verifies a LemonN session.'}</p>
         </div>
         <span className="quant-connection-pill">
-          <span /> {isConnected ? 'Connected' : 'Disconnected'}
+          <span /> {isConnected ? 'Connected / Session Active' : isSessionExpired ? 'Session Expired' : 'Disconnected'}
         </span>
       </div>
 
@@ -1771,7 +1812,7 @@ function BrokerConnectionView() {
         <section className="quant-panel quant-broker-card primary">
           <div className="quant-broker-card-top">
             <span className="quant-broker-logo">L</span>
-            <span className="quant-coming-pill">{isConnected ? 'CONNECTED' : 'BACKEND VERIFIED STATUS'}</span>
+            <span className="quant-coming-pill">{isConnected ? 'CONNECTED / SESSION ACTIVE' : isSessionExpired ? 'SESSION EXPIRED' : 'BACKEND VERIFIED STATUS'}</span>
           </div>
           <h3>Lemonn Broker Adapter</h3>
           <p>
@@ -1779,7 +1820,7 @@ function BrokerConnectionView() {
           </p>
           <div className="quant-broker-note">
             <ShieldCheck size={15} />
-            <span>{loading ? 'Checking backend provider readiness…' : lemonnReadiness?.enabled ? 'Provider configuration is present. User authentication is still required.' : (lemonnReadiness?.reason || 'Provider is not configured for live execution.')}</span>
+            <span>{loading ? 'Checking backend provider readiness…' : isConnected ? 'Stored LemonN session verified by the backend.' : isSessionExpired ? 'Stored LemonN session was rejected. Reconnect is required.' : lemonnReadiness?.enabled ? 'Provider configuration is present. Connect LemonN to enable live execution.' : (lemonnReadiness?.reason || 'Provider is not configured for live execution.')}</span>
           </div>
           {isConnected ? (
             <button className="quant-button quant-button-secondary" onClick={handleDisconnect} disabled={connecting}>
@@ -1787,7 +1828,7 @@ function BrokerConnectionView() {
             </button>
           ) : (
             <button className="quant-button quant-button-primary" onClick={handleLemonnConnect} disabled={connecting || loading}>
-              {connecting ? 'Checking provider…' : 'Connect Lemonn'} <ChevronRight size={15} />
+              {connecting ? 'Checking provider…' : isSessionExpired ? 'Reconnect Lemonn' : 'Connect Lemonn'} <ChevronRight size={15} />
             </button>
           )}
           {notice.text && <div className={`quant-connection-alert ${notice.type}`}>{notice.text}</div>}
@@ -1813,6 +1854,80 @@ function BrokerConnectionView() {
             Connect Angel One <ChevronRight size={15} />
           </button>
         </section>
+      </div>
+    </div>
+  );
+}
+
+function BrokerDataView({ type, onConnect }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const loaders = {
+    portfolio: fetchLemonnFunds,
+    positions: fetchLemonnPositions,
+    orders: fetchLemonnOrderBook,
+    holdings: fetchLemonnHoldings,
+    trades: fetchLemonnTradeBook,
+    analytics: fetchLemonnPnl,
+    watchlist: () => fetchLemonnLtp({
+      NSE_IDX_SYMBOL: ['NIFTY 50', 'BANK NIFTY', 'SENSEX', 'INDIA VIX'],
+      NSE_EQ_SYMBOL: ['RELIANCE', 'TCS', 'INFY'],
+    }),
+  };
+  const titles = {
+    portfolio: 'Live LemonN Funds',
+    positions: 'Live LemonN Positions',
+    orders: 'Live LemonN Order Book',
+    holdings: 'Live LemonN Holdings',
+    trades: 'Live LemonN Trade Book',
+    analytics: 'Live LemonN P&L',
+    watchlist: 'Live LemonN Watchlist',
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError('');
+    loaders[type]().then((result) => {
+      if (!mounted) return;
+      if (!result.ok) {
+        setError(result.data?.error || 'Live LemonN data is unavailable.');
+      } else {
+        setData(result.data);
+      }
+    }).catch((requestError) => {
+      if (mounted) setError(requestError.message || 'Live LemonN data is unavailable.');
+    }).finally(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, [type]);
+
+  const providerPayload = data?.data?.data || data?.data || data;
+  const providerArrays = providerPayload && typeof providerPayload === 'object'
+    ? Object.values(providerPayload).filter(Array.isArray).flat()
+    : [];
+  const records = data?.realizedPnl !== undefined ? [data]
+    : data?.funds ? [data.funds]
+    : data?.positions || data?.holdings || data?.orderbook?.data?.orders || data?.trades || providerArrays;
+  const columns = [...new Set(records.flatMap((record) => Object.keys(record || {})))].slice(0, 10);
+  const formatValue = (value) => value && typeof value === 'object' ? JSON.stringify(value) : String(value ?? 'No data');
+
+  return (
+    <div className="quant-page-view">
+      <section className="quant-page-intro">
+        <div>
+          <span className="quant-eyebrow">LEMONN · LIVE PROVIDER DATA</span>
+          <h1>{titles[type]}</h1>
+          <p>Values are loaded from the authenticated LemonN API. No paper or fallback values are shown.</p>
+        </div>
+      </section>
+      <div className="quant-panel quant-table-panel">
+        {loading ? <EmptyData title="Loading live provider data" description="The backend is validating the LemonN session and requesting current data." action={false} />
+          : error ? <EmptyData title="Live data unavailable" description={error} onConnect={onConnect} />
+            : records.length === 0 ? <EmptyData title={`No ${type} data`} description="LemonN returned no records for this account." action={false} />
+              : <div className="quant-table-wrap"><table className="quant-table"><thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{records.map((record, index) => <tr key={record.id || record.orderID || record.tradeNo || index}>{columns.map((column) => <td key={column}>{formatValue(record[column])}</td>)}</tr>)}</tbody></table></div>}
       </div>
     </div>
   );
@@ -1924,7 +2039,7 @@ export default function QuantDashboardPage() {
     if (activeSection === 'live') return <LiveDeploymentGateView onNavigate={goTo} />;
     if (activeSection === 'risk') return <RiskManagementView onNavigate={goTo} />;
     if (activeSection === 'broker') return <BrokerConnectionView />;
-    if (activeSection === 'watchlist') return <WatchlistView onConnect={() => goTo('broker')} />;
+    if (['portfolio', 'positions', 'holdings', 'orders', 'trades', 'analytics', 'watchlist', 'markets'].includes(activeSection)) return <BrokerDataView type={activeSection === 'markets' ? 'watchlist' : activeSection} onConnect={() => goTo('broker')} />;
     return <GenericTableView type={activeSection} onNavigate={goTo} />;
   }, [activeSection]);
 

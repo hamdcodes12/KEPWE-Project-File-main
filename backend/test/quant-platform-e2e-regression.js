@@ -1,6 +1,7 @@
 import http from 'http';
 import https from 'https';
 import assert from 'assert';
+import { generateNiftyBenchmarkCandles } from '../src/services/quant-engine.service.js';
 
 console.log('================================================================');
 console.log('   KEPWE QUANT & FULL PLATFORM COMPREHENSIVE E2E REGRESSION    ');
@@ -192,6 +193,7 @@ async function runRegressionSuite() {
       riskPct: 1.0,
       optionType: 'ATM',
       lotSize: 1,
+        candles: generateNiftyBenchmarkCandles(160),
     },
   });
   assert.strictEqual(backtestRes.statusCode, 200, `Backtest must return 200 (got ${backtestRes.statusCode})`);

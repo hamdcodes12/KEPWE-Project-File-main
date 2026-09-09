@@ -93,17 +93,21 @@ async function runQuantEngineTestSuite() {
     // ──────────────────────────────────────────────────────────────────────────
     console.log('\n[TEST 2] Testing dynamic NIFTY option contract selection...');
     const spotPrice = 24630;
-    const atmCe = selectNiftyOptionContract(spotPrice, 'CE', 'ATM');
-    assert.strictEqual(atmCe.strike, 24650, 'ATM strike must round to nearest 50');
+    assert.equal(selectNiftyOptionContract(spotPrice, 'CE', 'ATM'), null, 'No contract may be fabricated without provider instruments');
+    const instruments = [
+      { symbol: 'NIFTY30SEP24650CE', securityId: '101', exchange: 'NFO', strike: 24650, optionType: 'CE', ltp: 178.72, lotSize: 25 },
+      { symbol: 'NIFTY30SEP24600CE', securityId: '102', exchange: 'NFO', strike: 24600, optionType: 'CE', ltp: 210.10, lotSize: 25 },
+      { symbol: 'NIFTY30SEP24700PE', securityId: '103', exchange: 'NFO', strike: 24700, optionType: 'PE', ltp: 233.72, lotSize: 25 },
+    ];
+    const atmCe = selectNiftyOptionContract(spotPrice, 'CE', 'ATM', instruments);
+    assert.strictEqual(atmCe.strike, 24650, 'ATM strike must use a provider instrument');
     assert.strictEqual(atmCe.optionType, 'CE');
-    assert(atmCe.delta >= 0.45 && atmCe.delta <= 0.60, `Delta must be within 0.45-0.60 (got ${atmCe.delta})`);
     assert(atmCe.premium > 0, 'Option premium must be positive');
     assert.strictEqual(atmCe.stopLoss, Number((atmCe.premium * 0.75).toFixed(2)), 'Stop loss must be exactly 25% below entry');
     assert.strictEqual(atmCe.target, Number((atmCe.premium * 1.50).toFixed(2)), 'Target must be exactly 50% above entry');
 
-    const itmPe = selectNiftyOptionContract(spotPrice, 'PE', 'ITM_1');
+    const itmPe = selectNiftyOptionContract(spotPrice, 'PE', 'ITM_1', instruments);
     assert.strictEqual(itmPe.strike, 24700, '1-ITM PE strike must be ATM + 50');
-    assert(itmPe.delta >= 0.50 && itmPe.delta <= 0.65, 'ITM delta must be higher');
     console.log(`  ✔ Selected ATM CE: ${atmCe.symbol} @ ₹${atmCe.premium} (SL: ₹${atmCe.stopLoss}, TP: ₹${atmCe.target}, Delta: ${atmCe.delta}).`);
     console.log(`  ✔ Selected 1-ITM PE: ${itmPe.symbol} @ ₹${itmPe.premium} (Delta: ${itmPe.delta}).`);
 
@@ -182,7 +186,7 @@ async function runQuantEngineTestSuite() {
     });
     assert.strictEqual(dashRes.statusCode, 200, `Dashboard must return 200 (got ${dashRes.statusCode})`);
     assert.strictEqual(dashRes.data?.product, 'quant');
-    assert(dashRes.data?.capital >= 100000, 'Must return trading capital');
+    assert.equal(dashRes.data?.capital, 0, 'Unconfigured trading capital must remain zero');
     console.log('  ✔ GET /api/quant/dashboard returned 200 with truthful workspace metrics.');
 
     // 6b. POST /api/quant/strategies (Save new strategy version)
@@ -224,6 +228,7 @@ async function runQuantEngineTestSuite() {
         riskPct: 1.0,
         optionType: 'ATM',
         lotSize: 1,
+        candles: generateNiftyBenchmarkCandles(160),
       },
     });
     assert.strictEqual(btRes.statusCode, 200, `Backtest API must return 200 (got ${btRes.statusCode})`);

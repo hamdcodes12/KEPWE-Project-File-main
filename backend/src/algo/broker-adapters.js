@@ -541,6 +541,11 @@ export class LemonnAdapter extends BrokerAdapter {
     return { authenticated: true, broker: this.name, sessionTokenConfigured: true };
   }
 
+  async validateSession() {
+    await this.getMargin();
+    return { valid: true, broker: this.name };
+  }
+
   async getMarketData(body = {}) {
     if (!Object.keys(body).length) throw new BrokerCapabilityError(this.name, 'market-data symbols or tokens');
     return this.request(`${LEMONN_API_PREFIX}/market-data/ltp`, { method: 'POST', body });

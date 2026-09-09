@@ -286,7 +286,8 @@ export function evaluateNiftyQuantSignal(enrichedCandles, index, options = {}) {
     current.close < current.open;
 
   if (isCeRegime) {
-    const selectedContract = selectNiftyOptionContract(current.close, 'CE', options.optionType || 'ATM');
+    const selectedContract = selectNiftyOptionContract(current.close, 'CE', options.optionType || 'ATM', options.instruments);
+    if (!selectedContract) return { signal: 'NO_TRADE', reason: 'REAL_OPTION_INSTRUMENT_UNAVAILABLE' };
     return {
       signal: 'BUY_CE',
       direction: 'LONG_CE',
@@ -304,7 +305,8 @@ export function evaluateNiftyQuantSignal(enrichedCandles, index, options = {}) {
   }
 
   if (isPeRegime) {
-    const selectedContract = selectNiftyOptionContract(current.close, 'PE', options.optionType || 'ATM');
+    const selectedContract = selectNiftyOptionContract(current.close, 'PE', options.optionType || 'ATM', options.instruments);
+    if (!selectedContract) return { signal: 'NO_TRADE', reason: 'REAL_OPTION_INSTRUMENT_UNAVAILABLE' };
     return {
       signal: 'BUY_PE',
       direction: 'LONG_PE',
@@ -327,47 +329,32 @@ export function evaluateNiftyQuantSignal(enrichedCandles, index, options = {}) {
 /**
  * Selects NIFTY 50 Option Contract (ATM or 1-strike ITM with delta 0.45 - 0.60)
  */
-export function selectNiftyOptionContract(spotPrice, optionType = 'CE', strikeSelection = 'ATM') {
-  const strikeInterval = 50;
-  const roundedAtm = Math.round(spotPrice / strikeInterval) * strikeInterval;
-  let strike = roundedAtm;
-
-  if (strikeSelection === 'ITM_1') {
-    strike = optionType === 'CE' ? roundedAtm - strikeInterval : roundedAtm + strikeInterval;
-  }
-
-  // Estimated option premium model based on spot distance and standard implied volatility
-  const distance = Math.abs(spotPrice - strike);
-  const baseAtmPremium = spotPrice * 0.0075; // Approx 170-190 Rs for NIFTY at 24500
-  let estimatedPremium;
-
-  if (optionType === 'CE') {
-    const intrinsic = Math.max(0, spotPrice - strike);
-    const extrinsic = Math.max(25, baseAtmPremium - (distance * 0.3));
-    estimatedPremium = intrinsic + extrinsic;
-  } else {
-    const intrinsic = Math.max(0, strike - spotPrice);
-    const extrinsic = Math.max(25, baseAtmPremium - (distance * 0.3));
-    estimatedPremium = intrinsic + extrinsic;
-  }
-
-  const premium = Number(Math.max(40, estimatedPremium).toFixed(2));
-  const stopLoss = Number((premium * 0.75).toFixed(2)); // 25% stop
-  const target = Number((premium * 1.50).toFixed(2));   // 50% target (1:2 R:R)
-
+export function selectNiftyOptionContract(spotPrice, optionType = 'CE', strikeSelection = 'ATM', instruments = []) {
+  if (!Array.isArray(instruments) || instruments.length === 0) return null;
+  const candidates = instruments
+    .filter((instrument) => instrument && String(instrument.optionType || '').toUpperCase() === optionType)
+    .filter((instrument) => Number.isFinite(Number(instrument.strike)) && Number.isFinite(Number(instrument.ltp)))
+    .filter((instrument) => instrument.securityId || instrument.token || instrument.symbol);
+  if (candidates.length === 0) return null;
+  const strikes = candidates.map((instrument) => Number(instrument.strike));
+  const atmStrike = strikes.reduce((closest, strike) => Math.abs(strike - spotPrice) < Math.abs(closest - spotPrice) ? strike : closest, strikes[0]);
+  const targetStrike = strikeSelection === 'ITM_1'
+    ? atmStrike + (optionType === 'PE' ? Math.abs(strikes[1] - strikes[0] || 50) : -Math.abs(strikes[1] - strikes[0] || 50))
+    : atmStrike;
+  const selected = candidates.find((instrument) => Number(instrument.strike) === targetStrike)
+    || candidates.reduce((closest, instrument) => Math.abs(Number(instrument.strike) - targetStrike) < Math.abs(Number(closest.strike) - targetStrike) ? instrument : closest, candidates[0]);
+  const premium = Number(selected.ltp);
   return {
-    symbol: `NIFTY${strike}${optionType}`,
-    underlying: 'NIFTY 50',
-    strike,
-    optionType,
-    strikeMode: strikeSelection,
-    delta: strikeSelection === 'ITM_1' ? 0.58 : 0.50,
+    ...selected,
+    symbol: String(selected.symbol),
+    securityId: String(selected.securityId || selected.token),
     premium,
-    stopLoss,
-    target,
+    stopLoss: Number((premium * 0.75).toFixed(2)),
+    target: Number((premium * 1.50).toFixed(2)),
     stopLossPct: 25.0,
     targetPct: 50.0,
-    lotSize: NIFTY_QUANT_STRATEGY.lotSize,
+    lotSize: Number(selected.lotSize || selected.lot_size || 0),
+    strikeMode: strikeSelection,
   };
 }
 
