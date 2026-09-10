@@ -78,6 +78,7 @@ async function main() {
     await applySqlFile(client, join(__dirname, 'ledger_schema.sql'), 'ledger_schema.sql');
     await applySqlFile(client, join(__dirname, 'ledger_production_system.sql'), 'ledger_production_system.sql');
     await applySqlFile(client, join(__dirname, 'ledger_production_v2.sql'), 'ledger_production_v2.sql');
+    await applySqlFile(client, join(__dirname, 'ledger_integrations.sql'), 'ledger_integrations.sql');
     await applySqlFile(client, join(__dirname, 'profile_avatar_and_crm_seeds.sql'), 'profile_avatar_and_crm_seeds.sql');
     await applySqlFile(client, join(__dirname, 'product_memberships_schema.sql'), 'product_memberships_schema.sql');
     await applySqlFile(client, join(__dirname, 'quant_additions.sql'), 'quant_additions.sql');

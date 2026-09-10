@@ -28,20 +28,15 @@ export default function EInvoiceEWayBillView() {
 
   // IRN Form State (NIC Schema v1.03)
   const [irnForm, setIrnForm] = useState({
-    supplierGstin: '27AABCK1234F1Z5',
-    buyerGstin: '27AABCA1234F1Z1',
-    buyerLegalName: 'Apex Digital Solutions Pvt Ltd',
-    buyerPos: '27',
+    supplierGstin: '',
+    buyerGstin: '',
+    buyerLegalName: '',
+    buyerPos: '',
     docType: 'INV',
-    docNumber: 'INV-2026-0001',
+    docNumber: '',
     docDate: new Date().toISOString().split('T')[0],
-    taxableAmount: 100000.0,
-    cgstAmount: 9000.0,
-    sgstAmount: 9000.0,
-    igstAmount: 0.0,
-    totalInvoiceValue: 118000.0,
-    hsnCode: '998311',
-    itemDescription: 'Cloud Architecture Services'
+    taxableAmount: '', cgstAmount: '', sgstAmount: '', igstAmount: '', totalInvoiceValue: '',
+    hsnCode: '', itemDescription: ''
   });
 
   // Cancel IRN state
@@ -56,17 +51,12 @@ export default function EInvoiceEWayBillView() {
     supplyType: 'O',
     subSupplyType: '1',
     docType: 'INV',
-    docNo: 'INV-2026-0001',
+    docNo: '',
     docDate: new Date().toISOString().split('T')[0],
-    fromGstin: '27AABCK1234F1Z5',
-    toGstin: '07AABCB5678G1Z2',
-    totalValue: 118000.0,
-    transporterId: '27AABCT9988H1Z0',
-    transporterName: 'Blue Dart Express',
-    transDocNo: 'LR-998877',
+    fromGstin: '', toGstin: '', totalValue: '', transporterId: '', transporterName: '', transDocNo: '',
     transMode: '1',
     distanceKm: 450,
-    vehicleNo: 'MH-12-AB-1234'
+    vehicleNo: ''
   });
 
   const handleGenerateIrn = async (e) => {

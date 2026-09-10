@@ -203,11 +203,6 @@ async function runPersistenceAndInvariantsSuite() {
   assert.strictEqual(betaTrial.totalDebit, 0, 'Tenant Beta trial balance must be 0');
   console.log('  ✔ Multi-Tenant Isolation Confirmed: Tenant Beta has exactly 0 records and 0 balance leakage.\n');
 
-  if (pool.isEmbedded || !process.env.DATABASE_URL || process.env.DATABASE_URL.includes('pglite')) {
-    console.log('[TEST 4] SKIPPED: embedded PGlite restart verification requires a separate process on this platform; production requires DATABASE_URL and uses PostgreSQL.');
-    return;
-  }
-
   // ═══════════════════════════════════════════════════════════════════════════
   // TEST 4: POSTGRESQL PERSISTENCE ACROSS RESTART (CREATE -> RESTART -> READ)
   // ═══════════════════════════════════════════════════════════════════════════

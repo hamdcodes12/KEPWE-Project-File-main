@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import {
   importBankStatement,
+  importBankStatementFile,
   fetchBankStatements,
   fetchBankStatementLines,
   matchBankLine,
@@ -31,15 +32,10 @@ export default function BankReconciliationView() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // CSV Import State
+  // Statement upload state
   const [importModal, setImportModal] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState('');
-  const [csvText, setCsvText] = useState(
-    'Date,Description,Reference,Withdrawal,Deposit,Balance\n' +
-    '2026-09-01,UPI/APEX DIGITAL/INVOICE/UPI-REC-998877,UPI-REC-998877,0,118000.00,618000.00\n' +
-    '2026-09-02,NEFT/VERMA ADVOCATES/NEFT-VEN-112233,NEFT-VEN-112233,54000.00,0,564000.00\n' +
-    '2026-09-03,SMS CHARGES,,20.00,0,563980.00'
-  );
+  const [statementFile, setStatementFile] = useState(null);
 
   // Manual Matching Modal
   const [activeLine, setActiveLine] = useState(null);
@@ -99,27 +95,21 @@ export default function BankReconciliationView() {
 
   const handleImportSubmit = async (e) => {
     e.preventDefault();
+    if (!statementFile) { setError('Select a CSV, XLSX, XLS, or PDF statement first.'); return; }
     setLoading(true);
     setError('');
     try {
-      // Parse CSV text
-      const rawLines = csvText.trim().split('\n').slice(1);
-      const parsedLines = rawLines.map((row) => {
-        const cols = row.split(',');
-        return {
-          transactionDate: cols[0]?.trim(),
-          description: cols[1]?.trim(),
-          referenceNumber: cols[2]?.trim() || null,
-          withdrawalAmount: Number(cols[3] || 0),
-          depositAmount: Number(cols[4] || 0),
-          runningBalance: Number(cols[5] || 0)
-        };
+      const fileBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = () => reject(new Error('Unable to read statement file.'));
+        reader.readAsDataURL(statementFile);
       });
-
-      const res = await importBankStatement({
+      const res = await importBankStatementFile({
         accountId: selectedAccountId,
-        fileName: 'imported_statement.csv',
-        lines: parsedLines
+        fileName: statementFile.name,
+        mimeType: statementFile.type || 'application/octet-stream',
+        fileBase64,
       });
 
       if (res.ok) {
@@ -310,7 +300,7 @@ export default function BankReconciliationView() {
           <div className="ledger-modal-card" style={{ maxWidth: 560 }}>
             <div className="modal-header">
               <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0F172A' }}>
-                Import Bank Statement CSV
+                Import Bank Statement
               </div>
               <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748B' }}>
                 Automatic multi-tier matching runs immediately upon ingestion.
@@ -335,13 +325,12 @@ export default function BankReconciliationView() {
               </div>
 
               <div className="prod-form-group">
-                <label>CSV Data Feed (Date, Description, Reference, Withdrawal, Deposit, Balance)</label>
-                <textarea
-                  rows={6}
-                  value={csvText}
-                  onChange={(e) => setCsvText(e.target.value)}
-                  className="prod-input font-mono"
-                  style={{ fontSize: '0.78rem' }}
+                <label>Statement file (CSV, XLSX, XLS, or PDF)</label>
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls,.pdf,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                  onChange={(e) => setStatementFile(e.target.files?.[0] || null)}
+                  className="prod-input"
                   required
                 />
               </div>

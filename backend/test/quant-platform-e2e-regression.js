@@ -14,7 +14,7 @@ function request(url, options = {}) {
     const req = client.request(url, {
       method: options.method || 'GET',
       headers: options.headers || {},
-      timeout: 10000,
+      timeout: 30000,
     }, (res) => {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });

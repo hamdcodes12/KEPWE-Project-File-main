@@ -61,6 +61,73 @@ export async function deleteLedgerTransaction(transactionId) {
   return apiFetch(`/ledger/transactions/${transactionId}`, { method: 'DELETE' });
 }
 
+export async function fetchLedgerTransaction(transactionId) {
+  return apiFetch(`/ledger/transactions/${transactionId}`);
+}
+
+export async function importLedgerStatement(data) {
+  return apiFetch('/ledger/transactions/import', { method: 'POST', body: data });
+}
+export async function importLedgerStatementFile(data) { return apiFetch('/ledger/statements/import-file', { method: 'POST', body: data }); }
+export async function fetchLedgerStatementImportHistory() { return apiFetch('/ledger/statements/import-history'); }
+
+export async function reconcileLedgerTransaction(transactionId, data = {}) {
+  return apiFetch(`/ledger/transactions/${transactionId}/reconcile`, { method: 'POST', body: data });
+}
+
+export async function fetchLedgerIntegrationStatus() {
+  return apiFetch('/ledger/integrations/status');
+}
+
+export async function createLedgerPayment(data) {
+  return apiFetch('/ledger/payments', { method: 'POST', body: data });
+}
+
+export async function createLedgerPaymentLink(data) {
+  return apiFetch('/ledger/payments/links', { method: 'POST', body: data });
+}
+
+export async function fetchLedgerPaymentStatus(params) {
+  const query = new URLSearchParams(params);
+  return apiFetch(`/ledger/payments/status?${query.toString()}`);
+}
+
+export async function createLedgerRefund(paymentId, provider, data) {
+  return apiFetch(`/ledger/payments/${paymentId}/refunds?provider=${encodeURIComponent(provider)}`, { method: 'POST', body: data });
+}
+
+export async function fetchLedgerRefund(refundId, provider) {
+  return apiFetch(`/ledger/refunds/${refundId}?provider=${encodeURIComponent(provider)}`);
+}
+
+export async function fetchLedgerSettlements(provider, params = {}) {
+  const query = new URLSearchParams({ provider, ...params });
+  return apiFetch(`/ledger/settlements?${query.toString()}`);
+}
+
+export async function verifyLedgerBankAccount(data) { return apiFetch('/ledger/idspay/bank-account/verify', { method: 'POST', body: data }); }
+export async function verifyLedgerPennyDrop(data) { return apiFetch('/ledger/idspay/bank-account/penny-drop', { method: 'POST', body: data }); }
+export async function verifyLedgerIfsc(data) { return apiFetch('/ledger/idspay/ifsc/verify', { method: 'POST', body: data }); }
+export async function verifyLedgerUpi(data) { return apiFetch('/ledger/idspay/upi/verify', { method: 'POST', body: data }); }
+export async function fetchLedgerIdspayStatement(data) { return apiFetch('/ledger/idspay/statement', { method: 'POST', body: data }); }
+export async function fetchLedgerIdspayTransactions(data) { return apiFetch('/ledger/idspay/transactions', { method: 'POST', body: data }); }
+export async function fetchLedgerIdspayBalance(data) { return apiFetch('/ledger/idspay/balance', { method: 'POST', body: data }); }
+export async function fetchLedgerAaConsents() { return apiFetch('/ledger/aa/consents'); }
+export async function fetchLedgerAaAccounts() { return apiFetch('/ledger/aa/accounts'); }
+export async function discoverLedgerAaAccounts(data) { return apiFetch('/ledger/aa/accounts/discover', { method: 'POST', body: data }); }
+export async function linkLedgerAaAccount(data) { return apiFetch('/ledger/aa/accounts/link', { method: 'POST', body: data }); }
+export async function syncLedgerAaAccount(id, data = {}) { return apiFetch(`/ledger/aa/accounts/${id}/sync`, { method: 'POST', body: data }); }
+export async function disconnectLedgerAaAccount(id) { return apiFetch(`/ledger/aa/accounts/${id}/disconnect`, { method: 'POST' }); }
+export async function createLedgerAaConsent(data) { return apiFetch('/ledger/aa/consents', { method: 'POST', body: data }); }
+export async function fetchLedgerAaConsent(id) { return apiFetch(`/ledger/aa/consents/${id}`); }
+export async function revokeLedgerAaConsent(id) { return apiFetch(`/ledger/aa/consents/${id}/revoke`, { method: 'POST' }); }
+export async function notifyLedgerAaConsent(id, data = {}) { return apiFetch(`/ledger/aa/consents/${id}/notify`, { method: 'POST', body: data }); }
+export async function fetchLedgerAaConsentEvents(id) { return apiFetch(`/ledger/aa/consents/${id}/events`); }
+export async function fetchLedgerAaConsentHistory(customerHandle) { return apiFetch(`/ledger/aa/consent-history?customerHandle=${encodeURIComponent(customerHandle)}`); }
+export async function requestLedgerAaFi(id, data) { return apiFetch(`/ledger/aa/consents/${id}/fi-requests`, { method: 'POST', body: data }); }
+export async function fetchLedgerAaFi(id) { return apiFetch(`/ledger/aa/fi-requests/${id}/fetch`); }
+export async function fetchLedgerAaAccountData(id, action, params = {}) { return apiFetch(`/ledger/aa/accounts/${id}/${action}?${new URLSearchParams(params).toString()}`); }
+
 // 4. Receivables (Invoices)
 export async function fetchLedgerReceivables(params = {}) {
   const query = new URLSearchParams();
@@ -318,6 +385,10 @@ export async function disburseSalaries(runId, data) {
 
 // Bank Reconciliation
 export async function importBankStatement(data) {
+  return apiFetch('/v1/banks/statements/import', { method: 'POST', body: data });
+}
+
+export async function importBankStatementFile(data) {
   return apiFetch('/v1/banks/statements/import', { method: 'POST', body: data });
 }
 

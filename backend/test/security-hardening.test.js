@@ -123,9 +123,14 @@ async function runTests() {
     console.log('Test 4: Production OTP secrecy (devOtp is never exposed in production)');
     const originalEnv = process.env.NODE_ENV;
     const originalKey = process.env.RESEND_API_KEY;
+    const originalFetch = globalThis.fetch;
     try {
       process.env.NODE_ENV = 'production';
-      delete process.env.RESEND_API_KEY;
+      process.env.RESEND_API_KEY = 'test-only-email-provider-key';
+      globalThis.fetch = async () => new Response(JSON.stringify({ id: 'test-email-id' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
 
       const challenge = await requestEmailOtp({
         email: `prod_sec_check_${Date.now()}@kepwe-sec.test`,
@@ -138,6 +143,8 @@ async function runTests() {
     } finally {
       process.env.NODE_ENV = originalEnv;
       if (originalKey) process.env.RESEND_API_KEY = originalKey;
+      else delete process.env.RESEND_API_KEY;
+      globalThis.fetch = originalFetch;
     }
     console.log('✓ Production OTP secrecy verified');
 

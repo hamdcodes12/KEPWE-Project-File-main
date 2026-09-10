@@ -18,6 +18,8 @@ export class AccountAggregatorAdapter extends BaseProviderAdapter {
   constructor(options = {}) {
     super('BANK', 'Open Banking / ReBIT Account Aggregator', {
       baseUrl: options.baseUrl || process.env.AA_BASE_URL || 'https://api.accountaggregator.in/v1',
+      clientId: options.clientId || process.env.AA_CLIENT_ID || '',
+      clientSecret: options.clientSecret || process.env.AA_CLIENT_SECRET || '',
       ...options
     });
     this.fiuId = options.fiuId || process.env.AA_FIU_ID || '';
@@ -28,7 +30,7 @@ export class AccountAggregatorAdapter extends BaseProviderAdapter {
    * Checks if required Account Aggregator credentials are configured
    */
   hasCredentials() {
-    return Boolean(this.clientId && this.clientSecret && (this.fiuId || process.env.AA_FIU_ID));
+    return Boolean(this.baseUrl && this.clientId && this.clientSecret && (this.fiuId || process.env.AA_FIU_ID));
   }
 
   /**
@@ -48,8 +50,8 @@ export class AccountAggregatorAdapter extends BaseProviderAdapter {
           'AA_CLIENT_SECRET',
           'AA_FIU_ID',
           'AA_KEY_MATERIAL',
-          'BANK_BASE_URL',
-          'BANK_ENV'
+          'AA_BASE_URL',
+          'AA_ENV'
         ]
       };
     }
@@ -160,6 +162,52 @@ export class AccountAggregatorAdapter extends BaseProviderAdapter {
 
     await this.ensureAuthenticated();
     return this.send(`/Consent/handle/${consentHandle}`, 'GET');
+  }
+
+  async discoverAccounts(customerHandle) {
+    if (!this.hasCredentials()) return { success: false, status: 'CREDENTIALS_REQUIRED', error: 'Account Aggregator credentials not configured.' };
+    await this.ensureAuthenticated();
+    const response = await this.send(process.env.AA_ACCOUNT_DISCOVERY_PATH || '/Accounts/discover', 'POST', {
+      customerHandle,
+      FIType: ['DEPOSIT']
+    });
+    return { success: true, accounts: response.accounts || response.Accounts || response, rawResponse: response };
+  }
+
+  async linkAccount(accountId, customerHandle, otp) {
+    if (!this.hasCredentials()) return { success: false, status: 'CREDENTIALS_REQUIRED', error: 'Account Aggregator credentials not configured.' };
+    await this.ensureAuthenticated();
+    const response = await this.send(process.env.AA_ACCOUNT_LINK_PATH || '/Accounts/link', 'POST', { accountId, customerHandle, otp });
+    return { success: true, account: response.account || response, rawResponse: response };
+  }
+
+  async notifyConsent(consentHandle, notification = {}) {
+    if (!this.hasCredentials()) return { success: false, status: 'CREDENTIALS_REQUIRED', error: 'Account Aggregator credentials not configured.' };
+    await this.ensureAuthenticated();
+    const response = await this.send(process.env.AA_CONSENT_NOTIFICATION_PATH || '/Consent/notify', 'POST', { consentHandle, ...notification });
+    return { success: true, rawResponse: response };
+  }
+
+  async listConsentHistory(customerHandle) {
+    if (!this.hasCredentials()) return { success: false, status: 'CREDENTIALS_REQUIRED', error: 'Account Aggregator credentials not configured.' };
+    await this.ensureAuthenticated();
+    const response = await this.send(`${process.env.AA_CONSENT_HISTORY_PATH || '/Consent/history'}?customerHandle=${encodeURIComponent(customerHandle)}`, 'GET');
+    return { success: true, consents: response.consents || response.Consent || response, rawResponse: response };
+  }
+
+  async accountData(action, accountId, query = {}) {
+    if (!this.hasCredentials()) return { success: false, status: 'CREDENTIALS_REQUIRED', error: 'Account Aggregator credentials not configured.' };
+    await this.ensureAuthenticated();
+    const paths = {
+      balance: process.env.AA_ACCOUNT_BALANCE_PATH || '/Accounts/{id}/balance',
+      transactions: process.env.AA_TRANSACTION_HISTORY_PATH || '/Accounts/{id}/transactions',
+      statements: process.env.AA_BANK_STATEMENTS_PATH || '/Accounts/{id}/statements',
+      details: process.env.AA_ACCOUNT_DETAILS_PATH || '/Accounts/{id}'
+    };
+    const path = (paths[action] || paths.details).replace('{id}', encodeURIComponent(accountId));
+    const queryString = new URLSearchParams(query).toString();
+    const response = await this.send(`${path}${queryString ? `?${queryString}` : ''}`, 'GET');
+    return { success: true, data: response, rawResponse: response };
   }
 
   /**

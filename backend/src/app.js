@@ -33,7 +33,7 @@ import supportRoutes from './routes/support.routes.js';
 import algoRoutes from './routes/algo.routes.js';
 import brokerOAuthRoutes from './routes/broker-oauth.routes.js';
 import kycRoutes from './routes/kyc.routes.js';
-import ledgerRoutes from './routes/ledger.routes.js';
+import ledgerRoutes, { ledgerWebhookRoutes } from './routes/ledger.routes.js';
 import ledgerV1Routes from './routes/v1/ledger-v1.routes.js';
 import creditRoutes from './routes/credit.routes.js';
 import quantRoutes from './routes/quant.routes.js';
@@ -137,7 +137,7 @@ if (allowedOrigins.length > 0) {
 
 // Document uploads are sent as base64 JSON so the API can persist the file
 // bytes alongside their user-scoped metadata. Keep the request limit bounded.
-app.use(express.json({ limit: '8mb' }));
+app.use(express.json({ limit: '8mb', verify: (req, _res, buffer) => { req.rawBody = Buffer.from(buffer); } }));
 app.use((req, res, next) => {
   req.requestId = req.get('x-request-id') || crypto.randomUUID();
   res.setHeader('x-request-id', req.requestId);
@@ -253,6 +253,7 @@ app.use('/api', brokerOAuthRoutes);
 app.use('/api', algoRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api', ledgerRoutes);
+app.use('/api', ledgerWebhookRoutes);
 app.use('/api/v1', ledgerV1Routes);
 app.use('/api/credit', creditRoutes);
 app.use('/api/quant', quantRoutes);

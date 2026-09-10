@@ -14,13 +14,16 @@ dotenv.config();
 
 const { Pool } = pg;
 
-const isExternalPg = Boolean(process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('pglite'));
+const isPgliteTest = process.env.KEPWE_PGLITE_TEST === 'true';
+const isExternalPg = Boolean(process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('pglite') && !isPgliteTest);
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = 'postgresql://pglite@localhost/kepwe';
 }
 const databaseUrl = isExternalPg ? process.env.DATABASE_URL : null;
 
-const dataDir = resolve(__dirname, '../../data/pgdata');
+const dataDir = process.env.PGLITE_DATA_DIR
+  ? resolve(process.env.PGLITE_DATA_DIR)
+  : resolve(__dirname, '../../data/pgdata');
 let pgliteInstance = null;
 let pgliteReadyPromise = null;
 
@@ -72,6 +75,7 @@ export async function runAutoMigrations(client) {
       'ledger_schema.sql',
       'ledger_production_system.sql',
       'ledger_production_v2.sql',
+      'ledger_integrations.sql',
       'profile_avatar_and_crm_seeds.sql',
       'product_memberships_schema.sql',
       'quant_additions.sql'
@@ -132,6 +136,16 @@ export async function runAutoMigrations(client) {
           await client.query(sql);
         }
         console.log('[db] ledger_production_v2 migration applied successfully.');
+      }
+    }
+    const integrationsCheck = await client.query(`
+      SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ledger_webhooks') AS exists;
+    `);
+    if (!integrationsCheck.rows[0]?.exists) {
+      const integrationsPath = resolve(__dirname, '../../db/ledger_integrations.sql');
+      if (fs.existsSync(integrationsPath)) {
+        const sql = fs.readFileSync(integrationsPath, 'utf-8');
+        if (client.exec) await client.exec(sql); else await client.query(sql);
       }
     }
     // Check each profile avatar column so a partially applied migration is repaired.

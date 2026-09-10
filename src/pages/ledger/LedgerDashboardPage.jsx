@@ -67,6 +67,7 @@ import BankReconciliationView from '../../components/ledger/BankReconciliationVi
 import FixedAssetsView from '../../components/ledger/FixedAssetsView';
 import JournalsView from '../../components/ledger/JournalsView';
 import IntegrationsView from '../../components/ledger/IntegrationsView';
+import LedgerConnectionsView from '../../components/ledger/LedgerConnectionsView';
 import AuditTrailView from '../../components/ledger/AuditTrailView';
 
 export default function LedgerDashboardPage() {
@@ -193,6 +194,11 @@ export default function LedgerDashboardPage() {
   const greetingName = authState.user?.name?.split(' ')[0] || 'User';
   const companyName = portalProfile?.company?.name || 'My Business Workspace';
   const overdueAlertCount = (dashboardData?.metrics?.overdueReceivablesCount || 0) + (dashboardData?.metrics?.overduePayablesCount || 0);
+  const hasFinancialData = Boolean(
+    dashboardData?.recentTransactions?.length || accounts.length ||
+    dashboardData?.metrics?.totalIncome || dashboardData?.metrics?.totalExpenses ||
+    dashboardData?.metrics?.totalReceivables || dashboardData?.metrics?.totalPayables
+  );
 
   return (
     <div className="ledger-layout">
@@ -279,6 +285,7 @@ export default function LedgerDashboardPage() {
             { id: 'bank_rec', label: 'Bank Reconciliation', icon: Landmark },
             { id: 'fixed_assets', label: 'Fixed Assets', icon: Monitor },
             { id: 'integrations', label: 'Integrations Hub', icon: Server },
+            { id: 'connections', label: 'Bank & Payments', icon: CreditCard },
             { id: 'audit_trail', label: 'Audit Trail', icon: ShieldCheck },
             { id: 'settings', label: 'Settings', icon: Settings },
           ].map((item) => {
@@ -364,6 +371,7 @@ export default function LedgerDashboardPage() {
                 {activeTab === 'bank_rec' && 'Bank Statement Reconciliation'}
                 {activeTab === 'fixed_assets' && 'Fixed Assets & Depreciation'}
                 {activeTab === 'integrations' && 'External Integrations & Gateways'}
+                {activeTab === 'connections' && 'Bank Connections & Payment Workflows'}
                 {activeTab === 'audit_trail' && 'System Audit Trail & Event Logs'}
                 {activeTab === 'settings' && 'Ledger Settings'}
               </div>
@@ -506,7 +514,7 @@ export default function LedgerDashboardPage() {
                         </div>
                       </div>
                       <div className="card-number text-green font-mono">
-                        {fmtCurrency(dashboardData?.metrics?.totalIncome || 0)}
+                        {hasFinancialData ? fmtCurrency(dashboardData?.metrics?.totalIncome) : 'No data available'}
                       </div>
                       <div className="card-footer-sub">
                         <span>Actual Inflows</span>
@@ -525,7 +533,7 @@ export default function LedgerDashboardPage() {
                         </div>
                       </div>
                       <div className="card-number font-mono">
-                        {fmtCurrency(dashboardData?.metrics?.totalExpenses || 0)}
+                        {hasFinancialData ? fmtCurrency(dashboardData?.metrics?.totalExpenses) : 'No data available'}
                       </div>
                       <div className="card-footer-sub">
                         <span>Actual Outflows</span>
@@ -542,7 +550,7 @@ export default function LedgerDashboardPage() {
                         </div>
                       </div>
                       <div className={`card-number font-mono ${(dashboardData?.metrics?.netPosition || 0) >= 0 ? 'text-blue' : 'text-red'}`}>
-                        {(dashboardData?.metrics?.netPosition || 0) >= 0 ? '+' : ''}{fmtCurrency(dashboardData?.metrics?.netPosition || 0)}
+                        {hasFinancialData ? `${(dashboardData?.metrics?.netPosition || 0) >= 0 ? '+' : ''}${fmtCurrency(dashboardData?.metrics?.netPosition)}` : 'No data available'}
                       </div>
                       <div className="card-footer-sub">
                         <span>Income − Expenses</span>
@@ -559,7 +567,7 @@ export default function LedgerDashboardPage() {
                         </div>
                       </div>
                       <div className="card-number font-mono">
-                        {fmtCurrency(dashboardData?.metrics?.totalReceivables || 0)}
+                        {hasFinancialData ? fmtCurrency(dashboardData?.metrics?.totalReceivables) : 'No data available'}
                       </div>
                       <div className="card-footer-sub">
                         <span>Pending Invoices</span>
@@ -582,7 +590,7 @@ export default function LedgerDashboardPage() {
                         </div>
                       </div>
                       <div className="card-number font-mono">
-                        {fmtCurrency(dashboardData?.metrics?.totalPayables || 0)}
+                        {hasFinancialData ? fmtCurrency(dashboardData?.metrics?.totalPayables) : 'No data available'}
                       </div>
                       <div className="card-footer-sub">
                         <span>Vendor Obligations</span>
@@ -881,6 +889,9 @@ export default function LedgerDashboardPage() {
           {/* TAB: INTEGRATIONS */}
           {activeTab === 'integrations' && (
             <IntegrationsView />
+          )}
+          {activeTab === 'connections' && (
+            <LedgerConnectionsView />
           )}
 
           {/* TAB: AUDIT TRAIL */}

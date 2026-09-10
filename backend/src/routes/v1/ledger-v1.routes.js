@@ -12,6 +12,7 @@ import * as fixedAssetsEngine from '../../services/fixed-assets.service.js';
 import * as complianceEngine from '../../services/compliance-engine.service.js';
 import * as filingPrepEngine from '../../services/filing-prep.service.js';
 import { integrationManager } from '../../integrations/integration-manager.js';
+import { parseStatementFile } from '../../services/ledger-provider.service.js';
 
 import { requireIdempotency } from '../../middleware/idempotency.js';
 import { requireProductAccess } from '../../middleware/product-auth.js';
@@ -500,7 +501,17 @@ router.post('/payroll/runs/:runId/disburse', requireAuth, async (req, res, next)
 router.post('/banks/statements/import', requireAuth, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
-    const result = await bankRecEngine.importBankStatement(companyId, req.userId, req.body);
+    let payload = req.body;
+    if (req.body.fileBase64) {
+      const parsed = await parseStatementFile({
+        fileName: req.body.fileName,
+        mimeType: req.body.mimeType || 'application/octet-stream',
+        base64: req.body.fileBase64,
+      });
+      payload = { ...req.body, lines: parsed.rows, fileType: parsed.fileType };
+      delete payload.fileBase64;
+    }
+    const result = await bankRecEngine.importBankStatement(companyId, req.userId, payload);
     res.status(201).json(result);
   } catch (err) {
     next(err);

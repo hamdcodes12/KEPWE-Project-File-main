@@ -132,11 +132,13 @@ export async function requestEmailOtp({ email, purpose, payload = {} }) {
     [normalizedEmail, purpose, challengeId],
   );
 
-  return {
+  const response = {
     challengeId,
     expiresInSeconds: OTP_TTL_MINUTES * 60,
     resendAvailableInSeconds: RESEND_COOLDOWN_SECONDS,
   };
+  if (process.env.NODE_ENV !== 'production') response.devOtp = otp;
+  return response;
 }
 
 export async function consumeEmailOtp({ challengeId, email, purpose, otp }) {

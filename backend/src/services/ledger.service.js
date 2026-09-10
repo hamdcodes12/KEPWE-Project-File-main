@@ -318,6 +318,13 @@ function mapTransactionRow(row) {
     attachmentUrl: row.attachment_url,
     attachmentName: row.attachment_name,
     notes: row.notes,
+    debit: roundMoney(row.debit || (row.type === 'expense' ? row.amount : 0)),
+    credit: roundMoney(row.credit || (row.type === 'income' ? row.amount : 0)),
+    balance: row.running_balance === null || row.running_balance === undefined ? null : roundMoney(row.running_balance),
+    source: row.source || 'MANUAL',
+    bank: row.bank || '',
+    transactionType: row.transaction_type || row.type,
+    reconciledAt: row.reconciled_at,
     createdAt: row.created_at,
   };
 }
@@ -331,8 +338,8 @@ export async function createTransaction(userId, data) {
 
   const res = await pool.query(
     `INSERT INTO ledger_transactions
-       (id, user_id, account_id, type, amount, transaction_date, category, counterparty, description, payment_method, reference_number, status, receivable_id, payable_id, notes, attachment_url, attachment_name)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+       (id, user_id, account_id, type, amount, transaction_date, category, counterparty, description, payment_method, reference_number, status, receivable_id, payable_id, notes, attachment_url, attachment_name, source, debit, credit, transaction_type)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'MANUAL', $18, $19, $20)
      RETURNING *`,
     [
       txId,
@@ -352,6 +359,9 @@ export async function createTransaction(userId, data) {
       data.notes || null,
       data.attachmentUrl || null,
       data.attachmentName || null,
+      data.type === 'expense' ? amount : 0,
+      data.type === 'income' ? amount : 0,
+      data.type.toUpperCase(),
     ]
   );
 
