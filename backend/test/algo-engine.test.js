@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { atr, calculateIndicators, ema, rsi } from '../src/algo/indicators.js';
 import { runBacktest } from '../src/algo/backtest.js';
-import { AngelOneAdapter, LemonnAdapter, PaperBrokerAdapter, getBrokerReadiness } from '../src/algo/broker-adapters.js';
+import { AngelOneAdapter, DhanAdapter, PaperBrokerAdapter, getBrokerReadiness } from '../src/algo/broker-adapters.js';
 import { calculatePaperPnl, resolvePaperExit } from '../src/algo/paper-engine.js';
 import { comparePaperLedgers, killSwitchReasons } from '../src/algo/reconciliation.js';
 import { evaluateRisk, sizePosition } from '../src/algo/risk-engine.js';
@@ -104,12 +104,13 @@ test('ledger reconciliation catches missing and quantity-mismatched positions', 
 
 test('live broker adapters remain disabled without official configuration', () => {
   const angel = getBrokerReadiness('ANGEL_ONE', 'LIVE');
-  const lemonn = getBrokerReadiness('LEMONN', 'LIVE');
+  const dhan = getBrokerReadiness('DHAN', 'LIVE');
   assert.equal(angel.enabled, false);
-  assert.equal(lemonn.enabled, false);
+  assert.equal(dhan.enabled, false);
   assert.equal(angel.capabilities.orderPlacement, false);
-  assert.equal(lemonn.capabilities.positions, false);
+  assert.equal(dhan.capabilities.positions, false);
   assert.equal(JSON.stringify(angel).includes('ACCESS_TOKEN'), false);
+  assert.equal(JSON.stringify(dhan).includes('ACCESS_TOKEN'), false);
 });
 
 test('paper adapter preserves pending lifecycle state through modification and cancellation', async () => {
@@ -199,47 +200,41 @@ test('Angel One adapter covers authentication, orders, status, positions and exe
   });
 });
 
-test('Lemonn adapter covers the configured broker contract', async () => {
+test('Dhan adapter covers the configured broker contract', async () => {
   await withEnvironment({
-    LEMONN_API_KEY: 'lemonn-key',
-    LEMONN_API_SECRET: '0000000000000000000000000000000000000000000000000000000000000000',
-    LEMONN_CLIENT_ID: 'client-1',
+    DHAN_API_KEY: 'c0be378b',
+    DHAN_API_SECRET: '29c396c8-8ca0-4df2-a360-fa914e5d780b',
   }, async () => {
     const originalFetch = global.fetch;
     const calls = [];
     global.fetch = async (url, options) => {
       calls.push({ url: String(url), options });
-      if (String(url).endsWith('/generate_session_token')) return jsonResponse({ data: { accessToken: 'session-token' } });
-      if (String(url).endsWith('/orders')) return jsonResponse({ data: { orderId: 'lemonn-1', orderStatus: 'PENDING' } });
-      if (String(url).endsWith('/orders/modify')) return jsonResponse({ data: { orderId: 'lemonn-1', orderStatus: 'MODIFIED' } });
-      if (String(url).endsWith('/orders/cancel')) return jsonResponse({ data: { orderId: 'lemonn-1', orderStatus: 'CANCELLED' } });
-      if (String(url).endsWith('/orderbook')) return jsonResponse({ data: { orders: [{ orderID: 'lemonn-1', status: 'EXECUTED', orderQty: 10, tradeQty: 10, price: '101' }] } });
-      if (String(url).endsWith('/positions')) return jsonResponse({ data: { positions: [{ symbol: { symbol: 'NIFTY' }, quantity: 10 }] } });
-      if (String(url).endsWith('/holdings')) return jsonResponse({ data: { holdings: [{ symbol: { symbol: 'NIFTY' }, quantity: 10 }] } });
-      if (String(url).endsWith('/tradebook')) return jsonResponse({ data: { trades: [{ orderID: 'lemonn-1' }] } });
-      if (String(url).endsWith('/funds')) return jsonResponse({ data: { funds: { netAvailableFunds: '100000' } } });
-      return jsonResponse({ data: { points: [{ close: '100' }] } });
+      if (String(url).endsWith('/orders') && options.method === 'POST') return jsonResponse({ orderId: 'dhan-1', orderStatus: 'PENDING' });
+      if (String(url).includes('/orders/dhan-1') && options.method === 'PUT') return jsonResponse({ orderId: 'dhan-1', orderStatus: 'MODIFIED' });
+      if (String(url).includes('/orders/dhan-1') && options.method === 'DELETE') return jsonResponse({ orderId: 'dhan-1', orderStatus: 'CANCELLED' });
+      if (String(url).includes('/orders/dhan-1') && (!options.method || options.method === 'GET')) return jsonResponse({ orderId: 'dhan-1', orderStatus: 'EXECUTED' });
+      if (String(url).endsWith('/orders')) return jsonResponse([{ orderId: 'dhan-1', orderStatus: 'TRADED', quantity: 10, tradedQuantity: 10, price: 101 }]);
+      if (String(url).endsWith('/positions')) return jsonResponse([{ tradingSymbol: 'NIFTY', netQty: 10 }]);
+      if (String(url).endsWith('/holdings')) return jsonResponse([{ tradingSymbol: 'NIFTY', totalQty: 10 }]);
+      if (String(url).endsWith('/trades')) return jsonResponse([{ orderId: 'dhan-1' }]);
+      if (String(url).endsWith('/fundlimit')) return jsonResponse({ availabelBalance: 100000 });
+      return jsonResponse({ status: 'success' });
     };
     try {
-      const adapter = new LemonnAdapter();
-      assert.equal((await adapter.authenticate({ requestToken: 'request-token' })).authenticated, true);
-      await adapter.getMarketData({ NSE_EQ_SYMBOL: ['NIFTY'] });
-      await adapter.getMarketDepth({ NSE_EQ_SYMBOL: ['NIFTY'] });
-      await adapter.getChartData({ symbol: 'NIFTY', exchange: 'NSE', interval: '1m', start_time: '2026-08-28T09:15:00', end_time: '2026-08-28T10:15:00' });
-      await adapter.getHistoricalData({ symbol: 'NIFTY', exchange: 'NSE', interval: '1m', start_time: '2026-08-28T09:15:00', end_time: '2026-08-28T10:15:00' });
-      const order = await adapter.placeOrder({ instrument: 'NIFTY', side: 'BUY', quantity: 10, price: 100, metadata: { exchangeSegment: 'NSE', productType: 'DELIVERY', securityId: '1' } });
-      await adapter.modifyOrder({ ...order, price: 101 });
-      await adapter.cancelOrder(order);
-      assert.equal((await adapter.getOrderStatus({ brokerOrderId: 'lemonn-1' })).status, 'EXECUTED');
-      assert.equal((await adapter.getPositions())[0].quantity, 10);
-      assert.equal((await adapter.getHoldings())[0].quantity, 10);
-      assert.equal((await adapter.getTradeBook())[0].orderID, 'lemonn-1');
-      assert.equal((await adapter.getMargin()).netAvailableFunds, '100000');
+      const adapter = new DhanAdapter('LIVE', { dhanClientId: '1100000001', accessToken: 'dhan-session-token' });
+      const order = await adapter.placeOrder({ instrument: 'NIFTY', side: 'BUY', quantity: 10, price: 100, metadata: { exchangeSegment: 'NSE_EQ', productType: 'CNC', securityId: '1' } });
+      assert.equal(order.brokerOrderId, 'dhan-1');
+      await adapter.modifyOrder({ brokerOrderId: 'dhan-1', price: 101 });
+      await adapter.cancelOrder({ brokerOrderId: 'dhan-1' });
+      assert.equal((await adapter.getOrderStatus({ brokerOrderId: 'dhan-1' })).status, 'EXECUTED');
+      assert.equal((await adapter.getPositions())[0].instrument, 'NIFTY');
+      assert.equal((await adapter.getHoldings())[0].tradingSymbol, 'NIFTY');
+      assert.equal((await adapter.getTradeBook())[0].orderId, 'dhan-1');
+      assert.equal((await adapter.getMargin()).available, 100000);
       const updates = [];
-      await adapter.subscribeExecutionUpdates({ brokerOrderIds: ['lemonn-1'], onUpdate: (update) => updates.push(update), signal: new AbortController().signal });
+      await adapter.subscribeExecutionUpdates({ brokerOrderIds: ['dhan-1'], onUpdate: (update) => updates.push(update), signal: new AbortController().signal });
       assert.equal(updates.length, 1);
-      assert.ok(calls.every((call) => call.options.headers['x-api-key'] === 'lemonn-key'));
-      assert.ok(calls.filter((call) => !call.url.endsWith('/generate_session_token')).every((call) => call.options.headers['x-auth-key'] === 'session-token'));
+      assert.ok(calls.every((call) => call.options.headers['access-token'] === 'dhan-session-token'));
     } finally {
       global.fetch = originalFetch;
     }

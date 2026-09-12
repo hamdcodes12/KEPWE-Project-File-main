@@ -69,6 +69,7 @@ router.post('/register', validateBody(registerSchema), async (req, res, next) =>
         email: req.validatedBody.email,
         password: req.validatedBody.password,
         mobile: req.validatedBody.mobile.replace(/[\s-]/g, ''),
+        product: req.validatedBody.product || null,
       },
       getReqInfo(req)
     );
@@ -264,6 +265,10 @@ router.post('/product-membership/activate', requireAuth, validateBody(z.object({
   } catch (err) {
     next(err);
   }
+});
+
+router.get('/refresh', (req, res) => {
+  return res.status(401).json({ error: 'Session refresh requires a POST request with a valid refreshToken.' });
 });
 
 router.post('/refresh', validateBody(z.object({ refreshToken: z.string().min(1) })), async (req, res, next) => {

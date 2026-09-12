@@ -11,7 +11,7 @@
     "dev": "node --watch src/server.js",
     "start": "node db/migrate.js && node scripts/bootstrap-admin.js && node src/server.js",
     "migrate": "node db/migrate.js",
-    "test": "node test/algo-engine.test.js && node test/lemonn-auth-reuse.test.js && node test/lemonn-oauth-callback.test.js && node test/ledger.test.js && node test/accounting-engine-production.test.js && node test/comprehensive-audit-e2e.test.js && node --import ./test/pglite-test-bootstrap.mjs test/persistence-and-invariants.test.js && node test/runtime-smoke-and-security.test.js && node test/separate-product-auth.test.js && node test/quant-engine.test.js && node test/quant-platform-e2e-regression.js && node test/security-hardening.test.js",
+    "test": "node test/algo-engine.test.js && node test/dhan-broker.test.js && node test/ledger.test.js && node test/accounting-engine-production.test.js && node test/comprehensive-audit-e2e.test.js && node --import ./test/pglite-test-bootstrap.mjs test/persistence-and-invariants.test.js && node test/runtime-smoke-and-security.test.js && node test/separate-product-auth.test.js && node test/quant-engine.test.js && node test/paper-lifecycle-verification.test.js && node test/quant-platform-e2e-regression.js && node test/security-hardening.test.js && node test/dhan-session-persistence.test.js",
     "verify:prompt2": "node scripts/test-prompt2-e2e.js"
   },
   "dependencies": {

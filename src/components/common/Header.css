@@ -352,7 +352,7 @@
   background-color: #FFFFFF !important;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  z-index: 99999;
+  z-index: 1050;
   border-top: 1px solid #E2E8F0;
   animation: mobileDrawerFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }

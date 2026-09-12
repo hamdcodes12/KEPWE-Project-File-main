@@ -228,8 +228,6 @@ export const AppProvider = ({ children }) => {
     setUserRiskProfile(DEFAULT_RISK_PROFILE);
     setTradeJournal([]);
     setAlertsConfig(DEFAULT_ALERTS_CONFIG);
-    setPaperTradeModeState(true);
-    setSimulatedCapitalState(100000);
     setSubscription(null);
     setDeletionRequestedState(false);
     setReports([]);
@@ -704,29 +702,6 @@ export const AppProvider = ({ children }) => {
     return { success: false, error: res.data?.error || 'Could not save alert preferences.' };
   };
 
-  // ── IndexPilot: Paper Trade / Desk ──────────────────────────────
-  const [paperTradeMode, setPaperTradeModeState] = useState(true);
-  const [simulatedCapital, setSimulatedCapitalState] = useState(100000);
-
-  const refreshPaperTrade = useCallback(async () => {
-    const res = await apiFetch('/paper-trade');
-    if (res.ok) {
-      setPaperTradeModeState(res.data.paperTradeMode);
-      setSimulatedCapitalState(res.data.simulatedCapital);
-    }
-    return res;
-  }, []);
-
-  const setPaperTradeMode = async (value) => {
-    setPaperTradeModeState(value);
-    await apiFetch('/paper-trade', { method: 'PATCH', body: { paperTradeMode: value } });
-  };
-
-  const setSimulatedCapital = async (value) => {
-    setSimulatedCapitalState(value);
-    await apiFetch('/paper-trade', { method: 'PATCH', body: { simulatedCapital: value } });
-  };
-
   // ── IndexPilot: Subscription & Billing ──────────────────────────
   const DEFAULT_SUBSCRIPTION = {
     plan: '3 MONTHS',
@@ -862,12 +837,11 @@ export const AppProvider = ({ children }) => {
 
     refreshRiskProfile();
     refreshAlertsConfig();
-    refreshPaperTrade();
     refreshSubscription();
     refreshReports();
     refreshTradeJournal();
     refreshCompanies();
-  }, [authState.isLoggedIn, refreshRiskProfile, refreshAlertsConfig, refreshPaperTrade, refreshSubscription, refreshReports, refreshTradeJournal, refreshCompanies]);
+  }, [authState.isLoggedIn, refreshRiskProfile, refreshAlertsConfig, refreshSubscription, refreshReports, refreshTradeJournal, refreshCompanies]);
 
   const hasProductAccess = useCallback((product) => {
     if (!authState.isLoggedIn || !authState.user) return false;
@@ -973,11 +947,6 @@ export const AppProvider = ({ children }) => {
         tradeJournal,
         addTradeJournal,
         refreshTradeJournal,
-        paperTradeMode,
-        setPaperTradeMode,
-        simulatedCapital,
-        setSimulatedCapital,
-        refreshPaperTrade,
         alertsConfig,
         setAlertsConfig,
         saveAlertsConfig,

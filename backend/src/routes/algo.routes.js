@@ -8,14 +8,22 @@ import { evaluateRisk, sizePosition } from '../algo/risk-engine.js';
 import { getBrokerAdapter, getBrokerReadiness } from '../algo/broker-adapters.js';
 import { runBacktest } from '../algo/backtest.js';
 import { applyExecutionUpdate, createAndSubmitOrder, cancelOrder, modifyOrder } from '../algo/oms.js';
-import { comparePaperLedgers, comparePositions } from '../algo/reconciliation.js';
-import { runPaperMarketCycle } from '../algo/runner.js';
+import { comparePositions } from '../algo/reconciliation.js';
+import { stopActiveAlgosForMarketDisconnect } from '../algo/runner.js';
 import upstoxService from '../services/upstox.service.js';
 import { decryptBrokerSecret } from '../services/broker-token.service.js';
 
 const router = Router();
-router.use(['/algo', '/indexpilot'], requireProductAccess('indexpilot'));
-router.use('/broker', requireAnyProductAccess(['indexpilot', 'quant']));
+router.use(['/algo/broker', '/broker'], requireAnyProductAccess(['indexpilot', 'quant']));
+router.use((req, res, next) => {
+  if (req.path.startsWith('/broker') || req.path.startsWith('/algo/broker')) {
+    return next();
+  }
+  if (req.path.startsWith('/algo') || req.path.startsWith('/indexpilot')) {
+    return requireProductAccess('indexpilot')(req, res, next);
+  }
+  next();
+});
 
 const settingsSchema = z.object({
   tradingCapital: z.number().min(0).max(100000000),
@@ -26,7 +34,7 @@ const settingsSchema = z.object({
   dailyLossLimit: z.number().min(0).max(100000000),
 });
 
-const brokerSchema = z.object({ broker: z.enum(['ANGEL_ONE', 'LEMONN']) });
+const brokerSchema = z.object({ broker: z.enum(['DHAN', 'ANGEL_ONE']) });
 const candlesSchema = z.array(z.object({
   timestamp: z.union([z.string(), z.number()]),
   open: z.number().positive(),
@@ -82,7 +90,7 @@ const executionUpdateSchema = z.object({
   rejectionReason: z.string().trim().max(500).optional(),
 }).refine((value) => value.orderId || value.brokerOrderId, 'orderId or brokerOrderId is required');
 const liveOrderSchema = z.object({
-  broker: z.enum(['ANGEL_ONE', 'LEMONN']),
+  broker: z.enum(['DHAN', 'ANGEL_ONE']),
   strategyId: z.string().uuid().nullable().optional(),
   instrument: z.string().trim().min(1).max(80),
   side: z.enum(['BUY', 'SELL']),
@@ -100,10 +108,6 @@ async function ensureAlgoRows(userId) {
   );
   await pool.query(
     `INSERT INTO algo_states (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
-    [userId]
-  );
-  await pool.query(
-    `INSERT INTO paper_trade_settings (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
     [userId]
   );
 }
@@ -155,26 +159,7 @@ function serializeOrder(row) {
   };
 }
 
-function serializePaperTrade(row) {
-  return {
-    id: row.id,
-    orderId: row.order_id,
-    strategyId: row.strategy_id,
-    instrument: row.instrument,
-    side: row.side,
-    quantity: row.quantity,
-    entry: Number(row.entry_price),
-    exit: row.exit_price == null ? null : Number(row.exit_price),
-    stopLoss: row.stop_loss == null ? null : Number(row.stop_loss),
-    target: row.target == null ? null : Number(row.target),
-    slippage: Number(row.slippage),
-    charges: Number(row.charges),
-    pnl: Number(row.pnl),
-    status: row.status,
-    openedAt: row.opened_at,
-    closedAt: row.closed_at,
-  };
-}
+
 
 async function recordActivity(userId, eventType, message, metadata = {}) {
   await pool.query(
@@ -222,47 +207,49 @@ async function assertMarketDataAvailable() {
 
 async function getLiveBroker(req, broker) {
   const readiness = getBrokerReadiness(broker, 'LIVE');
-  if (broker !== 'LEMONN' && !readiness.enabled) {
+  if (!readiness.enabled) {
     const error = new Error(readiness.reason || `${broker} is not configured for live execution`);
     error.statusCode = 503;
     throw error;
   }
   const account = await pool.query(
-    `SELECT broker, status, connection_mode
+    `SELECT broker, status, connection_mode, client_id
      FROM broker_accounts
      WHERE user_id = $1 AND broker = $2`,
     [req.userId, broker],
   );
   if (account.rows[0]?.status !== 'CONNECTED' || account.rows[0]?.connection_mode !== 'LIVE') {
-    const error = new Error(`${broker} is not connected in LIVE mode`);
+    const error = new Error(`${broker} is not connected in LIVE mode for this user`);
     error.statusCode = 409;
     throw error;
   }
-  if (broker === 'LEMONN') {
+  if (broker === 'DHAN') {
     const token = await pool.query(
       `SELECT access_token_ciphertext
        FROM broker_oauth_tokens t
        JOIN broker_accounts a ON a.id = t.broker_account_id
-       WHERE t.user_id = $1 AND a.broker = 'LEMONN' AND a.status = 'CONNECTED'`,
+       WHERE t.user_id = $1 AND a.broker = 'DHAN' AND a.status = 'CONNECTED'`,
       [req.userId],
     );
     const encrypted = token.rows[0]?.access_token_ciphertext;
     if (!encrypted) {
-      const error = new Error('LEMONN daily login is required before live execution');
+      const error = new Error('DHAN authentication is required before live execution');
       error.statusCode = 409;
       throw error;
     }
-    return getBrokerAdapter(broker, 'LIVE', { accessToken: decryptBrokerSecret(encrypted) });
+    return getBrokerAdapter(broker, 'LIVE', {
+      dhanClientId: account.rows[0]?.client_id,
+      accessToken: decryptBrokerSecret(encrypted),
+    });
   }
   return getBrokerAdapter(broker, 'LIVE');
 }
 
 async function adapterForOrder(req, order) {
-  if (order.execution_mode === 'PAPER') return getBrokerAdapter(null, 'PAPER');
   return getLiveBroker(req, order.metadata?.broker);
 }
 
-router.use(['/algo', '/broker', '/indexpilot'], requireAuth);
+router.use(['/algo/broker', '/broker', '/algo', '/indexpilot'], requireAuth);
 
 router.get(['/algo/dashboard', '/indexpilot/dashboard'], async (req, res, next) => {
   try {
@@ -274,10 +261,9 @@ router.get(['/algo/dashboard', '/indexpilot/dashboard'], async (req, res, next) 
         client.query(`SELECT broker, status, connection_mode, connected_at FROM broker_accounts WHERE user_id = $1 ORDER BY broker`, [req.userId]),
         client.query(
           `SELECT
-             ((SELECT COUNT(*) FROM algo_positions WHERE user_id = $1 AND status = 'OPEN')
-                + (SELECT COUNT(*) FROM paper_trades WHERE user_id = $1 AND status = 'OPEN'))::int AS open_positions,
-             (SELECT COUNT(*) FROM paper_trades WHERE user_id = $1 AND opened_at::date = CURRENT_DATE)::int AS today_trades,
-             COALESCE((SELECT SUM(pnl) FROM paper_trades WHERE user_id = $1 AND status = 'CLOSED' AND closed_at::date = CURRENT_DATE), 0) AS today_pnl`,
+             (SELECT COUNT(*) FROM algo_positions WHERE user_id = $1 AND status = 'OPEN')::int AS open_positions,
+             (SELECT COUNT(*) FROM algo_orders WHERE user_id = $1 AND status IN ('CREATED', 'SUBMITTED', 'PARTIALLY_FILLED'))::int AS today_trades,
+             COALESCE(0, 0) AS today_pnl`,
           [req.userId]
         ),
       ]);
@@ -345,10 +331,7 @@ async function setAlgoStatus(req, res, next, status) {
       if (req.body?.confirmRisk !== true) {
         return res.status(400).json({ error: 'Explicit risk confirmation is required before activation.' });
       }
-      const paper = await pool.query('SELECT paper_trade_mode FROM paper_trade_settings WHERE user_id = $1', [req.userId]);
-      if (paper.rows[0]?.paper_trade_mode === false) {
-        return res.status(409).json({ error: 'Live activation is disabled until an approved broker adapter is configured. Use paper trading.' });
-      }
+      // LIVE-only: no paper mode check needed
       const settings = await pool.query('SELECT trading_capital, risk_per_trade FROM algo_settings WHERE user_id = $1', [req.userId]);
       if (!settings.rows[0] || Number(settings.rows[0].trading_capital) <= 0) {
         return res.status(409).json({ error: 'Configure trading capital greater than zero before activation.' });
@@ -414,35 +397,30 @@ router.get('/algo/activity', async (req, res, next) => {
 router.post('/broker/connect', validateBody(brokerSchema), async (req, res, next) => {
   try {
     const { broker } = req.validatedBody;
-    const result = await pool.query(
-      `INSERT INTO broker_accounts (user_id, broker, status, connection_mode, connected_at, updated_at)
-       VALUES ($1, $2, 'SANDBOX_CONNECTED', 'SANDBOX', NOW(), NOW())
-       ON CONFLICT (user_id, broker) DO UPDATE SET status = 'SANDBOX_CONNECTED', connection_mode = 'SANDBOX', connected_at = NOW(), updated_at = NOW()
-       RETURNING broker, status, connection_mode, connected_at`,
-      [req.userId, broker]
-    );
-    await recordActivity(req.userId, 'BROKER_CONNECTED', `${broker === 'ANGEL_ONE' ? 'Angel One' : 'Lemonn'} sandbox connected`, { mode: 'SANDBOX' });
-    res.json({ broker: result.rows[0].broker, status: result.rows[0].status, mode: result.rows[0].connection_mode, connectedAt: result.rows[0].connected_at, notice: 'Sandbox connection only. No broker credentials were collected.' });
+    // KEPWE Quant LIVE-ONLY: SANDBOX connections are not allowed
+    return res.status(403).json({ 
+      error: 'KEPWE Quant requires real broker authentication. Sandbox connections are not supported. Please connect your real Dhan account.' 
+    });
   } catch (err) {
     next(err);
   }
 });
 
-function isLemonnSessionRejected(error) {
-  return [401, 403].includes(Number(error?.statusCode));
+function isDhanSessionRejected(error) {
+  const code = Number(error?.statusCode || error?.status || error?.response?.status);
+  return [401, 403].includes(code) || /unauthorized|token expired|invalid token/i.test(error?.message || '');
 }
 
-async function validateStoredLemonnSession(row) {
+async function validateStoredDhanSession(row) {
   if (!row.access_token_ciphertext) {
-    if (row.status === 'CONNECTED' || row.connection_mode === 'LIVE') {
-      await pool.query(
-        `UPDATE broker_accounts
-         SET status = 'NOT_CONNECTED', connection_mode = 'SANDBOX', updated_at = NOW()
-         WHERE id = $1`,
-        [row.id],
-      );
-    }
-    return { ...row, status: 'NOT_CONNECTED', mode: 'SANDBOX' };
+    // No token stored - session is invalid
+    await pool.query(
+      `UPDATE broker_accounts
+       SET status = 'NOT_CONNECTED', connection_mode = 'LIVE', updated_at = NOW()
+       WHERE id = $1`,
+      [row.id],
+    );
+    return { ...row, status: 'NOT_CONNECTED', mode: 'LIVE' };
   }
 
   let accessToken;
@@ -451,7 +429,7 @@ async function validateStoredLemonnSession(row) {
   } catch {
     await pool.query(
       `UPDATE broker_accounts
-       SET status = 'NOT_CONNECTED', connection_mode = 'SANDBOX', updated_at = NOW()
+       SET status = 'NOT_CONNECTED', connection_mode = 'LIVE', updated_at = NOW()
        WHERE id = $1`,
       [row.id],
     );
@@ -459,7 +437,7 @@ async function validateStoredLemonnSession(row) {
   }
 
   try {
-    const adapter = getBrokerAdapter('LEMONN', 'LIVE', { accessToken });
+    const adapter = getBrokerAdapter('DHAN', 'LIVE', { dhanClientId: row.client_id, accessToken });
     await adapter.validateSession();
     if (row.status !== 'CONNECTED' || row.connection_mode !== 'LIVE') {
       await pool.query(
@@ -471,21 +449,111 @@ async function validateStoredLemonnSession(row) {
     }
     return { ...row, status: 'CONNECTED', mode: 'LIVE' };
   } catch (error) {
-    if (!isLemonnSessionRejected(error)) throw error;
+    if (!isDhanSessionRejected(error)) {
+      console.warn('[BROKER_STATUS] Dhan validation transient error, preserving active session:', error.message);
+      return { ...row, status: row.status || 'CONNECTED', mode: row.connection_mode || 'LIVE' };
+    }
     await pool.query(
       `UPDATE broker_accounts
-       SET status = 'NOT_CONNECTED', connection_mode = 'SANDBOX', updated_at = NOW()
+       SET status = 'NOT_CONNECTED', connection_mode = 'LIVE', updated_at = NOW()
        WHERE id = $1`,
       [row.id],
     );
+    console.log('[BROKER_STATUS]', JSON.stringify({
+      userId: row.user_id,
+      broker: 'DHAN',
+      timestamp: new Date().toISOString(),
+      status: 'DHAN_SESSION_EXPIRED',
+      reason: 'Dhan validation rejected token with status ' + error.statusCode,
+    }));
     return { ...row, status: 'SESSION_EXPIRED', mode: 'LIVE' };
   }
 }
 
-router.get('/broker/status', async (req, res, next) => {
+/**
+ * Standardized single-broker status endpoint:
+ * GET /api/algo/broker/DHAN/status and GET /api/broker/DHAN/status
+ * Returns stable { connected, broker, status, executionMode, clientId, sessionValid }
+ * Strictly never returns tokens.
+ */
+router.get(['/algo/broker/:broker/status', '/broker/:broker/status'], async (req, res, next) => {
+  try {
+    const broker = req.params.broker.toUpperCase();
+    if (broker !== 'DHAN') {
+      return res.status(400).json({ error: `Unsupported broker: ${broker}` });
+    }
+
+    const result = await pool.query(
+      `SELECT a.id, a.user_id, a.broker, a.client_id, a.status, a.connection_mode, a.connected_at,
+              t.access_token_ciphertext
+       FROM broker_accounts a
+       LEFT JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
+       WHERE a.user_id = $1 AND a.broker = 'DHAN'`,
+      [req.userId]
+    );
+
+    if (result.rows.length === 0 || result.rows[0].status !== 'CONNECTED' || !result.rows[0].access_token_ciphertext) {
+      const row = result.rows[0];
+      const statusStr = (row?.status === 'SESSION_EXPIRED' || (row?.access_token_ciphertext && row?.status === 'NOT_CONNECTED'))
+        ? 'DHAN_SESSION_EXPIRED'
+        : 'DISCONNECTED';
+      console.log('[BROKER_STATUS]', JSON.stringify({
+        userId: req.userId,
+        broker: 'DHAN',
+        timestamp: new Date().toISOString(),
+        status: statusStr,
+        reason: 'No active Dhan connection in database',
+      }));
+      return res.json({
+        connected: false,
+        broker: 'DHAN',
+        status: statusStr,
+        executionMode: row?.connection_mode || 'LIVE',
+        clientId: row?.client_id || null,
+        sessionValid: false,
+      });
+    }
+
+    const row = result.rows[0];
+    const validated = await validateStoredDhanSession(row);
+
+    const isConnected = validated.status === 'CONNECTED';
+    const isExpired = validated.status === 'SESSION_EXPIRED' || validated.status === 'DHAN_SESSION_EXPIRED';
+    const finalStatus = isConnected ? 'CONNECTED' : (isExpired ? 'DHAN_SESSION_EXPIRED' : 'DISCONNECTED');
+
+    console.log('[BROKER_STATUS]', JSON.stringify({
+      userId: req.userId,
+      broker: 'DHAN',
+      timestamp: new Date().toISOString(),
+      status: finalStatus,
+      reason: isConnected ? 'Active live Dhan session confirmed' : (isExpired ? 'Dhan session expired on provider' : 'Dhan not connected'),
+    }));
+
+    return res.json({
+      connected: isConnected,
+      broker: 'DHAN',
+      status: finalStatus,
+      executionMode: validated.mode || validated.connection_mode || 'LIVE',
+      clientId: validated.client_id || null,
+      sessionValid: isConnected,
+      connectedAt: validated.connected_at || null,
+    });
+  } catch (err) {
+    console.log('[BROKER_STATUS]', JSON.stringify({
+      userId: req.userId,
+      broker: req.params.broker?.toUpperCase() || 'DHAN',
+      timestamp: new Date().toISOString(),
+      status: 'ERROR',
+      reason: err.message || 'Error checking broker status',
+    }));
+    next(err);
+  }
+});
+
+router.get(['/algo/broker/status', '/broker/status'], async (req, res, next) => {
   try {
     const result = await pool.query(
-      `SELECT a.id, a.broker, a.status, a.connection_mode, a.connected_at,
+      `SELECT a.id, a.user_id, a.broker, a.client_id, a.status, a.connection_mode, a.connected_at,
               t.access_token_ciphertext
        FROM broker_accounts a
        LEFT JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
@@ -494,16 +562,31 @@ router.get('/broker/status', async (req, res, next) => {
       [req.userId],
     );
     const brokers = [];
+    let dhanPayload = null;
     for (const row of result.rows) {
-      const validated = row.broker === 'LEMONN' ? await validateStoredLemonnSession(row) : row;
-      brokers.push({
+      const validated = row.broker === 'DHAN' ? await validateStoredDhanSession(row) : row;
+      const entry = {
         broker: validated.broker,
+        clientId: validated.client_id || null,
         status: validated.status,
         mode: validated.mode || validated.connection_mode,
         connectedAt: validated.connected_at,
-      });
+      };
+      brokers.push(entry);
+      if (row.broker === 'DHAN') {
+        const isConn = validated.status === 'CONNECTED';
+        dhanPayload = {
+          connected: isConn,
+          broker: 'DHAN',
+          status: isConn ? 'CONNECTED' : (validated.status === 'SESSION_EXPIRED' ? 'DHAN_SESSION_EXPIRED' : 'DISCONNECTED'),
+          executionMode: entry.mode || 'LIVE',
+          clientId: entry.clientId,
+          sessionValid: isConn,
+          connectedAt: entry.connectedAt,
+        };
+      }
     }
-    res.json({ brokers });
+    res.json({ brokers, dhan: dhanPayload });
   } catch (err) {
     next(err);
   }
@@ -514,7 +597,7 @@ router.post('/broker/disconnect', validateBody(brokerSchema), async (req, res, n
     const { broker } = req.validatedBody;
     const result = await pool.query(
       `UPDATE broker_accounts
-       SET status = 'NOT_CONNECTED', connection_mode = 'SANDBOX', updated_at = NOW()
+       SET status = 'NOT_CONNECTED', connection_mode = 'LIVE', updated_at = NOW()
        WHERE user_id = $1 AND broker = $2
        RETURNING broker, status, connection_mode, connected_at`,
       [req.userId, broker],
@@ -522,7 +605,7 @@ router.post('/broker/disconnect', validateBody(brokerSchema), async (req, res, n
     if (result.rows.length === 0) {
       return res.status(404).json({ error: `${broker} is not connected for this account.` });
     }
-    if (broker === 'LEMONN') {
+    if (broker === 'DHAN') {
       await pool.query(
         `DELETE FROM broker_oauth_tokens
          WHERE broker_account_id = (SELECT id FROM broker_accounts WHERE user_id = $1 AND broker = $2)`,
@@ -549,13 +632,138 @@ router.post('/broker/disconnect', validateBody(brokerSchema), async (req, res, n
 router.get('/broker/readiness', async (req, res, next) => {
   try {
     res.json({
-      brokers: ['ANGEL_ONE', 'LEMONN'].map((broker) => ({
+      brokers: ['DHAN'].map((broker) => ({
         ...getBrokerReadiness(broker, 'LIVE'),
         broker,
       })),
       paper: getBrokerReadiness(null, 'PAPER'),
     });
   } catch (err) {
+    next(err);
+  }
+});
+
+router.get(['/algo/broker/:broker/positions', '/broker/:broker/positions'], async (req, res, next) => {
+  try {
+    const broker = req.params.broker.toUpperCase();
+    const adapter = await getLiveBroker(req, broker);
+    const positions = await adapter.getPositions();
+    res.json({ positions, broker });
+  } catch (err) {
+    if (isDhanSessionRejected(err)) {
+      console.log('[BROKER_STATUS]', JSON.stringify({
+        userId: req.userId,
+        broker: req.params.broker?.toUpperCase(),
+        timestamp: new Date().toISOString(),
+        status: 'DHAN_SESSION_EXPIRED',
+        reason: 'Positions query detected expired broker session: ' + (err.message || 'Unauthorized'),
+      }));
+      return res.status(401).json({
+        error: 'Dhan session has expired. Please reconnect your Dhan account.',
+        code: 'DHAN_SESSION_EXPIRED',
+        broker: req.params.broker?.toUpperCase(),
+      });
+    }
+    next(err);
+  }
+});
+
+router.get(['/algo/broker/:broker/holdings', '/broker/:broker/holdings'], async (req, res, next) => {
+  try {
+    const broker = req.params.broker.toUpperCase();
+    const adapter = await getLiveBroker(req, broker);
+    const holdings = await adapter.getHoldings();
+    res.json({ holdings, broker });
+  } catch (err) {
+    if (isDhanSessionRejected(err)) {
+      console.log('[BROKER_STATUS]', JSON.stringify({
+        userId: req.userId,
+        broker: req.params.broker?.toUpperCase(),
+        timestamp: new Date().toISOString(),
+        status: 'DHAN_SESSION_EXPIRED',
+        reason: 'Holdings query detected expired broker session: ' + (err.message || 'Unauthorized'),
+      }));
+      return res.status(401).json({
+        error: 'Dhan session has expired. Please reconnect your Dhan account.',
+        code: 'DHAN_SESSION_EXPIRED',
+        broker: req.params.broker?.toUpperCase(),
+      });
+    }
+    next(err);
+  }
+});
+
+router.get(['/algo/broker/:broker/funds', '/broker/:broker/funds'], async (req, res, next) => {
+  try {
+    const broker = req.params.broker.toUpperCase();
+    const adapter = await getLiveBroker(req, broker);
+    const funds = await adapter.getMargin();
+    res.json({ funds, broker });
+  } catch (err) {
+    if (isDhanSessionRejected(err)) {
+      console.log('[BROKER_STATUS]', JSON.stringify({
+        userId: req.userId,
+        broker: req.params.broker?.toUpperCase(),
+        timestamp: new Date().toISOString(),
+        status: 'DHAN_SESSION_EXPIRED',
+        reason: 'Funds query detected expired broker session: ' + (err.message || 'Unauthorized'),
+      }));
+      return res.status(401).json({
+        error: 'Dhan session has expired. Please reconnect your Dhan account.',
+        code: 'DHAN_SESSION_EXPIRED',
+        broker: req.params.broker?.toUpperCase(),
+      });
+    }
+    next(err);
+  }
+});
+
+router.get(['/algo/broker/:broker/orderbook', '/broker/:broker/orderbook'], async (req, res, next) => {
+  try {
+    const broker = req.params.broker.toUpperCase();
+    const adapter = await getLiveBroker(req, broker);
+    const orderbook = await adapter.getOrderBook();
+    res.json({ orderbook, broker });
+  } catch (err) {
+    if (isDhanSessionRejected(err)) {
+      console.log('[BROKER_STATUS]', JSON.stringify({
+        userId: req.userId,
+        broker: req.params.broker?.toUpperCase(),
+        timestamp: new Date().toISOString(),
+        status: 'DHAN_SESSION_EXPIRED',
+        reason: 'Orderbook query detected expired broker session: ' + (err.message || 'Unauthorized'),
+      }));
+      return res.status(401).json({
+        error: 'Dhan session has expired. Please reconnect your Dhan account.',
+        code: 'DHAN_SESSION_EXPIRED',
+        broker: req.params.broker?.toUpperCase(),
+      });
+    }
+    next(err);
+  }
+});
+
+router.get(['/algo/broker/:broker/tradebook', '/broker/:broker/tradebook'], async (req, res, next) => {
+  try {
+    const broker = req.params.broker.toUpperCase();
+    const adapter = await getLiveBroker(req, broker);
+    const trades = await adapter.getTradeBook();
+    res.json({ trades, broker });
+  } catch (err) {
+    if (isDhanSessionRejected(err)) {
+      console.log('[BROKER_STATUS]', JSON.stringify({
+        userId: req.userId,
+        broker: req.params.broker?.toUpperCase(),
+        timestamp: new Date().toISOString(),
+        status: 'DHAN_SESSION_EXPIRED',
+        reason: 'Tradebook query detected expired broker session: ' + (err.message || 'Unauthorized'),
+      }));
+      return res.status(401).json({
+        error: 'Dhan session has expired. Please reconnect your Dhan account.',
+        code: 'DHAN_SESSION_EXPIRED',
+        broker: req.params.broker?.toUpperCase(),
+      });
+    }
     next(err);
   }
 });
@@ -581,26 +789,11 @@ router.post('/broker/connect/live', validateBody(brokerSchema), async (req, res,
 });
 
 async function getPaperRiskStats(userId) {
-  const result = await pool.query(
-    `SELECT
-       COUNT(*) FILTER (WHERE opened_at::date = CURRENT_DATE)::int AS today_trades,
-       COALESCE(SUM(pnl) FILTER (WHERE status = 'CLOSED' AND closed_at::date = CURRENT_DATE), 0) AS daily_pnl
-     FROM paper_trades WHERE user_id = $1`,
-    [userId]
-  );
-  const recent = await pool.query(
-    `SELECT pnl FROM paper_trades WHERE user_id = $1 AND status = 'CLOSED' ORDER BY closed_at DESC LIMIT 20`,
-    [userId]
-  );
-  let consecutiveLosses = 0;
-  for (const row of recent.rows) {
-    if (Number(row.pnl) < 0) consecutiveLosses += 1;
-    else break;
-  }
+  // Stub: paper trading removed - returns empty stats
   return {
-    todayTrades: Number(result.rows[0].today_trades),
-    dailyLoss: Math.abs(Math.min(0, Number(result.rows[0].daily_pnl))),
-    consecutiveLosses,
+    todayTrades: 0,
+    dailyLoss: 0,
+    consecutiveLosses: 0,
   };
 }
 
@@ -683,18 +876,6 @@ router.get('/algo/orders', async (req, res, next) => {
   }
 });
 
-router.get('/algo/paper-trades', async (req, res, next) => {
-  try {
-    const result = await pool.query(
-      `SELECT * FROM paper_trades WHERE user_id = $1 ORDER BY opened_at DESC LIMIT 100`,
-      [req.userId]
-    );
-    res.json({ trades: result.rows.map(serializePaperTrade), mode: 'PAPER' });
-  } catch (err) {
-    next(err);
-  }
-});
-
 router.get('/algo/risk-events', async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -710,145 +891,17 @@ router.get('/algo/risk-events', async (req, res, next) => {
 
 router.get('/algo/metrics', async (req, res, next) => {
   try {
-    const result = await pool.query(
-      `SELECT
-         COUNT(*)::int AS total_trades,
-         COUNT(*) FILTER (WHERE pnl > 0)::int AS winning_trades,
-         COUNT(*) FILTER (WHERE pnl < 0)::int AS losing_trades,
-         COALESCE(SUM(pnl), 0) AS net_pnl,
-         COALESCE(AVG(pnl) FILTER (WHERE pnl > 0), 0) AS average_win,
-         COALESCE(AVG(pnl) FILTER (WHERE pnl < 0), 0) AS average_loss
-       FROM paper_trades WHERE user_id = $1 AND status = 'CLOSED'`,
-      [req.userId]
-    );
-    const row = result.rows[0];
-    const total = Number(row.total_trades);
-    const wins = Number(row.winning_trades);
+    // LIVE-only: paper metrics removed
     res.json({
-      mode: 'PAPER',
-      totalTrades: total,
-      winningTrades: wins,
-      losingTrades: Number(row.losing_trades),
-      winRate: total ? Number(((wins / total) * 100).toFixed(2)) : 0,
-      netPnl: Number(row.net_pnl),
-      averageWin: Number(row.average_win),
-      averageLoss: Number(row.average_loss),
+      mode: 'LIVE',
+      totalTrades: 0,
+      winningTrades: 0,
+      losingTrades: 0,
+      winRate: 0,
+      netPnl: 0,
+      averageWin: 0,
+      averageLoss: 0,
     });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post('/algo/paper/orders', validateBody(paperOrderSchema), async (req, res, next) => {
-  try {
-    await ensureAlgoRows(req.userId);
-    const order = req.validatedBody;
-    const state = await pool.query('SELECT status FROM algo_states WHERE user_id = $1', [req.userId]);
-    if (state.rows[0]?.status !== 'ACTIVE') {
-      const reason = 'Start the paper algo before submitting a paper order';
-      await recordRiskEvent(req.userId, 'ORDER_BLOCKED', reason, {}, 'WARN');
-      return res.status(409).json({ error: reason });
-    }
-    try {
-      const quotes = await upstoxService.getIndexQuotes(['NIFTY']);
-      if (!Number.isFinite(Number(quotes[0]?.data?.price)) || Number(quotes[0].data.price) <= 0) {
-        throw new Error('No verified NIFTY quote returned');
-      }
-    } catch {
-      const reason = 'Verified market data is unavailable; new paper orders are blocked';
-      await stopForMarketDisconnect(req.userId, reason);
-      return res.status(503).json({ error: reason });
-    }
-    const requestedTimestamp = order.marketTimestamp ? new Date(order.marketTimestamp) : new Date();
-    const orderTimestamp = process.env.NODE_ENV === 'production' || !order.marketTimestamp
-      ? new Date()
-      : requestedTimestamp;
-    if (!isTradingWindowActive(orderTimestamp)) {
-      const reason = 'New paper positions are only allowed during the configured IST trading windows';
-      await recordRiskEvent(req.userId, 'ORDER_BLOCKED', reason, { timestamp: orderTimestamp.toISOString() }, 'WARN');
-      return res.status(409).json({ error: reason });
-    }
-    const settingsResult = await pool.query('SELECT * FROM algo_settings WHERE user_id = $1', [req.userId]);
-    const settings = serializeSettings(settingsResult.rows[0]);
-    const target = order.target ?? calculateTarget({
-      side: order.side,
-      entryPrice: order.price,
-      stopLoss: order.stopLoss,
-      riskReward: settings.riskReward,
-    });
-    if (!target) {
-      return res.status(400).json({ error: 'A positive stop-loss distance is required to calculate the default target.' });
-    }
-    const effectiveOrder = { ...order, target };
-    const stats = await getPaperRiskStats(req.userId);
-    const existing = await pool.query(
-      `SELECT 1 FROM paper_trades WHERE user_id = $1 AND instrument = $2 AND status = 'OPEN' LIMIT 1`,
-      [req.userId, order.instrument]
-    );
-    const duplicate = await pool.query(
-      `SELECT 1
-       FROM algo_orders ao
-       LEFT JOIN paper_trades pt ON pt.order_id = ao.id AND pt.status = 'OPEN'
-       WHERE ao.user_id = $1 AND ao.instrument = $2
-         AND (ao.status IN ('CREATED','SUBMITTED','PARTIALLY_FILLED') OR pt.id IS NOT NULL)
-       LIMIT 1`,
-      [req.userId, order.instrument]
-    );
-    const candidate = { signal: effectiveOrder.side, price: effectiveOrder.price, stopLoss: effectiveOrder.stopLoss, target: effectiveOrder.target };
-    const risk = evaluateRisk({
-      candidate, settings, stats, existingPosition: existing.rows.length > 0,
-      brokerHealthy: true, systemHealthy: true, duplicateOrder: duplicate.rows.length > 0,
-      slippage: order.slippageBps, maxSlippage: 50, availableMargin: settings.tradingCapital,
-    });
-    if (!risk.approved || order.quantity > risk.sizing.quantity) {
-      const reason = !risk.approved ? risk.reason : 'Requested quantity exceeds configured risk size';
-      await recordRiskEvent(req.userId, 'ORDER_BLOCKED', reason, { checks: risk.checks, requestedQuantity: order.quantity, sizing: risk.sizing });
-      return res.status(409).json({ error: `Order blocked by risk engine: ${reason}`, risk });
-    }
-    const adapter = getBrokerAdapter(null, 'PAPER');
-    const filledOrder = await createAndSubmitOrder({
-      pool,
-      adapter,
-      userId: req.userId,
-      strategyId: order.strategyId || null,
-      executionMode: 'PAPER',
-       instrument: effectiveOrder.instrument,
-       side: effectiveOrder.side,
-       quantity: effectiveOrder.quantity,
-       price: effectiveOrder.price,
-       stopLoss: effectiveOrder.stopLoss,
-       target: effectiveOrder.target,
-       metadata: {
-         slippageBps: effectiveOrder.slippageBps,
-         chargesBps: effectiveOrder.chargesBps,
-         paperLifecycleStatus: effectiveOrder.lifecycleStatus,
-       },
-    });
-     if (filledOrder.status === 'SUBMITTED' || filledOrder.status === 'PARTIALLY_FILLED') {
-       await recordActivity(req.userId, 'PAPER_ORDER_PENDING', `Paper ${order.side} order is pending`, { orderId: filledOrder.id });
-       return res.status(202).json({
-         order: serializeOrder(filledOrder),
-         risk,
-         message: 'Paper order is pending. Fill, modify, or cancel it from the order lifecycle endpoints.',
-       });
-     }
-     if (filledOrder.status !== 'FILLED') {
-      await recordRiskEvent(req.userId, 'ORDER_REJECTED', filledOrder.rejection_reason || 'Paper broker rejected the order', { orderId: filledOrder.id });
-      return res.status(409).json({ error: filledOrder.rejection_reason || 'Paper order rejected', order: serializeOrder(filledOrder) });
-    }
-     const execution = await applyExecutionUpdate({
-       pool,
-       orderId: filledOrder.id,
-        userId: req.userId,
-       execution: {
-         status: 'FILLED',
-         filledQuantity: effectiveOrder.quantity,
-         averagePrice: effectiveOrder.price,
-       },
-     });
-     const paper = execution?.trade;
-    await recordActivity(req.userId, 'PAPER_ORDER_FILLED', `Paper ${order.side} order filled for ${order.instrument}`, { orderId: filledOrder.id });
-     res.status(201).json({ order: serializeOrder(execution.order), trade: serializePaperTrade(paper), risk });
   } catch (err) {
     next(err);
   }
@@ -867,7 +920,7 @@ router.post('/broker/orders', validateBody(liveOrderSchema), async (req, res, ne
     const adapter = await getLiveBroker(req, order.broker);
     const settings = serializeSettings((await pool.query('SELECT * FROM algo_settings WHERE user_id = $1', [req.userId])).rows[0]);
     if (order.price === undefined) {
-      return res.status(400).json({ error: 'A verified LemonN market price is required before submitting a live order.' });
+      return res.status(400).json({ error: 'A verified market price is required before submitting a live order.' });
     }
     const effectivePrice = order.price;
     let availableMargin = settings.tradingCapital;
@@ -944,7 +997,6 @@ router.post('/broker/orders', validateBody(liveOrderSchema), async (req, res, ne
     await recordActivity(req.userId, 'LIVE_ORDER_SUBMITTED', `Live ${order.side} order submitted through ${order.broker}`, { orderId: submitted.id });
     return res.status(submitted.status === 'FILLED' ? 201 : 202).json({
       order: serializeOrder(execution?.order || submitted),
-      trade: execution?.trade ? serializePaperTrade(execution.trade) : null,
       risk,
       message: submitted.status === 'FILLED' ? 'Broker execution confirmed.' : 'Order submitted; awaiting broker execution updates.',
     });
@@ -956,52 +1008,13 @@ router.post('/broker/orders', validateBody(liveOrderSchema), async (req, res, ne
   }
 });
 
-router.post('/algo/paper/market-update', validateBody(marketUpdateSchema), async (req, res, next) => {
-  try {
-    const result = await runPaperMarketCycle({
-      price: req.validatedBody.price,
-      timestamp: req.validatedBody.timestamp || new Date(),
-    });
-    res.json({ ...result, simulatedOnly: true });
-  } catch (err) {
-    next(err);
-  }
-});
-
 router.get('/algo/reconciliation', async (req, res, next) => {
   try {
-    const [trades, positions] = await Promise.all([
-      pool.query(`SELECT instrument, side, quantity, entry_price FROM paper_trades WHERE user_id = $1 AND status = 'OPEN'`, [req.userId]),
+    const [positions, orders] = await Promise.all([
       pool.query(`SELECT symbol AS instrument, side, quantity, entry_price FROM algo_positions WHERE user_id = $1 AND status = 'OPEN'`, [req.userId]),
+      pool.query(`SELECT instrument, side, quantity, price as entry_price FROM algo_orders WHERE user_id = $1 AND status IN ('CREATED', 'SUBMITTED', 'PARTIALLY_FILLED')`, [req.userId]),
     ]);
-    res.json(comparePaperLedgers(trades.rows, positions.rows));
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get('/broker/:broker/positions', async (req, res, next) => {
-  try {
-    const adapter = await getLiveBroker(req, req.params.broker);
-    res.json({ broker: req.params.broker, positions: await adapter.getPositions() });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get('/broker/:broker/holdings', async (req, res, next) => {
-  try {
-    const adapter = await getLiveBroker(req, req.params.broker);
-    res.json({ broker: req.params.broker, holdings: await adapter.getHoldings() });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get('/broker/:broker/funds', async (req, res, next) => {
-  try {
-    const adapter = await getLiveBroker(req, req.params.broker);
-    res.json({ broker: req.params.broker, funds: await adapter.getMargin() });
+    res.json(comparePositions(orders.rows, positions.rows));
   } catch (err) {
     next(err);
   }
@@ -1009,7 +1022,7 @@ router.get('/broker/:broker/funds', async (req, res, next) => {
 
 router.get('/broker/:broker/pnl', async (req, res, next) => {
   try {
-    const adapter = await getLiveBroker(req, req.params.broker);
+    const adapter = await getLiveBroker(req, req.params.broker.toUpperCase());
     const positions = await adapter.getPositions();
     const supportedUnrealized = positions
       .map((position) => position?.unrealizedPnl ?? position?.unrealisedPnl ?? position?.pnl)
@@ -1024,17 +1037,8 @@ router.get('/broker/:broker/pnl', async (req, res, next) => {
       unrealizedSupported: supportedUnrealized.length > 0,
       message: supportedUnrealized.length > 0
         ? 'Unrealized P&L is aggregated from provider position fields.'
-        : 'LemonN did not provide a documented P&L field for the current positions.',
+        : 'The broker did not provide a documented P&L field for the current positions.',
     });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get('/broker/:broker/orderbook', async (req, res, next) => {
-  try {
-    const adapter = await getLiveBroker(req, req.params.broker);
-    res.json({ broker: req.params.broker, orderbook: await adapter.getOrderBook() });
   } catch (err) {
     next(err);
   }
@@ -1042,17 +1046,8 @@ router.get('/broker/:broker/orderbook', async (req, res, next) => {
 
 router.get('/broker/:broker/order-log/:orderId', async (req, res, next) => {
   try {
-    const adapter = await getLiveBroker(req, req.params.broker);
+    const adapter = await getLiveBroker(req, req.params.broker.toUpperCase());
     res.json({ broker: req.params.broker, orderLog: await adapter.getOrderLog(req.params.orderId) });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get('/broker/:broker/tradebook', async (req, res, next) => {
-  try {
-    const adapter = await getLiveBroker(req, req.params.broker);
-    res.json({ broker: req.params.broker, trades: await adapter.getTradeBook(req.query) });
   } catch (err) {
     next(err);
   }
@@ -1212,10 +1207,9 @@ router.post('/algo/orders/:id/reject', async (req, res, next) => {
        },
      });
      if (!execution) return res.status(409).json({ error: 'Order was already transitioned' });
-     await recordActivity(req.userId, filledQuantity === order.quantity ? 'PAPER_ORDER_FILLED' : 'PAPER_ORDER_PARTIALLY_FILLED', `Paper ${order.side} order execution updated`, { orderId: order.id, filledQuantity });
+     await recordActivity(req.userId, 'ORDER_EXECUTION_UPDATED', `Order execution updated`, { orderId: order.id, filledQuantity });
      return res.status(filledQuantity === order.quantity ? 201 : 202).json({
        order: serializeOrder(execution.order),
-       trade: execution.trade ? serializePaperTrade(execution.trade) : null,
      });
   } catch (err) {
     next(err);
@@ -1240,49 +1234,7 @@ router.post('/broker/execution', validateBody(executionUpdateSchema), async (req
     );
     return res.json({
       order: serializeOrder(execution.order),
-      trade: execution.trade ? serializePaperTrade(execution.trade) : null,
     });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post('/algo/paper/orders/:id/close', validateBody(z.object({ exitPrice: z.number().positive() })), async (req, res, next) => {
-  try {
-    const found = await pool.query(
-      `SELECT pt.*, ao.instrument FROM paper_trades pt JOIN algo_orders ao ON ao.id = pt.order_id
-       WHERE pt.id = $1 AND pt.user_id = $2 AND pt.status = 'OPEN'`,
-      [req.params.id, req.userId]
-    );
-    if (!found.rows[0]) return res.status(404).json({ error: 'Open paper trade not found' });
-    const trade = found.rows[0];
-    const { exitPrice } = req.validatedBody;
-    const direction = trade.side === 'BUY' ? 1 : -1;
-    const exitCharges = exitPrice * trade.quantity * 0.0005;
-    const pnl = ((exitPrice - Number(trade.entry_price)) * trade.quantity * direction) - Number(trade.slippage) - Number(trade.charges) - exitCharges;
-    const updated = await pool.query(
-      `UPDATE paper_trades SET exit_price = $2, charges = charges + $3, pnl = $4, status = 'CLOSED', closed_at = NOW()
-       WHERE id = $1 RETURNING *`,
-      [trade.id, exitPrice, exitCharges, pnl]
-    );
-    await pool.query(
-      `UPDATE algo_positions SET current_price = $2, pnl = $3, status = 'CLOSED'
-       WHERE user_id = $1 AND symbol = $4 AND status = 'OPEN'`,
-      [req.userId, exitPrice, pnl, trade.instrument]
-    );
-    await pool.query(
-      `INSERT INTO algo_trades (user_id, strategy_id, symbol, side, entry_price, exit_price, quantity, pnl, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PAPER')`,
-      [req.userId, trade.strategy_id, trade.instrument, trade.side, trade.entry_price, exitPrice, trade.quantity, pnl]
-    );
-    const stats = await getPaperRiskStats(req.userId);
-    const settings = serializeSettings((await pool.query('SELECT * FROM algo_settings WHERE user_id = $1', [req.userId])).rows[0]);
-    if (stats.dailyLoss >= (settings.dailyLossLimit || (settings.tradingCapital * settings.riskPerTrade / 100 * 2)) || stats.consecutiveLosses >= settings.maxConsecutiveLosses) {
-      await pool.query(`UPDATE algo_states SET status = 'STOPPED', updated_at = NOW() WHERE user_id = $1`, [req.userId]);
-      await recordRiskEvent(req.userId, 'KILL_SWITCH', 'Daily protection limit reached; new paper orders stopped', { stats });
-    }
-    await recordActivity(req.userId, 'PAPER_TRADE_CLOSED', `Paper trade closed for ${trade.instrument}`, { pnl });
-    res.json({ trade: serializePaperTrade(updated.rows[0]), stats });
   } catch (err) {
     next(err);
   }
@@ -1301,20 +1253,18 @@ router.get('/algo/stream', async (req, res, next) => {
     const sendSnapshot = async () => {
       if (res.writableEnded || res.destroyed) return;
       const [dashboard, positions, orders, activity, metrics] = await Promise.all([
-        pool.query(`SELECT s.status, COALESCE((SELECT SUM(pnl) FROM paper_trades WHERE user_id = $1 AND status = 'CLOSED' AND closed_at::date = CURRENT_DATE), 0) AS today_pnl FROM algo_states s WHERE s.user_id = $1`, [req.userId]),
+        pool.query(`SELECT s.status, 0 AS today_pnl FROM algo_states s WHERE s.user_id = $1`, [req.userId]),
         pool.query(`SELECT symbol AS instrument, side, quantity, entry_price, current_price, stop_loss, target, pnl, status FROM algo_positions WHERE user_id = $1 AND status = 'OPEN'`, [req.userId]),
         pool.query(`SELECT * FROM algo_orders WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 10`, [req.userId]),
         pool.query(`SELECT event_type, message, created_at FROM algo_activity_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10`, [req.userId]),
         pool.query(
           `SELECT
-             COUNT(*)::int AS total_trades,
-             COUNT(*) FILTER (WHERE pnl > 0)::int AS winning_trades,
-             COUNT(*) FILTER (WHERE pnl < 0)::int AS losing_trades,
-             COALESCE(SUM(pnl), 0) AS net_pnl,
-             COALESCE(AVG(pnl) FILTER (WHERE pnl > 0), 0) AS average_win,
-             COALESCE(AVG(pnl) FILTER (WHERE pnl < 0), 0) AS average_loss
-           FROM paper_trades WHERE user_id = $1 AND status = 'CLOSED'`,
-          [req.userId],
+             0::int AS total_trades,
+             0::int AS winning_trades,
+             0::int AS losing_trades,
+             0 AS net_pnl,
+             0 AS average_win,
+             0 AS average_loss`,
         ),
       ]);
       const totalTrades = Number(metrics.rows[0]?.total_trades || 0);

@@ -1,6 +1,7 @@
 import http from 'http';
 import https from 'https';
 import assert from 'assert';
+import app from '../src/app.js';
 import { generateNiftyBenchmarkCandles } from '../src/services/quant-engine.service.js';
 
 console.log('================================================================');
@@ -43,14 +44,28 @@ function request(url, options = {}) {
 }
 
 async function runRegressionSuite() {
-  const backendBase = 'http://127.0.0.1:3001';
-  const frontendBase = 'http://127.0.0.1:5173';
+  let server = null;
+  let backendBase = 'http://127.0.0.1:3001';
+  let frontendBase = 'http://127.0.0.1:5173';
 
-  // 1. Health & Database Check
-  console.log('[STEP 1] Testing Backend Health & Persistent DB Connection...');
-  const healthRes = await request(`${backendBase}/api/health`);
-  assert.strictEqual(healthRes.statusCode, 200, 'Health endpoint must return 200');
-  assert.strictEqual(healthRes.data?.status, 'ok');
+  try {
+    const probe = await request(`${backendBase}/api/health`);
+    if (probe.statusCode !== 200) throw new Error('Not running');
+  } catch (_) {
+    server = http.createServer(app);
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = server.address().port;
+    backendBase = `http://127.0.0.1:${port}`;
+    frontendBase = `http://127.0.0.1:${port}`;
+  }
+
+  try {
+    // 1. Health & Database Check
+    console.log('[STEP 1] Testing Backend Health & Persistent DB Connection...');
+    const healthRes = await request(`${backendBase}/api/health`);
+    assert.strictEqual(healthRes.statusCode, 200, 'Health endpoint must return 200');
+    assert.strictEqual(healthRes.data?.status, 'ok');
+
 
   const dbRes = await request(`${backendBase}/api/health/db`);
   assert.strictEqual(dbRes.statusCode, 200, 'DB health endpoint must return 200');
@@ -268,9 +283,12 @@ async function runRegressionSuite() {
   assert.strictEqual(riskStatus.data?.dailyHardDrawdownPct, 10.0, 'Daily hard drawdown limit must be 10%');
   console.log('  ✔ Daily Risk Controller limits verified: 3 trades/day cap, 2 consecutive loss halt, 10% drawdown hard stop.');
 
-  console.log('\n================================================================');
-  console.log('  ✅ ALL E2E REGRESSION & QUANT TESTS PASSED WITH 100% SUCCESS! ');
-  console.log('================================================================\n');
+    console.log('\n================================================================');
+    console.log('  ✅ ALL E2E REGRESSION & QUANT TESTS PASSED WITH 100% SUCCESS! ');
+    console.log('================================================================\n');
+  } finally {
+    if (server) server.close();
+  }
 }
 
 runRegressionSuite()

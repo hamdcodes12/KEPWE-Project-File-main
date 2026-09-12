@@ -38,23 +38,6 @@ export function comparePositions(internalPositions = [], brokerPositions = []) {
   };
 }
 
-export function comparePaperLedgers(paperTrades = [], algoPositions = []) {
-  return comparePositions(
-    paperTrades.map((trade) => ({
-      instrument: trade.instrument,
-      side: trade.side,
-      quantity: trade.quantity,
-      entryPrice: trade.entryPrice ?? trade.entry_price,
-    })),
-    algoPositions.map((position) => ({
-      instrument: position.instrument || position.symbol,
-      side: position.side,
-      quantity: position.quantity,
-      entryPrice: position.entryPrice ?? position.entry_price,
-    }))
-  );
-}
-
 export function killSwitchReasons({
   dailyLoss = 0,
   maxDailyLoss = Infinity,

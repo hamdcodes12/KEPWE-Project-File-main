@@ -118,10 +118,7 @@ export async function registerUser({ name, email, password, mobile, emailVerifie
       `INSERT INTO alert_configs (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
       [newUser.id]
     );
-    await client.query(
-      `INSERT INTO paper_trade_settings (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
-      [newUser.id]
-    );
+    // LIVE-only: paper_trade_settings no longer created
 
     await client.query(
       `INSERT INTO subscriptions (user_id, plan_id, price_at_signup, status)

@@ -4,7 +4,7 @@ import { CheckCircle2, AlertTriangle, Send, BookOpen } from 'lucide-react';
 import '../../styles/modal-physics.css';
 
 const AppDeskPage = () => {
-  const { tradeJournal, paperTradeMode, setPaperTradeMode, simulatedCapital, marketStrategies } = useApp();
+  const { tradeJournal, marketStrategies } = useApp();
   const [brokerModalOpen, setBrokerModalOpen] = useState(false);
   const [isBrokerClosing, setIsBrokerClosing] = useState(false);
   const [brokerHandoffDone, setBrokerHandoffDone] = useState(false);
@@ -51,31 +51,8 @@ const AppDeskPage = () => {
               </span>
             </div>
             <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em', color: '#0F172A', margin: 0 }}>
-              Execution Support & Paper Desk
+              Execution Support
             </h1>
-          </div>
-
-          {/* Paper Trade Mode Switcher */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              PAPER TRADE MODE:
-            </span>
-            <button
-              onClick={() => setPaperTradeMode(!paperTradeMode)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: paperTradeMode ? '1px solid #BFDBFE' : '1px solid #CBD5E1',
-                fontWeight: 700,
-                fontSize: '11px',
-                cursor: 'pointer',
-                background: paperTradeMode ? '#EFF6FF' : '#F8FAFC',
-                color: paperTradeMode ? '#214ECF' : '#64748B',
-                transition: 'all 180ms ease'
-              }}
-            >
-              {paperTradeMode ? 'PRACTICE ACTIVE (Simulated ₹1,00,000)' : 'LIVE MODE (Broker Handoff)'}
-            </button>
           </div>
         </div>
 
@@ -249,46 +226,6 @@ const AppDeskPage = () => {
               <Send size={15} /> Send to Broker (Hand-off Order)
             </button>
           </div>
-
-          {/* Card 3: Paper Trade Mode Summary */}
-          <div style={{
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            borderRadius: '12px',
-            padding: '24px',
-            boxShadow: '0 4px 18px rgba(15, 23, 42, 0.04)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between'
-          }}>
-            <div>
-              <span style={{
-                background: '#EFF6FF',
-                color: '#214ECF',
-                border: '1px solid #BFDBFE',
-                padding: '3px 8px',
-                borderRadius: '4px',
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.04em'
-              }}>
-                PRACTICE
-              </span>
-              
-              <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: '10px 0 6px' }}>
-                Same engine, simulated capital
-              </h3>
-              
-              <p style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.5', marginBottom: '16px' }}>
-                New users default into paper trading for 15 sessions before live order hand-off unlocks — building trust in the verdict before risking real capital.
-              </p>
-            </div>
-
-            <div style={{ fontSize: '13px', color: '#64748B', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-              <span style={{ color: '#214ECF', fontWeight: 700 }}>Simulated Capital:</span> <span style={{ color: '#0F172A', fontWeight: 800, fontFamily: 'monospace' }}>₹{simulatedCapital.toLocaleString('en-IN')}</span>
-            </div>
-          </div>
-
         </div>
 
         {/* ── TRADE JOURNAL & EXECUTION HISTORY TABLE ────────────────── */}

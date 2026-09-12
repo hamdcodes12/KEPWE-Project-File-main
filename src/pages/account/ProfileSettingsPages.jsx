@@ -841,10 +841,55 @@ export const SettingsPage = () => {
           </div>
         </div>
 
+        {/* Password Change */}
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: '0 8px 22px rgba(15, 23, 42, 0.045)', padding: '24px', marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0F9F8F', letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Lock size={15} style={{ color: '#214ECF' }} /> PASSWORD & SECURITY
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#64748B', fontWeight: 600, marginBottom: '6px' }}>
+                <Lock size={13} style={{ color: '#214ECF' }} /> Current Password
+              </label>
+              <input
+                type="password"
+                placeholder="Enter your current password"
+                style={{ width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 14px', color: '#172033', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#64748B', fontWeight: 600, marginBottom: '6px' }}>
+                <Lock size={13} style={{ color: '#214ECF' }} /> New Password
+              </label>
+              <input
+                type="password"
+                placeholder="Enter your new password"
+                style={{ width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 14px', color: '#172033', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+              />
+              <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>At least 8 characters, with uppercase, lowercase, and a number.</div>
+            </div>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#64748B', fontWeight: 600, marginBottom: '6px' }}>
+                <Lock size={13} style={{ color: '#214ECF' }} /> Confirm New Password
+              </label>
+              <input
+                type="password"
+                placeholder="Confirm your new password"
+                style={{ width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 14px', color: '#172033', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            <button
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '8px', padding: '10px 22px', borderRadius: '8px', background: '#214ECF', color: '#FFFFFF', border: 'none', fontWeight: 700, fontSize: '12px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(33, 78, 207, 0.2)' }}
+            >
+              <Save size={15} /> Update Password
+            </button>
+          </div>
+        </div>
+
         {/* Notification Preferences */}
         <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: '0 8px 22px rgba(15, 23, 42, 0.045)', padding: '24px', marginBottom: '24px' }}>
           <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0F9F8F', letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Bell size={15} /> NOTIFICATION CHANNELS
+            <Bell size={15} style={{ color: '#214ECF' }} /> NOTIFICATION CHANNELS
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[
@@ -898,7 +943,7 @@ export const SettingsPage = () => {
         {/* Security / Session */}
         <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: '0 8px 22px rgba(15, 23, 42, 0.045)', padding: '24px', marginBottom: '24px' }}>
           <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0F9F8F', letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Lock size={15} /> SECURITY & SESSION
+            <Lock size={15} style={{ color: '#214ECF' }} /> SECURITY & SESSION
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap', gap: '10px' }}>

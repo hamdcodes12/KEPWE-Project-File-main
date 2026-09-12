@@ -516,7 +516,7 @@
   background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 10000;
+  z-index: 1001;
 }
 
 .app-mobile-drawer {
@@ -528,7 +528,7 @@
   max-width: 82vw;
   background-color: #FFFFFF;
   border-right: 1px solid #E2E8F0;
-  z-index: 10001;
+  z-index: 1002;
   display: flex;
   flex-direction: column;
   height: 100vh;

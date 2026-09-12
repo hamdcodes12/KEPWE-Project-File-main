@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS algo_states (
 CREATE TABLE IF NOT EXISTS broker_accounts (
     id                         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id                    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    broker                     VARCHAR(30) NOT NULL CHECK (broker IN ('ANGEL_ONE', 'LEMONN')),
+    broker                     VARCHAR(30) NOT NULL CHECK (broker IN ('ANGEL_ONE', 'DHAN')),
+    client_id                  VARCHAR(60),
     connection_mode            VARCHAR(20) NOT NULL DEFAULT 'SANDBOX' CHECK (connection_mode IN ('SANDBOX', 'LIVE')),
     status                     VARCHAR(30) NOT NULL DEFAULT 'NOT_CONNECTED' CHECK (status IN ('NOT_CONNECTED', 'SANDBOX_CONNECTED', 'CONNECTED')),
     connected_at               TIMESTAMPTZ,
@@ -38,7 +39,7 @@ CREATE TABLE IF NOT EXISTS broker_accounts (
 CREATE TABLE IF NOT EXISTS broker_oauth_sessions (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id            UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    broker             VARCHAR(30) NOT NULL CHECK (broker IN ('ANGEL_ONE', 'LEMONN')),
+    broker             VARCHAR(30) NOT NULL CHECK (broker IN ('ANGEL_ONE', 'DHAN')),
     state_hash         CHAR(64) NOT NULL UNIQUE,
     redirect_uri       TEXT NOT NULL,
     status             VARCHAR(20) NOT NULL DEFAULT 'PENDING'

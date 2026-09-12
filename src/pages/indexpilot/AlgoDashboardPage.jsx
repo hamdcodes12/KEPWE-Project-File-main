@@ -193,7 +193,7 @@ export default function AlgoDashboardPage() {
   const connectSandbox = async (broker) => {
     const result = await apiFetch('/broker/connect', { method: 'POST', body: { broker } });
     if (result.ok) {
-      setNotice({ type: 'success', text: `${broker === 'ANGEL_ONE' ? 'Angel One' : 'Lemonn'} sandbox connected. No live orders can be placed.` });
+      setNotice({ type: 'success', text: `${broker === 'DHAN' ? 'Dhan' : broker === 'ANGEL_ONE' ? 'Angel One' : broker} sandbox connected. No live orders can be placed.` });
       loadWorkspace();
     } else setNotice({ type: 'error', text: result.data?.error || 'Could not connect sandbox.' });
   };
@@ -275,7 +275,7 @@ function StrategyPreview({ strategy }) {
 }
 
 function BrokerPanel({ connectedBrokers, connectSandbox }) {
-  return <section className="algo-panel"><div className="algo-panel-heading"><div><span className="algo-section-kicker">BROKER ADAPTERS</span><h3>Connect your broker</h3></div><Link2 size={17} className="algo-heading-icon" /></div><p className="algo-muted-copy">Sandbox adapters are available for wiring. Kepwe never collects broker passwords or PINs.</p><div className="algo-broker-list">{[['ANGEL_ONE', 'Angel One'], ['LEMONN', 'Lemonn']].map(([key, name]) => { const broker = connectedBrokers.get(key); return <div className="algo-broker-row" key={key}><div className="algo-broker-logo">{name.slice(0, 1)}</div><div><strong>{name}</strong><span>{broker?.status === 'SANDBOX_CONNECTED' ? 'Sandbox connected' : 'Not connected'}</span></div><div className="algo-broker-actions"><a href={key === 'ANGEL_ONE' ? 'https://www.angelone.in/open-account' : 'https://lemonn.co.in/'} target="_blank" rel="noreferrer">Open account</a><button onClick={() => connectSandbox(key)} disabled={broker?.status === 'SANDBOX_CONNECTED'}>{broker?.status === 'SANDBOX_CONNECTED' ? 'Connected' : 'Connect sandbox'}</button></div></div>; })}</div></section>;
+  return <section className="algo-panel"><div className="algo-panel-heading"><div><span className="algo-section-kicker">BROKER ADAPTERS</span><h3>Connect your broker</h3></div><Link2 size={17} className="algo-heading-icon" /></div><p className="algo-muted-copy">Sandbox adapters are available for wiring. Kepwe never collects broker passwords or PINs.</p><div className="algo-broker-list">{[['ANGEL_ONE', 'Angel One'], ['DHAN', 'Dhan']].map(([key, name]) => { const broker = connectedBrokers.get(key); return <div className="algo-broker-row" key={key}><div className="algo-broker-logo">{name.slice(0, 1)}</div><div><strong>{name}</strong><span>{broker?.status === 'SANDBOX_CONNECTED' ? 'Sandbox connected' : 'Not connected'}</span></div><div className="algo-broker-actions"><a href={key === 'ANGEL_ONE' ? 'https://www.angelone.in/open-account' : 'https://dhan.co/'} target="_blank" rel="noreferrer">Open account</a><button onClick={() => connectSandbox(key)} disabled={broker?.status === 'SANDBOX_CONNECTED'}>{broker?.status === 'SANDBOX_CONNECTED' ? 'Connected' : 'Connect sandbox'}</button></div></div>; })}</div></section>;
 }
 
 function Strategies({ strategies, navigate }) {

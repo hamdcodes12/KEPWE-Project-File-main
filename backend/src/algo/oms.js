@@ -71,74 +71,21 @@ function executionValues(execution = {}, order) {
 async function recordFilledQuantity(client, order, filledQuantity, averagePrice) {
   if (filledQuantity <= 0) return null;
 
-  const isPaper = order.execution_mode === 'PAPER';
-  const existingTrade = isPaper
-    ? await client.query(
-      `SELECT * FROM paper_trades
-       WHERE order_id = $1 AND status = 'OPEN'
-       FOR UPDATE`,
-      [order.id],
-    )
-    : { rows: [] };
+  // ✅ LIVE ONLY: No paper trades - only algo_positions
   const openPosition = await client.query(
     `SELECT * FROM algo_positions
      WHERE user_id = $1 AND symbol = $2 AND status = 'OPEN'
      FOR UPDATE`,
     [order.user_id, order.instrument],
   );
-  const metadata = order.metadata || {};
-  const slippageBps = Number(metadata.slippageBps ?? 0);
-  const chargesBps = Number(metadata.chargesBps ?? 0);
-  const currentQuantity = Number(existingTrade.rows[0]?.quantity || openPosition.rows[0]?.quantity || 0);
+
+  const currentQuantity = Number(openPosition.rows[0]?.quantity || 0);
   const incrementalQuantity = currentQuantity
     ? Math.max(0, filledQuantity - currentQuantity)
     : filledQuantity;
-  if (incrementalQuantity <= 0) return existingTrade.rows[0] || openPosition.rows[0] || null;
+  if (incrementalQuantity <= 0) return openPosition.rows[0] || null;
 
-  const executionSlippage = averagePrice * (slippageBps / 10000) * incrementalQuantity;
-  const executionCharges = averagePrice * (chargesBps / 10000) * incrementalQuantity;
-  let trade;
-  if (!isPaper) {
-    trade = null;
-  } else if (existingTrade.rows[0]) {
-    const current = existingTrade.rows[0];
-    const currentQuantity = Number(current.quantity);
-    const weightedEntry = (
-      (Number(current.entry_price) * currentQuantity)
-      + (averagePrice * incrementalQuantity)
-    ) / filledQuantity;
-    const updated = await client.query(
-      `UPDATE paper_trades
-       SET quantity = $2, entry_price = $3, slippage = slippage + $4, charges = charges + $5
-       WHERE id = $1
-       RETURNING *`,
-      [current.id, filledQuantity, weightedEntry, executionSlippage, executionCharges]
-    );
-    trade = updated.rows[0];
-  } else {
-    const inserted = await client.query(
-      `INSERT INTO paper_trades
-       (user_id, order_id, strategy_id, instrument, side, quantity, entry_price,
-        stop_loss, target, slippage, charges, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'OPEN')
-       RETURNING *`,
-      [
-        order.user_id,
-        order.id,
-        order.strategy_id,
-        order.instrument,
-        order.side,
-        filledQuantity,
-        averagePrice,
-        order.stop_loss,
-        order.target,
-        executionSlippage,
-        executionCharges,
-      ]
-    );
-    trade = inserted.rows[0];
-  }
-
+  // Update or insert algo_positions only
   if (openPosition.rows[0]) {
     const current = openPosition.rows[0];
     const currentQuantity = Number(current.quantity);
@@ -148,24 +95,17 @@ async function recordFilledQuantity(client, order, filledQuantity, averagePrice)
     ) / (currentQuantity + incrementalQuantity);
     await client.query(
       `UPDATE algo_positions
-       SET quantity = $2, entry_price = $3, current_price = $4,
-           stop_loss = $5, target = $6
+       SET quantity = $2, entry_price = $3, current_price = $4, updated_at = NOW()
        WHERE id = $1`,
-      [
-        current.id,
-         currentQuantity + incrementalQuantity,
-        weightedEntry,
-        averagePrice,
-        order.stop_loss,
-        order.target,
-      ]
+      [current.id, currentQuantity + incrementalQuantity, weightedEntry, averagePrice]
     );
-  } else if (order.execution_mode === 'PAPER' || order.execution_mode === 'LIVE') {
-    await client.query(
+    return current;
+  } else {
+    const inserted = await client.query(
       `INSERT INTO algo_positions
-       (user_id, symbol, side, quantity, entry_price, current_price,
-        stop_loss, target, status)
-       VALUES ($1, $2, $3, $4, $5, $5, $6, $7, 'OPEN')`,
+       (user_id, symbol, side, quantity, entry_price, current_price, stop_loss, target, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $5, $6, $7, 'OPEN', NOW(), NOW())
+       RETURNING *`,
       [
         order.user_id,
         order.instrument,
@@ -176,8 +116,8 @@ async function recordFilledQuantity(client, order, filledQuantity, averagePrice)
         order.target,
       ]
     );
+    return inserted.rows[0];
   }
-  return trade;
 }
 
 /**
@@ -249,7 +189,7 @@ export async function applyExecutionUpdate({ pool, orderId, brokerOrderId, userI
 
     let trade = null;
     const newlyFilled = nextFilled > currentFilled;
-    if (nextFilled > 0 && (order.execution_mode === 'PAPER' || transitionedToFilled || nextStatus === 'PARTIALLY_FILLED' || newlyFilled)) {
+    if (nextFilled > 0 && (transitionedToFilled || nextStatus === 'PARTIALLY_FILLED' || newlyFilled)) {
       trade = await recordFilledQuantity(client, order, nextFilled, update.averagePrice);
     }
     await client.query('COMMIT');
@@ -267,7 +207,7 @@ export async function createAndSubmitOrder({
   adapter,
   userId,
   strategyId = null,
-  executionMode = 'PAPER',
+  executionMode = 'LIVE',
   instrument,
   side,
   quantity,
@@ -276,6 +216,11 @@ export async function createAndSubmitOrder({
   target,
   metadata = {},
 }) {
+  // ✅ STRICT LIVE-ONLY: REJECT ANY NON-LIVE EXECUTION MODE
+  if (executionMode !== 'LIVE') {
+    throw new Error(`KEPWE Quant only supports LIVE execution. Received: ${executionMode}. Paper trading has been completely removed.`);
+  }
+
   const internalOrderId = randomUUID();
   const client = await pool.connect();
   let order;
@@ -288,9 +233,6 @@ export async function createAndSubmitOrder({
        WHERE user_id = $1 AND instrument = $2
          AND status IN ('CREATED', 'SUBMITTED', 'PARTIALLY_FILLED')
        UNION ALL
-       SELECT 1 FROM paper_trades
-       WHERE user_id = $1 AND instrument = $2 AND status = 'OPEN'
-       UNION ALL
        SELECT 1 FROM algo_positions
        WHERE user_id = $1 AND symbol = $2 AND status = 'OPEN'
        LIMIT 1`,
@@ -300,9 +242,9 @@ export async function createAndSubmitOrder({
     const inserted = await client.query(
       `INSERT INTO algo_orders
         (internal_order_id, user_id, strategy_id, execution_mode, instrument, side, quantity, price, stop_loss, target, status, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'CREATED', $11::jsonb)
+       VALUES ($1, $2, $3, 'LIVE', $4, $5, $6, $7, $8, $9, 'CREATED', $10::jsonb)
        RETURNING *`,
-      [internalOrderId, userId, strategyId, executionMode, instrument, side, quantity, price, stopLoss, target, JSON.stringify(metadata)]
+      [internalOrderId, userId, strategyId, instrument, side, quantity, price, stopLoss, target, JSON.stringify(metadata)]
     );
     order = inserted.rows[0];
     await client.query('COMMIT');

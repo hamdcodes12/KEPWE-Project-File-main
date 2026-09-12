@@ -128,7 +128,7 @@ const readiness = await request('/broker/readiness', { token });
 expectStatus(readiness, 200, 'broker readiness');
 assert.equal(readiness.data.paper.enabled, true);
 assert.equal(readiness.data.brokers.find((broker) => broker.broker === 'ANGEL_ONE').enabled, false);
-assert.equal(readiness.data.brokers.find((broker) => broker.broker === 'LEMONN').enabled, false);
+assert.equal(readiness.data.brokers.find((broker) => broker.broker === 'DHAN').capabilities.positions, true);
 
 const unconfiguredLiveConnect = await request('/broker/connect/live', {
   token,

@@ -8,7 +8,7 @@
   background-color: #17E7C0;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 99999;
+  z-index: 1099;
   transform: translate(-50%, -50%);
   transition: width 0.15s ease, height 0.15s ease, background-color 0.15s ease;
   box-shadow: 0 0 10px #17E7C0, 0 0 20px rgba(23, 231, 192, 0.6);
@@ -34,7 +34,7 @@
   border: 1.5px solid rgba(23, 231, 192, 0.4);
   border-radius: 50%;
   pointer-events: none;
-  z-index: 99998;
+  z-index: 1098;
   transform: translate(-50%, -50%);
   transition: width 0.2s ease, height 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
   background: rgba(23, 231, 192, 0.03);

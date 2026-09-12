@@ -23,7 +23,6 @@ import adminRoutes from './routes/admin.routes.js';
 import riskProfileRoutes from './routes/risk-profile.routes.js';
 import tradeJournalRoutes from './routes/trade-journal.routes.js';
 import alertsRoutes from './routes/alerts.routes.js';
-import paperTradeRoutes from './routes/paper-trade.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import reportsRoutes from './routes/reports.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
@@ -203,14 +202,6 @@ const publicSubmissionLimiter = rateLimit({
   message: { error: 'Too many submissions received from this network. Please try again later.' },
 });
 
-const quantActionLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 120,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Trading action rate limit exceeded. Please slow down.' },
-});
-
 app.use('/api/auth', authLimiter);
 app.use('/api/user', authLimiter);
 app.use('/api/admin/auth/login', adminLoginLimiter);
@@ -221,7 +212,6 @@ app.use('/api/leads', (req, res, next) => {
   }
   next();
 });
-app.use(['/api/quant/paper/order', '/api/quant/kill-switch'], quantActionLimiter);
 
 // ── Routes ──────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -240,14 +230,13 @@ app.use('/api', adminRoutes);
 app.use('/api', riskProfileRoutes);
 app.use('/api', tradeJournalRoutes);
 app.use('/api', alertsRoutes);
-app.use('/api', paperTradeRoutes);
 app.use('/api', subscriptionRoutes);
 app.use('/api', reportsRoutes);
 app.use('/api', notificationsRoutes);
 app.use('/api', marketDataRoutes);
 app.use('/api', adminPanelRoutes);
 app.use('/api', supportRoutes);
-// Must precede algoRoutes: the Lemonn OAuth callback is public by design,
+// Must precede algoRoutes: the Dhan OAuth/Postback callback is public by design,
 // while all user-facing /broker and /algo routes remain protected there.
 app.use('/api', brokerOAuthRoutes);
 app.use('/api', algoRoutes);
@@ -300,15 +289,18 @@ app.use((err, req, res, next) => {
   }
   logServerError('request.failed', err, req);
   if (err.name === 'BrokerApiError' && err.statusCode === 401) {
-    return res.status(401).json({ error: 'LemonN session expired', code: 'LEMONN_SESSION_EXPIRED' });
+    return res.status(401).json({ error: 'Dhan session expired or invalid', code: 'DHAN_SESSION_EXPIRED' });
   }
   if (err.name === 'BrokerApiError' && err.statusCode === 429) {
-    return res.status(429).json({ error: 'LemonN rate limit reached. Retry shortly.', code: 'LEMONN_RATE_LIMITED' });
+    return res.status(429).json({ error: 'Dhan rate limit reached. Retry shortly.', code: 'DHAN_RATE_LIMITED' });
   }
   if (err.name === 'BrokerApiError' && err.statusCode >= 500) {
-    return res.status(503).json({ error: 'LemonN provider is unavailable.', code: 'LEMONN_PROVIDER_UNAVAILABLE' });
+    return res.status(503).json({ error: 'Dhan provider is unavailable.', code: 'DHAN_PROVIDER_UNAVAILABLE' });
   }
-  res.status(err.statusCode || 500).json({ error: 'Internal server error', requestId: req.requestId });
+  if (err.name === 'BrokerApiError' || err.name === 'BrokerCapabilityError') {
+    return res.status(err.statusCode || 502).json({ error: err.message, code: err.code || 'BROKER_ERROR' });
+  }
+  res.status(err.statusCode || 500).json({ error: err.statusCode && err.statusCode < 500 ? err.message : 'Internal server error', requestId: req.requestId });
 });
 
 export default app;

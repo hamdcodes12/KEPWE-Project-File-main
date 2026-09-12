@@ -18,7 +18,7 @@ command to `npm run render-build` and the start command to `npm start`. The Rend
 build normalizes any Replit-only package tarball URLs in the lockfile and installs
 both the frontend and backend from the public npm registry.
 
-The KEPWE QUANT integration-ready workspace is available at `/quant` with deep links for dashboard, markets, watchlist, portfolio, positions, orders, holdings, analytics, strategies, builder, risk, broker, notifications, and settings. Its UI keeps provider-dependent data empty until a real broker adapter is configured; it does not assume Lemonn API endpoints.
+The KEPWE QUANT integration-ready workspace is available at `/quant` with deep links for dashboard, markets, watchlist, portfolio, positions, orders, holdings, analytics, strategies, builder, risk, broker, notifications, and settings. Live execution is powered exclusively by the official DhanHQ API v2 broker adapter.
 
 ## Environment
 

@@ -960,8 +960,8 @@ router.get('/admin/algo/overview', requireAdminAuth, async (req, res, next) => {
            COUNT(*)::int AS configured_algos,
            (SELECT COUNT(*) FROM algo_positions WHERE status = 'OPEN')::int AS open_positions,
            (SELECT COUNT(*) FROM algo_orders WHERE status IN ('CREATED','SUBMITTED','PARTIALLY_FILLED'))::int AS pending_orders,
-           (SELECT COUNT(*) FROM paper_trades WHERE opened_at::date = CURRENT_DATE)::int AS today_trades,
-           (SELECT COALESCE(SUM(pnl), 0) FROM paper_trades WHERE status = 'CLOSED' AND closed_at::date = CURRENT_DATE) AS today_pnl,
+           0::int AS today_trades,
+           0 AS today_pnl,
            (SELECT COUNT(*) FROM risk_events WHERE created_at >= NOW() - INTERVAL '24 hours')::int AS risk_events_24h
          FROM algo_states s`,
       ),

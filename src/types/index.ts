@@ -78,7 +78,7 @@ export interface TradeJournalEntry {
   verdict: VerdictState;
   override: boolean;
   overrideReason?: string;
-  status: 'Executed' | 'Skipped' | 'Paper Trade' | 'Overridden';
+  status: 'Executed' | 'Skipped' | 'Overridden';
   pnl?: number;
 }
 

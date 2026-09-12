@@ -91,7 +91,7 @@ export async function requireAuth(req, res, next) {
     }
 
     if (scheme !== 'Bearer' || !token) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ error: 'Authentication required', code: 'USER_AUTH_REQUIRED' });
     }
 
     let payload;
@@ -99,9 +99,9 @@ export async function requireAuth(req, res, next) {
       payload = jwt.verify(token, getJwtSecret());
     } catch (err) {
       if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({ error: 'Token expired' });
+        return res.status(401).json({ error: 'Token expired', code: 'USER_AUTH_EXPIRED' });
       }
-      return res.status(401).json({ error: 'Invalid token' });
+      return res.status(401).json({ error: 'Invalid token', code: 'USER_AUTH_INVALID' });
     }
 
     // Load the real user from PostgreSQL. Never trust the client.

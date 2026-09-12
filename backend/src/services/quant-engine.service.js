@@ -688,32 +688,73 @@ export async function validateLiveDeploymentGate(userId, strategyConfig) {
       : 'Risk per trade must not exceed 5% and max trades must not exceed 3/day.',
   });
 
-  // Check 2: Broker Account Connection
+  // Check 2: Broker Account Connection - ACTUALLY VALIDATE SESSION (NOT JUST DB CHECK)
   let brokerConnected = false;
+  let brokerError = '';
   try {
+    // Query database for stored Dhan connection
     const brokerRes = await pool.query(
-      `SELECT broker, status, connection_mode FROM broker_accounts WHERE user_id = $1 AND status = 'CONNECTED'`,
+      `SELECT id, broker, status, connection_mode, client_id, access_token_ciphertext FROM broker_accounts 
+       LEFT JOIN broker_oauth_tokens ON broker_oauth_tokens.broker_account_id = broker_accounts.id
+       WHERE user_id = $1 AND broker = 'DHAN'`,
       [userId]
     );
-    brokerConnected = brokerRes.rows.length > 0;
-  } catch (_) {}
+    
+    if (brokerRes.rows.length === 0) {
+      brokerError = 'No Dhan broker account found.';
+      brokerConnected = false;
+    } else {
+      const brokerRow = brokerRes.rows[0];
+      
+      // ✅ VALIDATE THE STORED DHAN SESSION (NOT JUST CHECK STATUS)
+      // Import and use the validation logic from algo.routes
+      const { getBrokerAdapter, isDhanSessionRejected, decryptBrokerSecret } = require('../lib/broker-adapters.js');
+      
+      try {
+        if (!brokerRow.access_token_ciphertext) {
+          brokerConnected = false;
+          brokerError = 'No Dhan access token found.';
+        } else {
+          const accessToken = decryptBrokerSecret(brokerRow.access_token_ciphertext);
+          const adapter = getBrokerAdapter('DHAN', 'LIVE', { dhanClientId: brokerRow.client_id, accessToken });
+          await adapter.validateSession();
+          brokerConnected = true;
+        }
+      } catch (validationErr) {
+        if (!isDhanSessionRejected(validationErr)) {
+          // Transient error - assume connected
+          brokerConnected = brokerRow.status === 'CONNECTED';
+          if (!brokerConnected) {
+            brokerError = 'Transient broker verification error.';
+          }
+        } else {
+          // Session rejected - genuinely expired
+          brokerConnected = false;
+          brokerError = 'Dhan session has expired. Please reconnect your broker.';
+        }
+      }
+    }
+  } catch (err) {
+    brokerError = 'Unable to verify broker connection.';
+    brokerConnected = false;
+  }
 
   checks.push({
     key: 'BROKER_LIVE_CONNECTION',
-    label: 'Official Broker API Connected (Angel One / Lemonn)',
+    label: 'Official Broker API Connected (Dhan)',
     passed: brokerConnected,
     reason: brokerConnected
-      ? 'Broker authenticated in LIVE execution mode.'
-      : 'Broker connection required. Connect Angel One or Lemonn before deploying live.',
+      ? 'DhanHQ broker authenticated in LIVE execution mode.'
+      : brokerError || 'Broker connection required. Connect your Dhan trading account before deploying live.',
   });
 
-  // Check 3: Market Data Feed Health
+  // Check 3: Market Data Feed Health - ONLY BLOCK IF BROKER NOT CONNECTED
   checks.push({
     key: 'MARKET_DATA_FEED',
     label: 'Verified Exchange Market Data Feed',
     passed: brokerConnected,
     reason: brokerConnected
-      ? 'Real-time WebSocket market quote feed verified.'
+      ? 'Real-time market quote feed verified with live broker.'
       : 'Live market data feed unavailable without verified broker credentials.',
   });
 

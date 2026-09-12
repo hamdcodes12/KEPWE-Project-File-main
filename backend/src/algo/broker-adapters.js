@@ -1,9 +1,9 @@
-import { createHmac, createPrivateKey, sign } from 'crypto';
+import { createHmac } from 'crypto';
 
 const ANGEL_ONE_BASE_URL = 'https://apiconnect.angelone.in';
-const LEMONN_BASE_URL = 'https://cs-prod.lemonn.co.in';
-const LEMONN_LOGIN_URL = 'https://lemonn-pro.lemonn.co.in/login';
-const LEMONN_API_PREFIX = '/api-trading/api/v2';
+const DHAN_BASE_URL = 'https://api.dhan.co/v2';
+const DHAN_AUTH_URL = 'https://auth.dhan.co';
+const DHAN_STATIC_IP = '103.117.180.146';
 
 const LIVE_CAPABILITIES = {
   authentication: true,
@@ -135,11 +135,23 @@ async function parseJsonResponse(broker, response) {
     payload = null;
   }
   if (!response.ok) {
-    const message = payload?.message || payload?.error || payload?.errorcode || `HTTP ${response.status}`;
-    throw new BrokerApiError(broker, message, response.status >= 500 ? 502 : response.status);
+    const message = payload?.remarks?.message
+      || payload?.errorMessage
+      || payload?.message
+      || payload?.error
+      || payload?.errorcode
+      || `HTTP ${response.status}`;
+    const err = new BrokerApiError(broker, message, response.status >= 500 ? 502 : response.status);
+    err.raw = payload;
+    throw err;
   }
-  if (payload && payload.status === false) {
-    throw new BrokerApiError(broker, payload.message || payload.errorcode || 'Request rejected');
+  if (payload && (payload.status === false || payload.status === 'failure')) {
+    const message = payload?.remarks?.message
+      || payload?.errorMessage
+      || payload?.message
+      || payload?.errorcode
+      || 'Request rejected by broker';
+    throw new BrokerApiError(broker, message);
   }
   return payload;
 }
@@ -437,15 +449,20 @@ export class AngelOneAdapter extends BrokerAdapter {
   }
 }
 
-export class LemonnAdapter extends BrokerAdapter {
-  constructor({ accessToken = null } = {}) {
-    super('Lemonn');
-    this.baseUrl = LEMONN_BASE_URL;
-    this.accessToken = accessToken || text('LEMONN_ACCESS_TOKEN');
+export class DhanAdapter extends BrokerAdapter {
+  constructor(modeOrOptions = {}, maybeOptions = {}) {
+    super('Dhan');
+    const options = typeof modeOrOptions === 'string' ? maybeOptions : modeOrOptions;
+    const { dhanClientId = null, accessToken = null } = options || {};
+    this.baseUrl = text('DHAN_BASE_URL') || DHAN_BASE_URL;
+    this.authUrl = text('DHAN_AUTH_URL') || DHAN_AUTH_URL;
+    this.staticIp = text('DHAN_STATIC_IP') || DHAN_STATIC_IP;
+    this.dhanClientId = dhanClientId ? String(dhanClientId).trim() : text('DHAN_CLIENT_ID');
+    this.accessToken = accessToken ? String(accessToken).trim() : text('DHAN_ACCESS_TOKEN');
   }
 
   configFields() {
-    return ['LEMONN_API_KEY', 'LEMONN_API_SECRET', 'LEMONN_CLIENT_ID'];
+    return ['DHAN_API_KEY', 'DHAN_API_SECRET'];
   }
 
   isConfigured() {
@@ -459,7 +476,10 @@ export class LemonnAdapter extends BrokerAdapter {
       mode: 'LIVE',
       configured,
       enabled: configured,
-      reason: configured ? 'Provider configuration is present. User authentication is required for live calls.' : `Missing required LemonN configuration: ${this.configFields().join(', ')}`,
+      staticIp: this.staticIp,
+      reason: configured
+        ? 'DhanHQ provider configuration is present. Individual user authentication is required for live trading.'
+        : `Missing required DhanHQ configuration: ${this.configFields().join(', ')}`,
     };
   }
 
@@ -467,31 +487,36 @@ export class LemonnAdapter extends BrokerAdapter {
     return this.isConfigured() ? LIVE_CAPABILITIES : BROKER_CAPABILITIES;
   }
 
-  async request(path, { method = 'GET', body, query, signal, authenticated = true, headers: extraHeaders = {} } = {}) {
+  async request(path, { method = 'GET', body, query, signal, authenticated = true, authHost = false, headers: extraHeaders = {} } = {}) {
     if (!this.configFields().every((field) => Boolean(text(field)))) {
       throw new BrokerCapabilityError(this.name, `configuration (${this.configFields().join(', ')})`);
     }
     if (authenticated && !this.accessToken) {
-      throw new BrokerCapabilityError(this.name, 'daily login session token');
+      throw new BrokerCapabilityError(this.name, 'user access token');
     }
-    const url = new URL(joinUrl(this.baseUrl, path));
+
+    const host = authHost ? this.authUrl : this.baseUrl;
+    const url = new URL(joinUrl(host, path));
     for (const [key, value] of Object.entries(query || {})) {
       if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
     }
+
+    const headers = {
+      Accept: 'application/json',
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(authenticated && this.accessToken ? { 'access-token': this.accessToken } : {}),
+      ...(this.dhanClientId ? { 'client-id': this.dhanClientId } : {}),
+      ...extraHeaders,
+    };
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), requestTimeout('LEMONN'));
+    const timeout = setTimeout(() => controller.abort(), requestTimeout('DHAN'));
     const abort = () => controller.abort();
     signal?.addEventListener('abort', abort, { once: true });
     try {
       const response = await fetch(url, {
         method,
-        headers: {
-          Accept: 'application/json',
-          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-          'x-api-key': text('LEMONN_API_KEY'),
-          ...(authenticated ? { 'x-auth-key': this.accessToken, 'x-client-id': text('LEMONN_CLIENT_ID') } : {}),
-          ...extraHeaders,
-        },
+        headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: controller.signal,
       });
@@ -505,156 +530,245 @@ export class LemonnAdapter extends BrokerAdapter {
     }
   }
 
-  loginUrl() {
-    requireFields(this.name, ['LEMONN_API_KEY']);
-    return `${LEMONN_LOGIN_URL}?api_key=${encodeURIComponent(text('LEMONN_API_KEY'))}`;
-  }
-
-  async authenticate({ requestToken } = {}) {
+  async generateConsentSession() {
     requireFields(this.name, this.configFields());
-    if (!requestToken) {
-      if (!this.accessToken) throw new BrokerCapabilityError(this.name, 'daily login request token');
-      return { authenticated: true, broker: this.name, sessionTokenConfigured: true };
-    }
-    const privateKeyHex = text('LEMONN_API_SECRET');
-    if (!/^[0-9a-fA-F]{64}$/.test(privateKeyHex)) {
-      throw new BrokerCapabilityError(this.name, 'LEMONN_API_SECRET must be a 32-byte Ed25519 private key in hex');
-    }
-    const privateKey = createPrivateKey({
-      key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(privateKeyHex, 'hex')]),
-      format: 'der',
-      type: 'pkcs8',
-    });
-    const signature = sign(null, Buffer.from(`${requestToken}${text('LEMONN_API_KEY')}`, 'utf8'), privateKey).toString('hex');
-    const payload = await this.request('/api-trading/api/v1/generate_session_token', {
+    const payload = await this.request('/app/generate-consent', {
       method: 'POST',
+      authHost: true,
       authenticated: false,
       headers: {
-        'x-request-token': requestToken,
-        'x-signature': signature,
+        app_id: text('DHAN_API_KEY'),
+        app_secret: text('DHAN_API_SECRET'),
+      },
+    });
+    const consentAppId = payload?.consentAppId || payload?.consentId || payload?.data?.consentAppId || payload?.data?.consentId;
+    if (!consentAppId) {
+      throw new BrokerApiError(this.name, 'Consent generation failed to return a consentAppId', 502);
+    }
+    return {
+      consentAppId,
+      authorizationUrl: `${this.authUrl}/login/consentApp-login?consentAppId=${encodeURIComponent(consentAppId)}`,
+    };
+  }
+
+  async consumeConsent({ tokenId } = {}) {
+    requireFields(this.name, this.configFields());
+    if (!tokenId) {
+      throw new BrokerCapabilityError(this.name, 'tokenId for consent consumption');
+    }
+    const payload = await this.request('/app/consumeApp-consent', {
+      method: 'POST',
+      authHost: true,
+      authenticated: false,
+      query: { tokenId },
+      headers: {
+        app_id: text('DHAN_API_KEY'),
+        app_secret: text('DHAN_API_SECRET'),
       },
     });
     const data = payload?.data || payload || {};
-    const accessToken = data.accessToken || data.access_token || data.authKey || data.auth_key;
-    if (!accessToken) throw new BrokerApiError(this.name, 'session response did not include an access token', 502);
+    const accessToken = data.accessToken || data.access_token || data.token;
+    if (!accessToken) {
+      throw new BrokerApiError(this.name, 'Consume consent did not return an access token', 502);
+    }
     this.accessToken = String(accessToken);
-    return { authenticated: true, broker: this.name, sessionTokenConfigured: true };
+    if (data.dhanClientId || data.client_id) {
+      this.dhanClientId = String(data.dhanClientId || data.client_id);
+    }
+    return {
+      accessToken: this.accessToken,
+      dhanClientId: this.dhanClientId,
+      authenticated: true,
+      broker: this.name,
+    };
+  }
+
+  async authenticate({ tokenId } = {}) {
+    if (tokenId) {
+      return this.consumeConsent({ tokenId });
+    }
+    if (!this.accessToken) {
+      throw new BrokerCapabilityError(this.name, 'user access token or tokenId');
+    }
+    await this.validateSession();
+    return { authenticated: true, broker: this.name, dhanClientId: this.dhanClientId };
   }
 
   async validateSession() {
-    await this.getMargin();
-    return { valid: true, broker: this.name };
-  }
-
-  async getMarketData(body = {}) {
-    if (!Object.keys(body).length) throw new BrokerCapabilityError(this.name, 'market-data symbols or tokens');
-    return this.request(`${LEMONN_API_PREFIX}/market-data/ltp`, { method: 'POST', body });
-  }
-
-  async getMarketDepth(body = {}) {
-    if (!Object.keys(body).length) throw new BrokerCapabilityError(this.name, 'market-depth symbols or tokens');
-    return this.request(`${LEMONN_API_PREFIX}/market-data/depth`, { method: 'POST', body });
-  }
-
-  async getChartData(body = {}) {
-    return this.request(`${LEMONN_API_PREFIX}/market-data/chart`, { method: 'POST', body });
-  }
-
-  async getHistoricalData(body = {}) {
-    return this.request(`${LEMONN_API_PREFIX}/market-data/historical-chart`, { method: 'POST', body });
+    if (!this.accessToken) {
+      throw new BrokerCapabilityError(this.name, 'access token is required for validation');
+    }
+    const funds = await this.getMargin();
+    return { valid: true, broker: this.name, dhanClientId: this.dhanClientId, funds };
   }
 
   async placeOrder(order = {}) {
     const metadata = order.metadata || {};
-    if (!order.instrument || !Number.isInteger(Number(order.quantity)) || Number(order.quantity) <= 0) throw new BrokerCapabilityError(this.name, 'order instrument and quantity');
+    const quantity = Number(order.quantity);
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      throw new BrokerCapabilityError(this.name, 'order quantity must be a positive integer');
+    }
+
+    const clientId = this.dhanClientId || metadata.dhanClientId || order.dhanClientId;
+    if (!clientId) {
+      throw new BrokerCapabilityError(this.name, 'Dhan Client ID is required to place orders');
+    }
+
+    const securityId = String(metadata.securityId || metadata.symbolToken || order.instrumentToken || order.instrument);
+    const correlationId = String(order.internalOrderId || order.correlationId || metadata.correlationId || `KP${Date.now().toString(36)}`).slice(0, 25);
+
     const body = {
-      clientId: text('LEMONN_CLIENT_ID'),
-      ...(metadata.tag ? { tag: String(metadata.tag) } : {}),
-      transactionType: order.side,
-      exchangeSegment: metadata.exchangeSegment || metadata.exchange || 'NFO',
-      productType: metadata.productType || 'INTRADAY',
-      orderType: metadata.orderType || (order.price ? 'LIMIT' : 'MARKET'),
-      validity: metadata.validity || 'DAY',
-      symbol: String(metadata.symbol || order.instrument),
-      ...(metadata.securityId ? { securityId: String(metadata.securityId) } : {}),
-      quantity: String(order.quantity),
-      ...(metadata.disclosedQuantity !== undefined ? { disclosedQuantity: String(metadata.disclosedQuantity) } : {}),
-      ...(order.price !== undefined ? { price: String(order.price) } : {}),
-      ...(metadata.triggerPrice !== undefined ? { triggerPrice: String(metadata.triggerPrice) } : {}),
-      afterMarketOrder: Boolean(metadata.afterMarketOrder),
-      ...(metadata.contractType ? { contractType: String(metadata.contractType) } : {}),
-      ...(metadata.expiry ? { expiry: String(metadata.expiry) } : {}),
-      ...(metadata.strikePrice ? { strikePrice: String(metadata.strikePrice) } : {}),
-      ...(metadata.optionType ? { optionType: String(metadata.optionType) } : {}),
+      dhanClientId: clientId,
+      correlationId,
+      transactionType: String(order.side).toUpperCase() === 'SELL' ? 'SELL' : 'BUY',
+      exchangeSegment: String(metadata.exchangeSegment || metadata.exchange || 'NSE_FNO').toUpperCase(),
+      productType: String(metadata.productType || order.productType || 'INTRADAY').toUpperCase(),
+      orderType: String(metadata.orderType || order.orderType || (order.price ? 'LIMIT' : 'MARKET')).toUpperCase(),
+      validity: String(metadata.validity || order.validity || 'DAY').toUpperCase(),
+      securityId,
+      quantity,
+      disclosedQuantity: Number(metadata.disclosedQuantity || 0),
+      price: Number(order.price || 0),
+      triggerPrice: Number(metadata.triggerPrice || order.triggerPrice || 0),
+      afterMarketOrder: Boolean(metadata.afterMarketOrder || order.afterMarketOrder),
+      amoTime: metadata.amoTime || 'OPEN',
     };
-    const payload = await this.request(`${LEMONN_API_PREFIX}/orders`, {
+
+    const payload = await this.request('/orders', {
       method: 'POST',
       body,
     });
-    const brokerOrderId = payload?.data?.orderId;
-    if (!brokerOrderId) throw new BrokerApiError(this.name, 'order response did not include orderId', 502);
-    return normalizeBrokerExecution(payload, { brokerOrderId, status: payload?.data?.orderStatus || 'SUBMITTED' });
+
+    const brokerOrderId = payload?.orderId || payload?.data?.orderId || payload?.order_id;
+    if (!brokerOrderId) {
+      throw new BrokerApiError(this.name, 'Dhan order placement response did not include orderId', 502);
+    }
+
+    return normalizeBrokerExecution(payload, {
+      brokerOrderId,
+      status: payload?.orderStatus || payload?.data?.orderStatus || 'SUBMITTED',
+    });
   }
 
   async modifyOrder(order = {}) {
-    if (!order.brokerOrderId) throw new BrokerCapabilityError(this.name, 'broker order id');
-    const payload = await this.request(`${LEMONN_API_PREFIX}/orders/modify`, {
-      method: 'POST',
-      body: { orderId: order.brokerOrderId, ...(order.quantity !== undefined ? { quantity: String(order.quantity) } : {}), ...(order.price !== undefined ? { price: String(order.price) } : {}), ...(order.metadata?.triggerPrice !== undefined ? { triggerPrice: String(order.metadata.triggerPrice) } : {}), ...(order.metadata?.validity ? { validity: order.metadata.validity } : {}) },
+    const brokerOrderId = order.brokerOrderId || order.orderId;
+    if (!brokerOrderId) throw new BrokerCapabilityError(this.name, 'broker order id');
+
+    const clientId = this.dhanClientId || order.metadata?.dhanClientId;
+    const body = {
+      dhanClientId: clientId,
+      orderId: String(brokerOrderId),
+      orderType: String(order.metadata?.orderType || order.orderType || (order.price ? 'LIMIT' : 'MARKET')).toUpperCase(),
+      legName: order.metadata?.legName || 'ENTRY_LEG',
+      quantity: Number(order.quantity),
+      price: Number(order.price || 0),
+      triggerPrice: Number(order.metadata?.triggerPrice || order.triggerPrice || 0),
+      disclosedQuantity: Number(order.metadata?.disclosedQuantity || 0),
+      validity: String(order.metadata?.validity || order.validity || 'DAY').toUpperCase(),
+    };
+
+    const payload = await this.request(`/orders/${encodeURIComponent(brokerOrderId)}`, {
+      method: 'PUT',
+      body,
     });
-    return normalizeBrokerExecution(payload, { brokerOrderId: order.brokerOrderId, status: payload?.data?.orderStatus || 'SUBMITTED' });
+
+    return normalizeBrokerExecution(payload, {
+      brokerOrderId,
+      status: payload?.orderStatus || payload?.data?.orderStatus || 'SUBMITTED',
+    });
   }
 
   async cancelOrder(order = {}) {
-    if (!order.brokerOrderId) throw new BrokerCapabilityError(this.name, 'broker order id');
-    const payload = await this.request(`${LEMONN_API_PREFIX}/orders/cancel`, { method: 'POST', body: { orderId: order.brokerOrderId } });
-    return normalizeBrokerExecution(payload, { brokerOrderId: order.brokerOrderId, status: payload?.data?.orderStatus || 'CANCELLED' });
+    const brokerOrderId = order.brokerOrderId || order.orderId;
+    if (!brokerOrderId) throw new BrokerCapabilityError(this.name, 'broker order id');
+
+    const payload = await this.request(`/orders/${encodeURIComponent(brokerOrderId)}`, {
+      method: 'DELETE',
+    });
+
+    return normalizeBrokerExecution(payload, {
+      brokerOrderId,
+      status: payload?.orderStatus || payload?.data?.orderStatus || 'CANCELLED',
+    });
   }
 
   async getOrderStatus({ brokerOrderId } = {}) {
-    const payload = await this.getOrderBook();
-    const order = (payload?.data?.orders || []).find((item) => String(item.orderID) === String(brokerOrderId));
-    if (!order) throw new BrokerApiError(this.name, 'order was not found', 404);
-    return normalizeBrokerExecution(order, { brokerOrderId: order.orderID });
-  }
-
-  async getPositions() {
-    const payload = await this.request(`${LEMONN_API_PREFIX}/positions`);
-    return payload?.data?.positions || [];
-  }
-
-  async getHoldings() {
-    const payload = await this.request(`${LEMONN_API_PREFIX}/holdings`);
-    return payload?.data?.holdings || [];
-  }
-
-  async getMargin() {
-    const payload = await this.request(`${LEMONN_API_PREFIX}/funds`);
-    return payload?.data?.funds || {};
-  }
-
-  async getMarginInfo(body) {
-    const payload = await this.request(`${LEMONN_API_PREFIX}/margin-info`, { method: 'POST', body });
-    return payload?.data || payload;
+    if (!brokerOrderId) throw new BrokerCapabilityError(this.name, 'broker order id');
+    const payload = await this.request(`/orders/${encodeURIComponent(brokerOrderId)}`);
+    return normalizeBrokerExecution(payload, { brokerOrderId });
   }
 
   async getOrderBook() {
-    return this.request(`${LEMONN_API_PREFIX}/orderbook`);
+    const payload = await this.request('/orders');
+    return Array.isArray(payload) ? payload : (payload?.data || []);
   }
 
-  async getOrderLog(orderId) {
-    if (!orderId) throw new BrokerCapabilityError(this.name, 'order id');
-    return this.request(`${LEMONN_API_PREFIX}/order_log/${encodeURIComponent(orderId)}`);
+  async getTradeBook() {
+    const payload = await this.request('/trades');
+    return Array.isArray(payload) ? payload : (payload?.data || []);
   }
 
-  async getTradeBook({ orderId, limit, offset } = {}) {
-    const payload = await this.request(`${LEMONN_API_PREFIX}/tradebook`, { query: { orderId, limit, offset } });
-    return payload?.data?.trades || [];
+  async getPositions() {
+    try {
+      const payload = await this.request('/positions');
+      const list = Array.isArray(payload) ? payload : (payload?.data || []);
+      return list.map((pos) => ({
+        instrument: pos.tradingSymbol || pos.customSymbol || String(pos.securityId),
+        symbolToken: String(pos.securityId),
+        side: pos.positionType === 'LONG' || Number(pos.netQty || 0) >= 0 ? 'BUY' : 'SELL',
+        quantity: Math.abs(Number(pos.netQty || 0)),
+        entryPrice: Number(pos.buyAvg || pos.costPrice || 0),
+        currentPrice: Number(pos.rbiReferenceRate || pos.costPrice || 0),
+        pnl: Number((Number(pos.realizedProfit || 0) + Number(pos.unrealizedProfit || 0)).toFixed(2)),
+      }));
+    } catch (error) {
+      if (
+        error.message?.includes('No positions') ||
+        error.raw?.errorCode === 'DH-1111' ||
+        error.raw?.errorType === 'POSITION_ERROR'
+      ) {
+        return [];
+      }
+      throw error;
+    }
   }
 
-  async getTransactionHistory({ fromDate, toDate, status, isFno } = {}) {
-    const payload = await this.request(`${LEMONN_API_PREFIX}/transaction_history`, { query: { from_date: fromDate, to_date: toDate, status, is_fno: isFno } });
-    return payload?.data?.transactions || [];
+  async getHoldings() {
+    try {
+      const payload = await this.request('/holdings');
+      const list = Array.isArray(payload) ? payload : (payload?.data || []);
+      return list.map((h) => ({
+        tradingSymbol: h.tradingSymbol || h.customSymbol || String(h.securityId || ''),
+        securityId: String(h.securityId || ''),
+        exchange: h.exchange || 'NSE',
+        totalQty: Number(h.totalQty || 0),
+        availableQty: Number(h.dpQty ?? h.availableQty ?? 0),
+        avgCostPrice: Number(h.avgCostPrice || 0),
+        currentPrice: Number(h.currentPrice || h.lastTradedPrice || h.avgCostPrice || 0),
+        pnl: Number(h.pnl || 0),
+      }));
+    } catch (error) {
+      if (
+        error.message?.includes('No holdings available') ||
+        error.raw?.errorCode === 'DH-1111' ||
+        error.raw?.errorType === 'HOLDING_ERROR'
+      ) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async getMargin() {
+    const payload = await this.request('/fundlimit');
+    const data = payload?.data || payload || {};
+    return {
+      available: Number(data.availabelBalance ?? data.withdrawableBalance ?? 0),
+      utilized: Number(data.utilizedAmount ?? 0),
+      collateral: Number(data.collateralAmount ?? 0),
+      withdrawable: Number(data.withdrawableBalance ?? 0),
+      sodLimit: Number(data.sodLimit ?? 0),
+    };
   }
 
   async subscribeExecutionUpdates({ brokerOrderIds = [], onUpdate, signal, intervalMs = 5000 } = {}) {
@@ -679,155 +793,18 @@ export class LemonnAdapter extends BrokerAdapter {
   }
 }
 
-export class PaperBrokerAdapter {
-  constructor() {
-    this.name = 'Paper Broker';
-    this.orders = new Map();
-  }
-
-  capabilities() {
-    return { ...LIVE_CAPABILITIES };
-  }
-
-  readiness() {
-    return {
-      broker: this.name,
-      mode: 'PAPER',
-      configured: true,
-      enabled: true,
-      reason: null,
-    };
-  }
-
-  async authenticate() {
-    return { authenticated: true, mode: 'PAPER' };
-  }
-
-  async placeOrder(order = {}) {
-    const lifecycle = String(order.metadata?.paperLifecycleStatus || 'FILLED').toUpperCase();
-    if (lifecycle === 'REJECTED') {
-      this.orders.set(order.internalOrderId, {
-        ...order,
-        status: 'REJECTED',
-        rejectionReason: 'Paper order rejected by the simulated execution venue',
-      });
-      return {
-        status: 'REJECTED',
-        rejectionReason: 'Paper order rejected by the simulated execution venue',
-      };
-    }
-    if (lifecycle === 'PENDING') {
-      this.orders.set(order.internalOrderId, {
-        ...order,
-        status: 'SUBMITTED',
-        brokerOrderId: `PAPER-${order.internalOrderId}`,
-      });
-      return {
-        brokerOrderId: `PAPER-${order.internalOrderId}`,
-        status: 'SUBMITTED',
-      };
-    }
-    this.orders.set(order.internalOrderId, {
-      ...order,
-      status: 'FILLED',
-      brokerOrderId: `PAPER-${order.internalOrderId}`,
-    });
-    return {
-      brokerOrderId: `PAPER-${order.internalOrderId}`,
-      status: 'FILLED',
-    };
-  }
-
-  findOrder(brokerOrderId) {
-    return [...this.orders.values()].find((item) => item.brokerOrderId === brokerOrderId);
-  }
-
-  async fillOrder({ brokerOrderId, fillPrice, filledQuantity } = {}) {
-    const current = this.findOrder(brokerOrderId);
-    if (!current) throw new BrokerApiError(this.name, 'paper order was not found', 404);
-    if (current.status !== 'SUBMITTED' && current.status !== 'PARTIALLY_FILLED') {
-      throw new BrokerApiError(this.name, `cannot fill order in ${current.status} state`, 409);
-    }
-    const requested = Number(filledQuantity || current.quantity);
-    if (!Number.isInteger(requested) || requested <= 0 || requested > Number(current.quantity)) {
-      throw new BrokerApiError(this.name, 'filled quantity is invalid', 400);
-    }
-    current.filledQuantity = requested;
-    current.averagePrice = Number(fillPrice || current.price);
-    current.status = requested === Number(current.quantity) ? 'FILLED' : 'PARTIALLY_FILLED';
-    return {
-      brokerOrderId,
-      status: current.status,
-      filledQuantity: requested,
-      averagePrice: current.averagePrice,
-    };
-  }
-
-  async rejectOrder({ brokerOrderId, reason } = {}) {
-    const current = this.findOrder(brokerOrderId);
-    if (!current) throw new BrokerApiError(this.name, 'paper order was not found', 404);
-    if (current.status !== 'SUBMITTED' && current.status !== 'PARTIALLY_FILLED') {
-      throw new BrokerApiError(this.name, `cannot reject order in ${current.status} state`, 409);
-    }
-    current.status = 'REJECTED';
-    current.rejectionReason = reason || 'Paper order rejected by simulated execution venue';
-    return { brokerOrderId, status: 'REJECTED', rejectionReason: current.rejectionReason };
-  }
-
-  async modifyOrder(order) {
-    const current = this.findOrder(order.brokerOrderId);
-    if (!current) throw new BrokerApiError(this.name, 'paper order was not found', 404);
-    if (current && current.status !== 'SUBMITTED' && current.status !== 'PARTIALLY_FILLED') {
-      throw new BrokerApiError(this.name, `cannot modify order in ${current.status} state`, 409);
-    }
-    current.price = order.price;
-    current.quantity = order.quantity;
-    current.stopLoss = order.stopLoss;
-    current.target = order.target;
-    return { brokerOrderId: order.brokerOrderId, status: 'SUBMITTED' };
-  }
-
-  async cancelOrder(order) {
-    const current = this.findOrder(order.brokerOrderId);
-    if (!current) throw new BrokerApiError(this.name, 'paper order was not found', 404);
-    if (current.status !== 'SUBMITTED' && current.status !== 'PARTIALLY_FILLED') {
-      throw new BrokerApiError(this.name, `cannot cancel order in ${current.status} state`, 409);
-    }
-    current.status = 'CANCELLED';
-    return { brokerOrderId: order.brokerOrderId, status: 'CANCELLED' };
-  }
-
-  async getOrderStatus(order) {
-    const current = this.findOrder(order.brokerOrderId);
-    if (!current) throw new BrokerApiError(this.name, 'paper order was not found', 404);
-    const result = {
-      brokerOrderId: order.brokerOrderId,
-      status: current.status,
-    };
-    if (current.filledQuantity) result.filledQuantity = current.filledQuantity;
-    if (current.averagePrice) result.averagePrice = current.averagePrice;
-    if (current.rejectionReason) result.rejectionReason = current.rejectionReason;
-    return result;
-  }
-
-  async getPositions() { return []; }
-  async getTradeBook() { return []; }
-  async getMargin() { return { available: Infinity }; }
-  async getMarketData() { return { mode: 'PAPER' }; }
-  async getHistoricalData() { return []; }
-  async subscribeExecutionUpdates() { return { stopped: true }; }
-}
-
-const paperAdapter = new PaperBrokerAdapter();
-
-export function getBrokerAdapter(broker, mode = 'PAPER', options = {}) {
-  if (mode === 'PAPER') return paperAdapter;
+export function getBrokerAdapter(broker, mode, options = {}) {
+  // LIVE-only: no PAPER mode supported
+  if (broker === 'DHAN') return new DhanAdapter(options);
   if (broker === 'ANGEL_ONE') return new AngelOneAdapter();
-  if (broker === 'LEMONN') return new LemonnAdapter(options);
   throw new Error(`Unsupported broker: ${broker}`);
 }
 
-export function getBrokerReadiness(broker, mode = 'PAPER') {
+export function getBrokerReadiness(broker, mode) {
+  // LIVE-only: only real brokers supported
+  if (!broker || broker === 'PAPER') {
+    throw new Error('Paper broker mode is not supported. Only LIVE trading is allowed.');
+  }
   const adapter = getBrokerAdapter(broker, mode);
   return {
     ...adapter.readiness(),

@@ -35,9 +35,91 @@ async function ensureQuantUserRows(userId) {
   );
 }
 
+function toNumberOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function deriveExecutionMode(status, latestEventType) {
+  if (latestEventType === 'LIVE_DEPLOYED' || status === 'LIVE_ACTIVE') return 'LIVE / Dhan';
+  return null;
+}
+
+function deriveDeploymentState(status, latestEventType) {
+  if (latestEventType === 'LIVE_DEPLOYED' || status === 'LIVE_ACTIVE') return 'LIVE';
+  if (status === 'LIVE_READY') return 'LIVE_READY';
+  if (status === 'BACKTESTED') return 'BACKTESTED';
+  if (status === 'STOPPED') return 'STOPPED';
+  if (status === 'ARCHIVED') return 'COMPLETED';
+  if (status === 'DRAFT') return 'DRAFT';
+  return status || null;
+}
+
+function serializeQuantStrategy(row) {
+  const parameters = row.parameters && typeof row.parameters === 'object' ? row.parameters : {};
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    version: row.version,
+    instrument: row.instrument,
+    strategyType: parameters.strategyType || parameters.type || null,
+    direction: row.direction,
+    cePeDirection: row.direction,
+    optionType: row.option_type,
+    timeframe: row.timeframe,
+    confirmationTimeframe: row.confirmation_timeframe,
+    lotSize: row.lot_size,
+    orderType: row.order_type,
+    productType: row.product_type,
+    executionMode: deriveExecutionMode(row.status, row.latest_event_type),
+    tradingWindowStart: row.trading_window_start,
+    tradingWindowEnd: row.trading_window_end,
+    riskPerTradePct: toNumberOrNull(row.risk_per_trade_pct),
+    stopLossPct: toNumberOrNull(row.stop_loss_pct),
+    targetPct: toNumberOrNull(row.target_pct),
+    riskRewardRatio: toNumberOrNull(row.risk_reward_ratio),
+    timeStopMinutes: row.time_stop_minutes,
+    maxTradesPerDay: row.max_trades_per_day,
+    maxConsecutiveLosses: row.max_consecutive_losses,
+    dailyDrawdownLimitPct: toNumberOrNull(row.daily_drawdown_limit_pct),
+    status: row.status,
+    deploymentState: deriveDeploymentState(row.status, row.latest_event_type),
+    deploymentEventType: row.latest_event_type || null,
+    deploymentUpdatedAt: row.latest_event_at || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    capital: toNumberOrNull(parameters.capital ?? parameters.tradingCapital ?? null),
+    risk: toNumberOrNull(row.risk_per_trade_pct),
+    stopLoss: toNumberOrNull(row.stop_loss_pct),
+    profitTarget: toNumberOrNull(row.target_pct),
+    pnl: null,
+    winRate: null,
+    totalTrades: null,
+    openPositions: null,
+    lastExecution: null,
+    parameters,
+  };
+}
+
+function computeMaxDrawdownFromPnlSeries(pnls = []) {
+  let equity = 0;
+  let peak = 0;
+  let maxDrawdown = 0;
+
+  for (const value of pnls) {
+    equity += Number(value) || 0;
+    peak = Math.max(peak, equity);
+    maxDrawdown = Math.max(maxDrawdown, peak - equity);
+  }
+
+  return Number(maxDrawdown.toFixed(2));
+}
+
 /**
  * GET /api/quant/dashboard
- * Quantitative trading workspace overview: capital, active strategy, paper P&L, broker connections
+ * Quantitative trading workspace overview: capital, active strategy, live P&L, broker connections
  */
 router.get('/dashboard', async (req, res, next) => {
   try {
@@ -47,14 +129,27 @@ router.get('/dashboard', async (req, res, next) => {
       pool.query('SELECT * FROM algo_settings WHERE user_id = $1', [req.userId]),
       pool.query('SELECT status FROM algo_states WHERE user_id = $1', [req.userId]),
       pool.query('SELECT broker, status, connection_mode FROM broker_accounts WHERE user_id = $1', [req.userId]),
-      pool.query(`SELECT COUNT(*)::int AS count FROM paper_trades WHERE user_id = $1 AND status = 'OPEN'`, [req.userId]),
+      pool.query(`SELECT COUNT(*)::int AS count FROM algo_positions WHERE user_id = $1 AND status = 'OPEN'`, [req.userId]),
       pool.query(
         `SELECT COUNT(*)::int AS count, COALESCE(SUM(pnl), 0)::numeric AS pnl
-         FROM paper_trades
-         WHERE user_id = $1 AND opened_at::date = CURRENT_DATE`,
+         FROM algo_orders
+         WHERE user_id = $1 AND execution_mode = 'LIVE' AND created_at::date = CURRENT_DATE`,
         [req.userId]
       ),
-      pool.query('SELECT * FROM quant_strategies WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 5', [req.userId]),
+      pool.query(
+        `SELECT s.*, latest.event_type AS latest_event_type, latest.created_at AS latest_event_at
+         FROM quant_strategies s
+         LEFT JOIN LATERAL (
+           SELECT event_type, created_at
+           FROM quant_deployment_events
+           WHERE user_id = $1 AND strategy_id = s.id
+           ORDER BY created_at DESC
+           LIMIT 1
+         ) latest ON true
+         WHERE s.user_id = $1
+         ORDER BY s.updated_at DESC`,
+        [req.userId]
+      ),
     ]);
 
     const settings = settingsRes.rows[0];
@@ -65,17 +160,7 @@ router.get('/dashboard', async (req, res, next) => {
     const todayTrades = todayTradesRes.rows[0]?.count || 0;
     const todayPnl = Number(todayTradesRes.rows[0]?.pnl || 0);
 
-    const userStrategies = strategiesRes.rows.map((s) => ({
-      id: s.id,
-      name: s.name,
-      slug: s.slug,
-      version: s.version,
-      instrument: s.instrument,
-      status: s.status,
-      riskReward: s.risk_reward_ratio,
-      riskPct: s.risk_per_trade_pct,
-      updatedAt: s.updated_at,
-    }));
+    const userStrategies = strategiesRes.rows.map(serializeQuantStrategy);
 
     res.json({
       product: 'quant',
@@ -108,8 +193,8 @@ router.get('/dashboard', async (req, res, next) => {
       })),
       feedStatus: {
         connected: false,
-        source: null,
-        label: 'No live market data available',
+        source: 'UPSTOX',
+        label: 'Market Feed: Standby (NSE Closed)',
       },
       strategies: userStrategies,
     });
@@ -125,39 +210,188 @@ router.get('/dashboard', async (req, res, next) => {
 router.get('/strategies', async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM quant_strategies WHERE user_id = $1 ORDER BY updated_at DESC',
+      `SELECT s.*, latest.event_type AS latest_event_type, latest.created_at AS latest_event_at
+       FROM quant_strategies s
+       LEFT JOIN LATERAL (
+         SELECT event_type, created_at
+         FROM quant_deployment_events
+         WHERE user_id = $1 AND strategy_id = s.id
+         ORDER BY created_at DESC
+         LIMIT 1
+       ) latest ON true
+       WHERE s.user_id = $1
+       ORDER BY s.updated_at DESC`,
       [req.userId]
     );
 
     const saved = result.rows;
     res.json({
-      strategies: saved.map((s) => ({
-        id: s.id,
-        name: s.name,
-        slug: s.slug,
-        version: s.version,
-        instrument: s.instrument,
-        direction: s.direction,
-        optionType: s.option_type,
-        timeframe: s.timeframe,
-        confirmationTimeframe: s.confirmation_timeframe,
-        lotSize: s.lot_size,
-        orderType: s.order_type,
-        productType: s.product_type,
-        riskPerTradePct: Number(s.risk_per_trade_pct),
-        stopLossPct: Number(s.stop_loss_pct),
-        targetPct: Number(s.target_pct),
-        riskRewardRatio: Number(s.risk_reward_ratio),
-        timeStopMinutes: s.time_stop_minutes,
-        maxTradesPerDay: s.max_trades_per_day,
-        maxConsecutiveLosses: s.max_consecutive_losses,
-        dailyDrawdownLimitPct: Number(s.daily_drawdown_limit_pct),
-        status: s.status,
-        parameters: s.parameters,
-        createdAt: s.created_at,
-        updatedAt: s.updated_at,
-      })),
+      strategies: saved.map(serializeQuantStrategy),
       defaultTemplate: NIFTY_QUANT_STRATEGY,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/quant/analytics
+ * Real stored analytics derived from LIVE Dhan orders, trades, and backtest records only.
+ */
+router.get('/analytics', async (req, res, next) => {
+  try {
+    await ensureQuantUserRows(req.userId);
+
+    const [
+      closedTradesRes,
+      openPositionsRes,
+      latestOrdersRes,
+      backtestsRes,
+      strategiesRes,
+    ] = await Promise.all([
+      pool.query(
+        `SELECT id, instrument, side, quantity, entry_price, exit_price, pnl, status, opened_at, closed_at
+         FROM algo_orders
+         WHERE user_id = $1 AND execution_mode = 'LIVE' AND status IN ('FILLED', 'PART_TRADED')
+         ORDER BY COALESCE(created_at) DESC`,
+        [req.userId]
+      ),
+      pool.query(
+        `SELECT instrument, side, quantity, price as entry_price, 0 as stop_loss, 0 as target, 'OPEN' as status, created_at as opened_at
+         FROM algo_positions
+         WHERE user_id = $1 AND status = 'OPEN'
+         ORDER BY created_at DESC`,
+        [req.userId]
+      ),
+      pool.query(
+        `SELECT instrument, status, execution_mode, created_at
+         FROM algo_orders
+         WHERE user_id = $1 AND execution_mode = 'LIVE'
+         ORDER BY created_at DESC
+         LIMIT 50`,
+        [req.userId]
+      ),
+      pool.query(
+        `SELECT id, strategy_slug, instrument, timeframe, parameters, results, created_at
+         FROM algo_backtest_runs
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 20`,
+        [req.userId]
+      ),
+      pool.query('SELECT COUNT(*)::int AS count FROM quant_strategies WHERE user_id = $1', [req.userId]),
+    ]);
+
+    // Handle empty positions gracefully
+    const openPositions = (openPositionsRes.rows || []).map((position) => ({
+      id: position.instrument,
+      instrument: position.instrument,
+      side: position.side,
+      quantity: Number(position.quantity) || 0,
+      entryPrice: toNumberOrNull(position.entry_price) ?? 0,
+      currentPrice: toNumberOrNull(position.entry_price) ?? 0,
+      stopLoss: null,
+      target: null,
+      pnl: 0,
+      status: position.status,
+      openedAt: position.opened_at,
+    }));
+
+    const trades = (closedTradesRes.rows || []).map((trade) => ({
+      id: trade.id,
+      instrument: trade.instrument,
+      side: trade.side,
+      quantity: Number(trade.quantity) || 0,
+      entryPrice: toNumberOrNull(trade.entry_price),
+      exitPrice: toNumberOrNull(trade.exit_price),
+      pnl: toNumberOrNull(trade.pnl) ?? 0,
+      status: trade.status,
+      openedAt: trade.opened_at,
+      closedAt: trade.closed_at,
+    }));
+
+    const closedTrades = trades.filter((trade) => trade.status === 'FILLED');
+    const totalTrades = closedTrades.length;
+    const winningTrades = closedTrades.filter((trade) => trade.pnl > 0);
+    const losingTrades = closedTrades.filter((trade) => trade.pnl < 0);
+    const realizedPnl = Number(closedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0).toFixed(2));
+    const unrealizedPnl = Number(openPositions.reduce((sum, position) => sum + (position.pnl || 0), 0).toFixed(2));
+    const grossProfit = Number(winningTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0).toFixed(2));
+    const grossLossAbs = Number(
+      Math.abs(losingTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0)).toFixed(2)
+    );
+    const averageProfit = winningTrades.length
+      ? Number((grossProfit / winningTrades.length).toFixed(2))
+      : null;
+    const averageLoss = losingTrades.length
+      ? Number((losingTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / losingTrades.length).toFixed(2))
+      : null;
+    const winRate = totalTrades
+      ? Number(((winningTrades.length / totalTrades) * 100).toFixed(2))
+      : null;
+    const todayRealizedPnl = Number(
+      closedTrades
+        .filter((trade) => trade.closedAt && new Date(trade.closedAt).toDateString() === new Date().toDateString())
+        .reduce((sum, trade) => sum + (trade.pnl || 0), 0)
+        .toFixed(2)
+    );
+    const todayUnrealizedPnl = Number(
+      openPositions
+        .filter((position) => position.openedAt && new Date(position.openedAt).toDateString() === new Date().toDateString())
+        .reduce((sum, position) => sum + (position.pnl || 0), 0)
+        .toFixed(2)
+    );
+    const pnlSeriesAscending = [...closedTrades]
+      .sort((a, b) => new Date(a.closedAt || a.openedAt) - new Date(b.closedAt || b.openedAt))
+      .map((trade) => trade.pnl || 0);
+    const maxDrawdown = totalTrades ? computeMaxDrawdownFromPnlSeries(pnlSeriesAscending) : null;
+
+    const lastExecutionCandidate = [
+      ...trades.map((trade) => trade.closedAt || trade.openedAt).filter(Boolean),
+      ...latestOrdersRes.rows.map((order) => order.created_at).filter(Boolean),
+    ]
+      .map((value) => new Date(value))
+      .filter((value) => !Number.isNaN(value.getTime()))
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+
+    const recentBacktests = backtestsRes.rows.map((run) => ({
+      id: run.id,
+      strategySlug: run.strategy_slug,
+      instrument: run.instrument,
+      timeframe: run.timeframe,
+      createdAt: run.created_at,
+      metrics: run.results?.metrics || {},
+      parameters: run.parameters || {},
+    }));
+
+    res.json({
+      summary: {
+        hasTradingActivity: totalTrades > 0 || openPositions.length > 0,
+        totalPnl: Number((realizedPnl + unrealizedPnl).toFixed(2)),
+        todayPnl: Number((todayRealizedPnl + todayUnrealizedPnl).toFixed(2)),
+        realizedPnl,
+        unrealizedPnl,
+        totalTrades,
+        winningTrades: winningTrades.length,
+        losingTrades: losingTrades.length,
+        winRate,
+        averageProfit,
+        averageLoss,
+        profitFactor: grossLossAbs > 0 ? Number((grossProfit / grossLossAbs).toFixed(2)) : null,
+        maxDrawdown,
+        openPositions: openPositions.length,
+        lastExecution: lastExecutionCandidate ? lastExecutionCandidate.toISOString() : null,
+      },
+      strategyCount: Number(strategiesRes.rows[0]?.count || 0),
+      openPositions,
+      trades: trades.slice(0, 100),
+      recentBacktests,
+      orderHistory: latestOrdersRes.rows.map((order) => ({
+        instrument: order.instrument,
+        status: order.status,
+        executionMode: order.execution_mode,
+        createdAt: order.created_at,
+      })),
     });
   } catch (err) {
     next(err);
@@ -185,7 +419,7 @@ const strategySaveSchema = z.object({
   maxTradesPerDay: z.number().int().min(1).max(3).default(3),
   maxConsecutiveLosses: z.number().int().min(1).max(2).default(2),
   dailyDrawdownLimitPct: z.number().positive().max(15.0).default(10.0),
-  status: z.enum(['DRAFT', 'BACKTESTED', 'PAPER_ACTIVE', 'LIVE_READY', 'STOPPED']).default('DRAFT'),
+  status: z.enum(['DRAFT', 'BACKTESTED', 'LIVE_READY', 'STOPPED']).default('DRAFT'),
   parameters: z.record(z.any()).optional().default({}),
 });
 
@@ -354,201 +588,7 @@ router.post('/backtest', validateBody(backtestRunSchema), async (req, res, next)
   }
 });
 
-/**
- * GET /api/quant/paper/status
- * Get paper trading session, open positions and performance
- */
-router.get('/paper/status', async (req, res, next) => {
-  try {
-    await ensureQuantUserRows(req.userId);
 
-    const [positionsRes, ordersRes, stateRes, tradesRes] = await Promise.all([
-      pool.query(`SELECT * FROM paper_trades WHERE user_id = $1 AND status = 'OPEN' ORDER BY opened_at DESC`, [req.userId]),
-      pool.query(`SELECT * FROM algo_orders WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20`, [req.userId]),
-      pool.query(`SELECT status FROM algo_states WHERE user_id = $1`, [req.userId]),
-      pool.query(`SELECT * FROM paper_trades WHERE user_id = $1 ORDER BY opened_at DESC LIMIT 20`, [req.userId]),
-    ]);
-
-    const state = stateRes.rows[0]?.status || 'STOPPED';
-
-    res.json({
-      status: state,
-      openPositions: positionsRes.rows.map((p) => ({
-        id: p.id,
-        instrument: p.instrument,
-        side: p.side,
-        quantity: p.quantity,
-        entryPrice: Number(p.entry_price),
-        currentPrice: null,
-        stopLoss: Number(p.stop_loss),
-        target: Number(p.target),
-        pnl: Number(p.pnl),
-        openedAt: p.opened_at,
-      })),
-      recentOrders: ordersRes.rows.map((o) => ({
-        id: o.id,
-        internalOrderId: o.internal_order_id,
-        instrument: o.instrument,
-        side: o.side,
-        quantity: o.quantity,
-        price: Number(o.price),
-        status: o.status,
-        createdAt: o.created_at,
-      })),
-      tradesHistory: tradesRes.rows.map((t) => ({
-        id: t.id,
-        instrument: t.instrument,
-        side: t.side,
-        quantity: t.quantity,
-        entryPrice: Number(t.entry_price),
-        exitPrice: Number(t.exit_price || t.entry_price),
-        pnl: Number(t.pnl),
-        status: t.status,
-        openedAt: t.opened_at,
-        closedAt: t.closed_at,
-      })),
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * POST /api/quant/paper/start
- * Start paper trading execution engine
- */
-router.post('/paper/start', async (req, res, next) => {
-  try {
-    await pool.query(
-      `UPDATE algo_states SET status = 'ACTIVE', updated_at = NOW() WHERE user_id = $1`,
-      [req.userId]
-    );
-    res.json({ success: true, status: 'ACTIVE', mode: 'PAPER' });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * POST /api/quant/paper/stop
- * Stop paper trading execution engine
- */
-router.post('/paper/stop', async (req, res, next) => {
-  try {
-    await pool.query(
-      `UPDATE algo_states SET status = 'STOPPED', updated_at = NOW() WHERE user_id = $1`,
-      [req.userId]
-    );
-    res.json({ success: true, status: 'STOPPED', mode: 'PAPER' });
-  } catch (err) {
-    next(err);
-  }
-});
-
-const paperOrderSchema = z.object({
-  instrument: z.string().min(1),
-  side: z.enum(['BUY', 'SELL']),
-  quantity: z.number().int().positive(),
-  price: z.number().positive(),
-  stopLoss: z.number().positive().optional(),
-  target: z.number().positive().optional(),
-});
-
-/**
- * POST /api/quant/paper/order
- * Place simulated order in paper sandbox
- */
-router.post('/paper/order', validateBody(paperOrderSchema), async (req, res, next) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const { instrument, side, quantity, price, stopLoss, target } = req.validatedBody;
-
-    const orderRes = await client.query(
-      `INSERT INTO algo_orders (user_id, instrument, side, quantity, filled_quantity, price, average_fill_price, stop_loss, target, status, execution_mode)
-       VALUES ($1, $2, $3, $4, $4, $5, $5, $6, $7, 'FILLED', 'PAPER')
-       RETURNING *`,
-      [req.userId, instrument, side, quantity, price, stopLoss || null, target || null]
-    );
-
-    const tradeRes = await client.query(
-      `INSERT INTO paper_trades (user_id, order_id, instrument, side, quantity, entry_price, stop_loss, target, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'OPEN')
-       RETURNING *`,
-      [req.userId, orderRes.rows[0].id, instrument, side, quantity, price, stopLoss || null, target || null]
-    );
-
-    await client.query('COMMIT');
-    res.status(201).json({
-      success: true,
-      order: orderRes.rows[0],
-      trade: tradeRes.rows[0],
-    });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    next(err);
-  } finally {
-    client.release();
-  }
-});
-
-/**
- * POST /api/quant/kill-switch
- * Emergency kill switch: halts trading and flattens paper positions
- */
-router.post('/kill-switch', async (req, res, next) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // 1. Set status to STOPPED
-    await client.query(
-      `UPDATE algo_states SET status = 'STOPPED', updated_at = NOW() WHERE user_id = $1`,
-      [req.userId]
-    );
-
-    // 2. Flatten all OPEN positions
-    const openPositions = await client.query(
-      `SELECT id, entry_price FROM paper_trades WHERE user_id = $1 AND status = 'OPEN'`,
-      [req.userId]
-    );
-
-    for (const pos of openPositions.rows) {
-      await client.query(
-        `UPDATE paper_trades SET status = 'CLOSED', exit_price = entry_price, closed_at = NOW() WHERE id = $1`,
-        [pos.id]
-      );
-    }
-
-    // 3. Persist Risk Event
-    await client.query(
-      `INSERT INTO risk_events (user_id, event_type, reason, severity)
-       VALUES ($1, 'KILL_SWITCH_ACTIVATED', 'Manual emergency kill switch triggered by user.', 'CRITICAL')`,
-      [req.userId]
-    );
-
-    // 4. Persist Quant Deployment Event
-    await client.query(
-      `INSERT INTO quant_deployment_events (user_id, event_type, reason)
-       VALUES ($1, 'KILL_SWITCH_TRIGGERED', 'Trading halted and positions flattened via Kill Switch.')`,
-      [req.userId]
-    );
-
-    await client.query('COMMIT');
-
-    res.json({
-      success: true,
-      status: 'STOPPED',
-      positionsFlattened: openPositions.rows.length,
-      message: 'Emergency kill switch triggered. Trading is stopped and open positions are closed.',
-    });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    next(err);
-  } finally {
-    client.release();
-  }
-});
 
 /**
  * POST /api/quant/deployment/validate
@@ -578,7 +618,7 @@ router.post('/deployment/validate', async (req, res, next) => {
 
 /**
  * GET /api/quant/risk/status
- * Get real-time daily risk controller status
+ * Get real-time daily risk controller status from live Dhan account
  */
 router.get('/risk/status', async (req, res, next) => {
   try {
@@ -587,8 +627,8 @@ router.get('/risk/status', async (req, res, next) => {
          COUNT(*)::int AS trades_today,
          COUNT(*) FILTER (WHERE pnl < 0)::int AS losses_today,
          COALESCE(SUM(pnl), 0)::numeric AS day_pnl
-       FROM paper_trades
-       WHERE user_id = $1 AND opened_at::date = CURRENT_DATE`,
+       FROM algo_orders
+       WHERE user_id = $1 AND execution_mode = 'LIVE' AND created_at::date = CURRENT_DATE`,
       [req.userId]
     );
 

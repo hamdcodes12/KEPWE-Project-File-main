@@ -1,18 +1,29 @@
 import { apiFetch } from './client';
 
+export { apiFetch };
+
 /**
  * KEPWE QUANT API Client
- * Connects frontend UI to Quant Lab backend endpoints
+ * Connects frontend UI to REAL DHAN PRODUCTION trading endpoints only
+ * No paper trading, no simulation, no mock data - LIVE DHAN ONLY
  */
 
 // 1. Quant Dashboard Overview
-export async function fetchQuantDashboard() {
-  return apiFetch('/quant/dashboard');
+export async function fetchQuantDashboard(options = {}) {
+  return apiFetch('/quant/dashboard', options);
 }
 
 // 2. Strategies Management
-export async function fetchQuantStrategies() {
-  return apiFetch('/quant/strategies');
+export async function fetchQuantStrategies(options = {}) {
+  return apiFetch('/quant/strategies', options);
+}
+
+export async function fetchQuantAnalytics(options = {}) {
+  return apiFetch('/quant/analytics', options);
+}
+
+export async function fetchAlgoBacktests(options = {}) {
+  return apiFetch('/algo/backtests', options);
 }
 
 export async function saveQuantStrategy(strategyData) {
@@ -22,7 +33,7 @@ export async function saveQuantStrategy(strategyData) {
   });
 }
 
-// 3. Quantitative Backtesting Engine
+// 3. Quantitative Backtesting Engine (Historical Analysis Only - NOT Execution)
 export async function runQuantBacktest(params = {}) {
   return apiFetch('/quant/backtest', {
     method: 'POST',
@@ -36,38 +47,7 @@ export async function runQuantBacktest(params = {}) {
   });
 }
 
-// 4. Paper Trading Engine
-export async function fetchPaperStatus() {
-  return apiFetch('/quant/paper/status');
-}
-
-export async function startPaperTrading() {
-  return apiFetch('/quant/paper/start', {
-    method: 'POST',
-  });
-}
-
-export async function stopPaperTrading() {
-  return apiFetch('/quant/paper/stop', {
-    method: 'POST',
-  });
-}
-
-export async function placePaperOrder(orderData) {
-  return apiFetch('/quant/paper/order', {
-    method: 'POST',
-    body: orderData,
-  });
-}
-
-// 5. Emergency Kill Switch
-export async function triggerKillSwitch() {
-  return apiFetch('/quant/kill-switch', {
-    method: 'POST',
-  });
-}
-
-// 6. Live Deployment Safety Gate
+// 4. Live Deployment Safety Gate
 export async function validateLiveDeploymentGate(config = {}) {
   return apiFetch('/quant/deployment/validate', {
     method: 'POST',
@@ -75,74 +55,54 @@ export async function validateLiveDeploymentGate(config = {}) {
   });
 }
 
-// 7. Daily Risk Controller Status
-export async function fetchRiskStatus() {
-  return apiFetch('/quant/risk/status');
+// 5. Daily Risk Controller Status
+export async function fetchRiskStatus(options = {}) {
+  return apiFetch('/quant/risk/status', options);
 }
 
-export async function fetchBrokerReadiness() {
-  return apiFetch('/broker/readiness');
+export async function fetchBrokerReadiness(options = {}) {
+  return apiFetch('/broker/readiness', options);
 }
 
-export async function fetchBrokerStatus() {
-  return apiFetch('/broker/status');
+export async function fetchBrokerStatus(options = {}) {
+  return apiFetch('/broker/status', options);
 }
 
-export async function startLemonnOAuth() {
-  return apiFetch('/broker/lemonn/oauth/start', { method: 'POST' });
+export async function fetchDhanBrokerStatus(options = {}) {
+  return apiFetch('/algo/broker/DHAN/status', options);
 }
 
-export async function disconnectBroker(broker) {
-  return apiFetch('/broker/disconnect', {
+export async function connectDhanAccount({ dhanClientId, accessToken }) {
+  return apiFetch('/broker/dhan/connect', {
     method: 'POST',
-    body: { broker },
+    body: { dhanClientId, accessToken },
   });
 }
 
-export async function fetchLemonnHoldings() {
-  return apiFetch('/broker/LEMONN/holdings');
+export async function startDhanOAuth() {
+  return apiFetch('/broker/dhan/oauth/start', { method: 'POST' });
 }
 
-export async function fetchLemonnPositions() {
-  return apiFetch('/broker/LEMONN/positions');
+export async function disconnectBroker(broker = 'DHAN') {
+  return apiFetch('/broker/dhan/disconnect', { method: 'POST' });
 }
 
-export async function fetchLemonnFunds() {
-  return apiFetch('/broker/LEMONN/funds');
+export async function fetchDhanHoldings(options = {}) {
+  return apiFetch('/broker/DHAN/holdings', options);
 }
 
-export async function fetchLemonnPnl() {
-  return apiFetch('/broker/LEMONN/pnl');
+export async function fetchDhanPositions(options = {}) {
+  return apiFetch('/broker/DHAN/positions', options);
 }
 
-export async function fetchLemonnOrderBook() {
-  return apiFetch('/broker/LEMONN/orderbook');
+export async function fetchDhanFunds(options = {}) {
+  return apiFetch('/broker/DHAN/funds', options);
 }
 
-export async function fetchLemonnOrderLog(orderId) {
-  return apiFetch(`/broker/LEMONN/order-log/${encodeURIComponent(orderId)}`);
+export async function fetchDhanOrderBook(options = {}) {
+  return apiFetch('/broker/DHAN/orderbook', options);
 }
 
-export async function fetchLemonnTradeBook(params = {}) {
-  return apiFetch(`/broker/LEMONN/tradebook?${new URLSearchParams(params).toString()}`);
-}
-
-export async function fetchLemonnTransactions(params = {}) {
-  return apiFetch(`/broker/LEMONN/transactions?${new URLSearchParams(params).toString()}`);
-}
-
-export async function fetchLemonnLtp(request) {
-  return apiFetch('/broker/LEMONN/market-data/ltp', { method: 'POST', body: request });
-}
-
-export async function fetchLemonnDepth(request) {
-  return apiFetch('/broker/LEMONN/market-data/depth', { method: 'POST', body: request });
-}
-
-export async function fetchLemonnChart(request) {
-  return apiFetch('/broker/LEMONN/market-data/chart', { method: 'POST', body: request });
-}
-
-export async function fetchLemonnHistoricalChart(request) {
-  return apiFetch('/broker/LEMONN/market-data/historical-chart', { method: 'POST', body: request });
+export async function fetchDhanTradeBook(options = {}) {
+  return apiFetch('/broker/DHAN/tradebook', options);
 }

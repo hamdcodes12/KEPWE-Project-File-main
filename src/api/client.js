@@ -75,14 +75,17 @@ export async function downloadAuthenticatedFile(path) {
   return response;
 }
 
+let activeRefreshPromise = null;
+
 /**
  * Core API request helper.
  * Attaches Bearer token when present.
  * Automatically attempts one refresh when a request returns 401,
  * then retries the original request once.
+ * Differentiates USER_AUTH_EXPIRED from DHAN_SESSION_EXPIRED.
  */
 export async function apiFetch(path, options = {}) {
-  const { method = 'GET', body, headers = {}, auth = true } = options;
+  const { method = 'GET', body, headers = {}, auth = true, signal } = options;
 
   const h = { 'Content-Type': 'application/json', ...headers };
   if (auth) {
@@ -95,9 +98,40 @@ export async function apiFetch(path, options = {}) {
     headers: h,
     body: body ? JSON.stringify(body) : undefined,
     credentials: 'include',
+    signal,
   });
 
+  // Parse response body helper
+  const parseBody = async (response) => {
+    let data = null;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+    }
+    if (data === null) {
+      data = {
+        error: response.ok
+          ? 'Unexpected response from server.'
+          : `Request failed (${response.status}). Please try again.`,
+      };
+    }
+    return data;
+  };
+
   if (res.status === 401 && auth) {
+    let data = await parseBody(res);
+
+    // If this is a broker-specific 401 (e.g. Dhan 24h token expired on DhanHQ),
+    // do NOT treat it as a user app login failure and do NOT refresh or clear user tokens.
+    if (data?.code === 'DHAN_SESSION_EXPIRED' || data?.broker === 'DHAN') {
+      return { status: res.status, ok: false, data };
+    }
+
+    // Otherwise, this is a user application authentication expiration
     const refreshed = await tryRefresh();
     if (refreshed) {
       const newToken = getAccessToken();
@@ -107,65 +141,58 @@ export async function apiFetch(path, options = {}) {
         headers: h,
         body: body ? JSON.stringify(body) : undefined,
         credentials: 'include',
+        signal,
       });
+      return { status: res.status, ok: res.ok, data: await parseBody(res) };
     }
+
+    return { status: res.status, ok: false, data };
   }
 
-  // Parse the response body. If the server returns non-JSON (e.g. the SPA's
-  // index.html fallback when a route is missing, or a proxy error page), we
-  // must NOT return `data: null` — consumers would crash with
-  // "Cannot read properties of null (reading '...')". Instead we return a
-  // structured error object so callers can surface a meaningful message.
-  let data = null;
-  const contentType = res.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
-    try {
-      data = await res.json();
-    } catch {
-      data = null;
-    }
-  }
-
-  if (data === null) {
-    data = {
-      error: res.ok
-        ? 'Unexpected response from server.'
-        : `Request failed (${res.status}). Please try again.`,
-    };
-  }
-
-  return { status: res.status, ok: res.ok, data };
+  return { status: res.status, ok: res.ok, data: await parseBody(res) };
 }
 
 /**
  * Attempt to refresh the access token using the stored refresh token.
+ * Uses a singleton inflight promise to eliminate concurrent refresh stampedes.
  */
 export async function tryRefresh() {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
+  if (activeRefreshPromise) {
+    return activeRefreshPromise;
+  }
 
-  try {
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-      credentials: 'include',
-    });
+  activeRefreshPromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return false;
 
-    if (!res.ok) {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          clearTokens();
+        }
+        return false;
+      }
+
+      const data = await res.json();
+      if (data.accessToken && data.refreshToken) {
+        setTokens(data.accessToken, data.refreshToken);
+        return true;
+      }
       clearTokens();
       return false;
+    } catch {
+      return false;
+    } finally {
+      activeRefreshPromise = null;
     }
+  })();
 
-    const data = await res.json();
-    if (data.accessToken && data.refreshToken) {
-      setTokens(data.accessToken, data.refreshToken);
-      return true;
-    }
-    clearTokens();
-    return false;
-  } catch {
-    clearTokens();
-    return false;
-  }
+  return activeRefreshPromise;
 }

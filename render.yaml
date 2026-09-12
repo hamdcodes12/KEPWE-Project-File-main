@@ -65,15 +65,15 @@ services:
         value: "60000"
       - key: BROKER_TOKEN_ENCRYPTION_KEY
         sync: false
-      - key: LEMONN_API_KEY
+      - key: DHAN_API_KEY
         sync: false
-      - key: LEMONN_API_SECRET
+      - key: DHAN_API_SECRET
         sync: false
-      - key: LEMONN_CLIENT_ID
-        sync: false
-      - key: LEMONN_REDIRECT_URL
+      - key: DHAN_REDIRECT_URL
         value: https://kepwe.in/api/lemonn/callback
-      - key: LEMONN_TIMEOUT_MS
+      - key: DHAN_STATIC_IP
+        value: "103.117.180.146"
+      - key: DHAN_TIMEOUT_MS
         value: "10000"
       - key: RESEND_API_KEY
         sync: false

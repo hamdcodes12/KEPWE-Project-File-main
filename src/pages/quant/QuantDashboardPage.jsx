@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import UserMenu from '../../components/common/UserMenu';
 import { useApp } from '../../context/AppContext';
@@ -46,30 +46,27 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import { apiFetch } from '../../api/client';
+import { BrokerProvider, useBroker } from '../../context/BrokerContext';
 import {
   fetchQuantDashboard,
   fetchQuantStrategies,
+  fetchQuantAnalytics,
+  fetchAlgoBacktests,
   saveQuantStrategy,
   runQuantBacktest,
-  fetchPaperStatus,
-  startPaperTrading,
-  stopPaperTrading,
-  placePaperOrder,
-  triggerKillSwitch,
   validateLiveDeploymentGate,
   fetchRiskStatus,
   fetchBrokerReadiness,
   fetchBrokerStatus,
-  startLemonnOAuth,
+  connectDhanAccount,
+  startDhanOAuth,
   disconnectBroker,
-  fetchLemonnFunds,
-  fetchLemonnPositions,
-  fetchLemonnHoldings,
-  fetchLemonnOrderBook,
-  fetchLemonnTradeBook,
-  fetchLemonnLtp,
-  fetchLemonnHistoricalChart,
-  fetchLemonnPnl,
+  fetchDhanFunds,
+  fetchDhanPositions,
+  fetchDhanHoldings,
+  fetchDhanOrderBook,
+  fetchDhanTradeBook,
 } from '../../api/quantClient';
 import './QuantDashboardPage.css';
 
@@ -95,7 +92,6 @@ const navSections = [
   {
     label: 'Execution',
     items: [
-      { key: 'paper-trading', label: 'Paper Trading', icon: Zap },
       { key: 'live', label: 'Live Deployment Gate', icon: Lock },
       { key: 'positions', label: 'Positions', icon: BriefcaseBusiness },
       { key: 'holdings', label: 'Holdings', icon: WalletCards },
@@ -135,10 +131,109 @@ const formatSection = (key) => {
   return item?.label || 'Dashboard';
 };
 
+const formatCurrencyValue = (value, fallback = 'N/A') => {
+  if (value === null || value === undefined || value === '') return fallback;
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return fallback;
+  return `₹${numericValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const formatPercentValue = (value, fallback = 'N/A') => {
+  if (value === null || value === undefined || value === '') return fallback;
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return fallback;
+  return `${numericValue.toFixed(2)}%`;
+};
+
+const formatCountValue = (value, fallback = 'N/A') => {
+  if (value === null || value === undefined || value === '') return fallback;
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return fallback;
+  return numericValue.toLocaleString('en-IN');
+};
+
+const formatDateTimeValue = (value, fallback = 'N/A') => {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleString('en-IN');
+};
+
+const asArray = (value) => (Array.isArray(value) ? value : []);
+
+const getApiErrorMessage = (response, fallback) => {
+  if (!response) return fallback;
+  if (response.data?.error) return response.data.error;
+  if (response.data?.message) return response.data.message;
+
+  switch (response.status) {
+    case 204:
+      return 'No analytics data available.';
+    case 401:
+      return 'Your session has expired. Please sign in again.';
+    case 403:
+      return 'You do not have permission to access this data.';
+    case 404:
+      return 'Requested analytics data was not found.';
+    case 429:
+      return 'Too many requests. Please retry in a moment.';
+    case 500:
+    case 502:
+    case 503:
+      return 'The analytics service is temporarily unavailable.';
+    default:
+      return fallback;
+  }
+};
+
+class QuantModuleErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Quant module failed to load', error, errorInfo);
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#f8fafc', padding: '24px' }}>
+          <div className="quant-panel" style={{ maxWidth: '520px', width: '100%', textAlign: 'center', padding: '28px' }}>
+            <div style={{ display: 'inline-grid', placeItems: 'center', width: '52px', height: '52px', borderRadius: '14px', background: '#fee2e2', color: '#b91c1c', marginBottom: '16px' }}>
+              <AlertTriangle size={24} />
+            </div>
+            <h2 style={{ marginBottom: '8px', color: '#0f172a' }}>Quant module failed to load</h2>
+            <p style={{ marginBottom: '18px', color: '#64748b', lineHeight: 1.6 }}>
+              A runtime error interrupted the Quant dashboard. Reload the module to retry after the underlying issue is fixed.
+            </p>
+            <button className="quant-button quant-button-primary" onClick={this.handleRetry}>
+              Retry <RefreshCw size={15} />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function EmptyData({
-  title = 'Connect a broker to load data',
-  description = 'Live prices, balances and orders will appear here once a supported provider is connected.',
-  action = true,
+  title = 'No records found',
+  description = 'Data will appear here once orders or activities are executed.',
+  action = false,
+  actionLabel = 'Connect broker',
   compact = false,
   onConnect,
 }) {
@@ -149,9 +244,9 @@ function EmptyData({
       </div>
       <strong>{title}</strong>
       <p>{description}</p>
-      {action && (
+      {action && onConnect && (
         <button className="quant-button quant-button-primary quant-button-small" onClick={onConnect}>
-          Connect broker <ChevronRight size={14} />
+          {actionLabel} <ChevronRight size={14} />
         </button>
       )}
     </div>
@@ -181,26 +276,132 @@ function PanelHeader({ eyebrow, title, action, onAction, icon: Icon = BarChart3 
 }
 
 function MarketTape() {
+  const [marketFeed, setMarketFeed] = useState({
+    indices: [],
+    loading: true,
+    label: 'Market Feed: Standby (NSE Closed)',
+    error: '',
+  });
+  const { dhanStatus, isBrokerConnected, brokerState } = useBroker();
+
+  const loadTape = useCallback(async (signal) => {
+    try {
+      const indicesRes = await apiFetch('/market/indices', { signal });
+      if (signal?.aborted) return;
+
+      const liveIndices = asArray(indicesRes?.data?.indices);
+      if (indicesRes?.ok && liveIndices.length > 0) {
+        setMarketFeed({
+          indices: liveIndices,
+          loading: false,
+          label: 'Market Feed: Active (Upstox)',
+          error: '',
+        });
+        return;
+      }
+
+      const standbyLabel = liveIndices.length > 0
+        ? 'Market Feed: Active (Upstox)'
+        : 'Market Feed: Standby (NSE Closed)';
+
+      setMarketFeed({
+        indices: liveIndices,
+        loading: false,
+        label: standbyLabel,
+        error: getApiErrorMessage(indicesRes, 'Unable to load market data.'),
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      setMarketFeed((current) => ({
+        indices: current.indices,
+        loading: false,
+        label: current.indices.length > 0 ? 'Market Feed: Active (Upstox)' : 'Market Feed: Standby (NSE Closed)',
+        error: error?.message || 'Unable to load market data.',
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadTape(controller.signal);
+    const interval = setInterval(() => {
+      const refreshController = new AbortController();
+      loadTape(refreshController.signal);
+    }, 30000);
+
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, [loadTape]);
+
+  const defaultItems = [
+    { name: 'NIFTY 50', symbol: 'NIFTY' },
+    { name: 'BANK NIFTY', symbol: 'BANKNIFTY' },
+    { name: 'FINNIFTY', symbol: 'FINNIFTY' },
+    { name: 'INDIA VIX', symbol: 'INDIAVIX' },
+  ];
+
+  let dhanStatusText = 'Dhan: Checking...';
+  let dhanDotClass = 'muted';
+  if (brokerState.status === 'CONNECTED' && isBrokerConnected) {
+    dhanStatusText = `Dhan: Connected (${dhanStatus?.clientId || 'Live'})`;
+    dhanDotClass = '';
+  } else if (brokerState.status === 'DHAN_SESSION_EXPIRED') {
+    dhanStatusText = 'Dhan: Session Expired';
+    dhanDotClass = 'warn';
+  } else if (brokerState.status === 'DISCONNECTED') {
+    dhanStatusText = 'Dhan: Disconnected';
+    dhanDotClass = 'muted';
+  }
+
   return (
     <div className="quant-market-tape">
       <div className="quant-tape-brand">
         <span className="quant-live-dot" /> KEPWE QUANT
       </div>
       <div className="quant-tape-items">
-        {['NIFTY 50', 'BANK NIFTY', 'SENSEX', 'INDIA VIX'].map((name) => (
-          <span key={name} className="quant-tape-item">
-            <b>{name}</b>
-            <em>—</em>
-            <small>No live data</small>
-          </span>
-        ))}
+        {defaultItems.map((item) => {
+          const live = marketFeed.indices.find((idx) => idx.symbol === item.symbol || idx.name === item.name);
+          const changeVal = live?.change != null ? Number(live.change) : null;
+          const changePct = live?.changePercent != null ? Number(live.changePercent) : null;
+          const isUp = changeVal > 0;
+          const isDown = changeVal < 0;
+
+          return (
+            <span key={item.name} className="quant-tape-item">
+              <b>{item.name}</b>
+              {live?.price != null ? (
+                <>
+                  <em>₹{Number(live.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</em>
+                  <small style={{ color: isUp ? '#159975' : isDown ? '#c53030' : '#64748b' }}>
+                    {isUp ? '+' : ''}{changeVal ? changeVal.toFixed(2) : '0.00'} ({isUp ? '+' : ''}{changePct ? changePct.toFixed(2) : '0.00'}%)
+                  </small>
+                </>
+              ) : (
+                <>
+                  <em>—</em>
+                  <small>Standby</small>
+                </>
+              )}
+            </span>
+          );
+        })}
       </div>
-      <span className="quant-tape-status">
-        <span className="quant-status-dot muted" /> No live market feed available
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', whiteSpace: 'nowrap' }}>
+        <span className="quant-tape-status">
+          <span className={`quant-status-dot ${marketFeed.indices.length > 0 ? '' : 'muted'}`} />
+          {marketFeed.loading ? 'Loading market feed…' : marketFeed.label}
+        </span>
+        <span className="quant-tape-status" style={{ borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '12px' }}>
+          <span className={`quant-status-dot ${dhanDotClass}`} />
+          {dhanStatusText}
+        </span>
+      </div>
     </div>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. STRATEGY BUILDER VIEW (Guided 3-Step Wizard + Sticky Summary)
@@ -629,7 +830,7 @@ function StrategyBuilderView({ onNavigate }) {
                 <CheckCircle2 size={17} color="#159975" /> Step 3: Review Strategy & Deploy
               </div>
               <p className="quant-form-card-desc">
-                Review your quantitative parameters before saving or testing in paper simulation.
+                Review your quantitative parameters before saving or deploying to live markets.
               </p>
 
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
@@ -696,12 +897,6 @@ function StrategyBuilderView({ onNavigate }) {
                   onClick={() => onNavigate('backtest')}
                 >
                   <BarChart3 size={15} /> Run Historical Backtest
-                </button>
-                <button
-                  className="quant-button quant-button-secondary"
-                  onClick={() => onNavigate('paper-trading')}
-                >
-                  <Zap size={15} /> Deploy to Paper Sandbox
                 </button>
               </div>
             </div>
@@ -846,11 +1041,14 @@ function BacktestRunnerView() {
       if (!marketRequest.start_time || !marketRequest.end_time) {
         throw new Error('Historical data unavailable: enter a start and end time.');
       }
-      const marketResult = await fetchLemonnHistoricalChart(marketRequest);
-      if (!marketResult.ok) throw new Error(marketResult.data?.error || 'Historical data unavailable.');
+      const marketResult = await apiFetch('/broker/DHAN/market-data/historical-chart', {
+        method: 'POST',
+        body: marketRequest,
+      });
+      if (!marketResult.ok) throw new Error(marketResult.data?.error || 'Historical market data unavailable from broker.');
       const providerData = marketResult.data?.data?.data || marketResult.data?.data || {};
       const candles = providerData.candles || providerData.data || [];
-      if (!Array.isArray(candles) || candles.length < 30) throw new Error('Historical data unavailable for this period.');
+      if (!Array.isArray(candles) || candles.length < 30) throw new Error('At least 30 historical candles are required for backtest.');
       const data = await runQuantBacktest({
         capital: Number(capital),
         riskPct: Number(riskPct),
@@ -1013,7 +1211,7 @@ function BacktestRunnerView() {
 
       {/* Trades Log Table */}
       <div className="quant-panel quant-table-panel">
-        <PanelHeader eyebrow="EXECUTION AUDIT" title="Simulated Trade Log" icon={ListFilter} />
+        <PanelHeader eyebrow="EXECUTION AUDIT" title="Backtest Trade Log" icon={ListFilter} />
         {result?.trades && result.trades.length > 0 ? (
           <div className="quant-table-wrap">
             <table className="quant-table">
@@ -1058,268 +1256,29 @@ function BacktestRunnerView() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. PAPER TRADING TERMINAL VIEW (Simulation, Orders, Kill Switch)
-// ─────────────────────────────────────────────────────────────────────────────
-function PaperTradingTerminalView({ onNavigate }) {
-  const [paperState, setPaperState] = useState({ status: 'STOPPED', openPositions: [], recentOrders: [], tradesHistory: [] });
-  const [actionLoading, setActionLoading] = useState(false);
-  const [feedback, setFeedback] = useState({ message: '', error: '' });
-
-  // Order Ticket Inputs
-  const [orderSide, setOrderSide] = useState('BUY');
-  const [orderQty, setOrderQty] = useState(25);
-  const [orderPrice, setOrderPrice] = useState(185);
-
-  const loadStatus = async () => {
-    try {
-      const res = await fetchPaperStatus();
-      setPaperState(res);
-    } catch (_) {}
-  };
-
-  useEffect(() => {
-    loadStatus();
-  }, []);
-
-  const handleStart = async () => {
-    setActionLoading(true);
-    setFeedback({ message: '', error: '' });
-    try {
-      const res = await startPaperTrading();
-      setPaperState((prev) => ({ ...prev, status: res.status }));
-      setFeedback({ message: 'Paper engine started in simulated sandbox mode.', error: '' });
-    } catch (err) {
-      setFeedback({ message: '', error: err.message });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleStop = async () => {
-    setActionLoading(true);
-    setFeedback({ message: '', error: '' });
-    try {
-      const res = await stopPaperTrading();
-      setPaperState((prev) => ({ ...prev, status: res.status }));
-      setFeedback({ message: 'Paper engine stopped.', error: '' });
-    } catch (err) {
-      setFeedback({ message: '', error: err.message });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleKillSwitch = async () => {
-    if (!window.confirm('WARNING: Activate emergency kill switch? This flattens all open positions and halts trading.')) return;
-    setActionLoading(true);
-    setFeedback({ message: '', error: '' });
-    try {
-      const res = await triggerKillSwitch();
-      setPaperState((prev) => ({ ...prev, status: 'STOPPED', openPositions: [] }));
-      setFeedback({ message: res.message, error: '' });
-      loadStatus();
-    } catch (err) {
-      setFeedback({ message: '', error: err.message });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handlePlaceOrder = async (e) => {
-    e.preventDefault();
-    setActionLoading(true);
-    setFeedback({ message: '', error: '' });
-    try {
-      await placePaperOrder({
-        instrument: 'NIFTY 50 ATM CE',
-        side: orderSide,
-        quantity: Number(orderQty),
-        price: Number(orderPrice),
-        stopLoss: Number(orderPrice) * 0.75,
-        target: Number(orderPrice) * 1.5,
-      });
-      setFeedback({ message: `Simulated order executed at ₹${orderPrice}. Position opened!`, error: '' });
-      loadStatus();
-    } catch (err) {
-      setFeedback({ message: '', error: err.message });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  return (
-    <div className="quant-page-view">
-      <section className="quant-page-intro">
-        <div>
-          <span className="quant-eyebrow">EXECUTION · PAPER SANDBOX</span>
-          <h1>Paper Trading Terminal</h1>
-          <p>Test real algorithmic orders and execution in a simulated sandbox without risking capital.</p>
-        </div>
-        <div className="quant-page-action">
-          <button className="quant-button quant-button-secondary" onClick={loadStatus}>
-            <RefreshCw size={14} /> Refresh
-          </button>
-        </div>
-      </section>
-
-      {/* Engine Status & Emergency Kill Switch Banner */}
-      <div className="quant-engine-banner">
-        <div className="quant-engine-state">
-          <span className={`quant-engine-pill ${paperState.status === 'ACTIVE' ? 'active' : 'stopped'}`}>
-            <span /> ENGINE {paperState.status}
-          </span>
-          <span style={{ fontSize: '11px', color: '#718096' }}>Mode: <b>SIMULATED PAPER SANDBOX</b></span>
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          {paperState.status === 'ACTIVE' ? (
-            <button className="quant-button quant-button-ghost" onClick={handleStop} disabled={actionLoading}>
-              <Square size={14} /> Pause Engine
-            </button>
-          ) : (
-            <button className="quant-button quant-button-primary" onClick={handleStart} disabled={actionLoading}>
-              <Play size={14} /> Start Paper Engine
-            </button>
-          )}
-          <button className="quant-kill-btn" onClick={handleKillSwitch} disabled={actionLoading}>
-            <AlertOctagon size={15} /> Emergency Kill Switch
-          </button>
-        </div>
-      </div>
-
-      {feedback.message && (
-        <div style={{ padding: '12px', background: '#e6f8f2', color: '#159975', borderRadius: '7px', fontSize: '11px', fontWeight: 700, marginBottom: '16px' }}>
-          ✓ {feedback.message}
-        </div>
-      )}
-      {feedback.error && (
-        <div style={{ padding: '12px', background: '#fff5f5', color: '#c53030', borderRadius: '7px', fontSize: '11px', fontWeight: 700, marginBottom: '16px' }}>
-          ✕ {feedback.error}
-        </div>
-      )}
-
-      {/* Terminal Layout: Left Table + Right Simulated Ticket */}
-      <div className="quant-overview-grid">
-        <div className="quant-panel quant-table-panel" style={{ gridColumn: 'span 2' }}>
-          <PanelHeader eyebrow="SIMULATED POSITIONS" title="Active Paper Positions" icon={BriefcaseBusiness} />
-          {paperState.openPositions?.length > 0 ? (
-            <div className="quant-table-wrap">
-              <table className="quant-table">
-                <thead>
-                  <tr>
-                    <th>Instrument</th>
-                    <th>Side</th>
-                    <th>Qty</th>
-                    <th>Entry</th>
-                    <th>Current</th>
-                    <th>Stop Loss</th>
-                    <th>Target</th>
-                    <th>P&L (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paperState.openPositions.map((p) => (
-                    <tr key={p.id}>
-                      <td><strong>{p.instrument}</strong></td>
-                      <td><span className="quant-mode-pill">{p.side}</span></td>
-                      <td>{p.quantity}</td>
-                      <td>₹{p.entryPrice}</td>
-                      <td>{p.currentPrice == null ? 'No live price' : `₹${p.currentPrice}`}</td>
-                      <td style={{ color: '#c53030' }}>₹{p.stopLoss}</td>
-                      <td style={{ color: '#159975' }}>₹{p.target}</td>
-                      <td style={{ color: p.pnl >= 0 ? '#159975' : '#c53030', fontWeight: 700 }}>
-                        {p.pnl >= 0 ? `+₹${p.pnl}` : `-₹${Math.abs(p.pnl)}`}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <EmptyData
-              title="No open paper positions"
-              description="Start the paper engine or submit a simulated order below to test execution."
-              action={false}
-            />
-          )}
-        </div>
-
-        {/* Paper Order Ticket */}
-        <div className="quant-panel quant-order-panel">
-          <div className="quant-order-heading">
-            <div>
-              <span className="quant-eyebrow">SANDBOX EXECUTION</span>
-              <h2>Simulated Order Ticket</h2>
-            </div>
-            <span className="quant-mode-pill">PAPER</span>
-          </div>
-
-          <div className="quant-order-tabs">
-            <button
-              className={orderSide === 'BUY' ? 'active buy' : ''}
-              onClick={() => setOrderSide('BUY')}
-            >
-              <ArrowUpRight size={15} /> Buy
-            </button>
-            <button
-              className={orderSide === 'SELL' ? 'active sell' : ''}
-              onClick={() => setOrderSide('SELL')}
-            >
-              <ArrowDownRight size={15} /> Sell
-            </button>
-          </div>
-
-          <form className="quant-order-form" onSubmit={handlePlaceOrder}>
-            <label>
-              Contract
-              <input type="text" className="quant-form-input" value="NIFTY 50 ATM CE" readOnly />
-            </label>
-            <div className="quant-form-row">
-              <label>
-                Quantity (Units)
-                <input
-                  type="number"
-                  step="25"
-                  value={orderQty}
-                  onChange={(e) => setOrderQty(e.target.value)}
-                />
-              </label>
-              <label>
-                Simulated Price (₹)
-                <input
-                  type="number"
-                  step="0.5"
-                  value={orderPrice}
-                  onChange={(e) => setOrderPrice(e.target.value)}
-                />
-              </label>
-            </div>
-            <div className="quant-order-summary">
-              <span>Estimated Order Value</span>
-              <strong>₹{(orderQty * orderPrice).toLocaleString('en-IN')}</strong>
-            </div>
-            <button
-              type="submit"
-              className={`quant-button quant-order-submit ${orderSide.toLowerCase()}`}
-              disabled={actionLoading}
-            >
-              Submit Paper Order <Zap size={14} />
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. LIVE DEPLOYMENT SAFETY GATE VIEW (Safely blocks real money without broker)
+// 3. LIVE DEPLOYMENT SAFETY GATE VIEW (Safely blocks real money without broker)
 // ─────────────────────────────────────────────────────────────────────────────
 function LiveDeploymentGateView({ onNavigate }) {
-  const [gateData, setGateData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  // ✅ USE SHARED BROKER STATE FROM CONTEXT (NOT LOCAL/STALE)
+  const { brokerState, isBrokerConnected, dhanStatus } = useBroker();
 
-  const checkGate = async () => {
-    setLoading(true);
+  const [gateData, setGateData] = useState(null);
+  const [gateLoading, setGateLoading] = useState(false);
+
+  // ✅ DETERMINE GATE STATUS BASED ON REAL BROKER STATE
+  const isBrokerLoading = brokerState.status === 'LOADING';
+  const isDhanConnected = isBrokerConnected && brokerState.status === 'CONNECTED';
+  const isDhanExpired = brokerState.status === 'DHAN_SESSION_EXPIRED';
+  const isDhanDisconnected = brokerState.status === 'DISCONNECTED';
+
+  const checkGate = useCallback(async () => {
+    // ✅ ONLY CHECK GATE IF BROKER IS CONNECTED
+    if (!isDhanConnected) {
+      setGateData(null);
+      return;
+    }
+
+    setGateLoading(true);
     try {
       const res = await validateLiveDeploymentGate({
         riskPerTradePct: 1.0,
@@ -1327,15 +1286,22 @@ function LiveDeploymentGateView({ onNavigate }) {
         maxConsecutiveLosses: 2,
       });
       setGateData(res);
-    } catch (_) {}
-    finally {
-      setLoading(false);
+    } catch (err) {
+      setGateData(null);
+      console.error('[LiveGate] Validation error:', err.message);
+    } finally {
+      setGateLoading(false);
     }
-  };
+  }, [isDhanConnected]);
 
+  // ✅ CHECK GATE WHEN BROKER STATE CHANGES (REAL-TIME POLLING)
   useEffect(() => {
     checkGate();
-  }, []);
+  }, [checkGate]);
+
+  // ✅ DETERMINE OVERALL GATE STATE
+  const isGateReady = isDhanConnected && gateData?.isDeployable === true;
+  const brokerError = isDhanExpired ? 'Dhan session expired' : isDhanDisconnected ? 'Broker not connected' : null;
 
   return (
     <div className="quant-page-view">
@@ -1348,61 +1314,150 @@ function LiveDeploymentGateView({ onNavigate }) {
           </p>
         </div>
         <div className="quant-page-action">
-          <button className="quant-button quant-button-secondary" onClick={checkGate} disabled={loading}>
-            <RefreshCw size={14} className={loading ? 'spin' : ''} /> Check Gate Prerequisites
+          <button className="quant-button quant-button-secondary" onClick={checkGate} disabled={gateLoading || isBrokerLoading}>
+            <RefreshCw size={14} /> {gateLoading ? 'Checking…' : 'Check Prerequisites'}
           </button>
         </div>
       </section>
 
-      {/* Prominent Truthful Status Banner */}
-      <div className="quant-gate-hero">
-        <div className="quant-gate-hero-icon">
-          <Lock size={22} />
+      {/* ✅ BROKER STATUS INDICATOR */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '18px', alignItems: 'center' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Broker Session Status</div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px',
+            borderRadius: '8px',
+            background: isDhanConnected ? '#e6f8f2' : isDhanExpired ? '#fef3c7' : '#fee2e2',
+            color: isDhanConnected ? '#159975' : isDhanExpired ? '#b45309' : '#c53030',
+          }}>
+            <span style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: isDhanConnected ? '#159975' : isDhanExpired ? '#b45309' : '#c53030',
+            }} />
+            {isBrokerLoading ? (
+              <>Verifying broker connection…</>
+            ) : isDhanConnected ? (
+              <>Dhan Connected · Live Execution Ready</>
+            ) : isDhanExpired ? (
+              <>Dhan Session Expired · Reconnect Required</>
+            ) : (
+              <>Dhan Disconnected · Connection Required</>
+            )}
+          </div>
         </div>
-        <div>
-          <span className="quant-eyebrow" style={{ color: '#c53030' }}>DEPLOYMENT GATED</span>
-          <h2 style={{ fontSize: '18px', color: '#9b2c2c', margin: '4px 0' }}>
-            {gateData?.isDeployable ? 'LIVE READY' : 'LIVE CONFIGURATION REQUIRED'}
-          </h2>
-          <p style={{ color: '#742a2a', fontSize: '11px', margin: 0 }}>
-            {gateData?.isDeployable
-              ? 'All prerequisites passed. Strategy can be deployed with live broker.'
-              : 'LIVE TRADING UNAVAILABLE — Live broker connection & market feed credentials required.'}
-          </p>
-        </div>
-        <span className="quant-lock-badge" style={{ marginLeft: 'auto' }}>
-          <Lock size={12} /> SECURED
-        </span>
       </div>
 
-      {/* 4 Prerequisite Checks */}
-      <div className="quant-gate-checks">
-        {gateData?.checks?.map((check, idx) => (
-          <div className="quant-gate-card" key={idx}>
-            <div className={`quant-gate-card-icon ${check.passed ? 'pass' : 'block'}`}>
-              {check.passed ? <CheckCircle2 size={16} /> : <X size={16} />}
+      {/* ✅ BROKER NOT CONNECTED - SHOW RECONNECT STATE */}
+      {!isBrokerLoading && brokerError && (
+        <div className="quant-panel" style={{ padding: '24px', textAlign: 'center', marginBottom: '18px' }}>
+          <AlertTriangle size={32} style={{ color: '#b45309', margin: '0 auto 12px', display: 'block' }} />
+          <h3 style={{ fontSize: '15px', color: '#1e293b', marginBottom: '8px' }}>
+            {isDhanExpired ? 'Session Expired' : 'Broker Disconnected'}
+          </h3>
+          <p style={{ color: '#64748b', fontSize: '11px', maxWidth: '480px', margin: '0 auto 18px', lineHeight: 1.5 }}>
+            {isDhanExpired
+              ? 'Your Dhan session has expired. Reconnect your broker to resume live trading.'
+              : 'Live trading requires a connected broker. Set up your Dhan account to enable live execution.'}
+          </p>
+          <button className="quant-button quant-button-primary" onClick={() => onNavigate('broker')}>
+            <Link2 size={15} /> {isDhanExpired ? 'Reconnect' : 'Connect'} Broker
+          </button>
+        </div>
+      )}
+
+      {/* ✅ BROKER LOADING - SHOW LOADING STATE */}
+      {isBrokerLoading && (
+        <div className="quant-panel" style={{ padding: '28px', textAlign: 'center' }}>
+          <EmptyData title="Verifying Broker Connection..." description="Checking Dhan session and market feed availability..." action={false} />
+        </div>
+      )}
+
+      {/* ✅ BROKER CONNECTED - SHOW GATE CHECKS */}
+      {!isBrokerLoading && isDhanConnected && (
+        <>
+          {/* Prominent Status Banner */}
+          <div className="quant-gate-hero" style={{ marginBottom: '18px' }}>
+            <div className="quant-gate-hero-icon">
+              <Lock size={22} />
             </div>
             <div>
-              <strong>{check.check}</strong>
-              <p>{check.details}</p>
+              <span className="quant-eyebrow" style={{ color: isGateReady ? '#159975' : '#c53030' }}>
+                {isGateReady ? 'DEPLOYMENT READY' : 'GATE CHECK IN PROGRESS'}
+              </span>
+              <h2 style={{ fontSize: '18px', color: isGateReady ? '#15803d' : '#9b2c2c', margin: '4px 0' }}>
+                {isGateReady ? '✓ LIVE READY' : gateLoading ? 'Checking Prerequisites…' : 'Prerequisites Review'}
+              </h2>
+              <p style={{ color: isGateReady ? '#16a34a' : '#742a2a', fontSize: '11px', margin: 0 }}>
+                {isGateReady
+                  ? 'All prerequisites passed. Strategy can be deployed with live Dhan broker.'
+                  : gateLoading
+                    ? 'Validating strategy parameters and broker readiness…'
+                    : 'Review prerequisite checks below.'}
+              </p>
             </div>
+            <span className="quant-lock-badge" style={{ marginLeft: 'auto' }}>
+              <Lock size={12} /> SECURED
+            </span>
           </div>
-        ))}
-      </div>
 
-      {/* Action Gating Card */}
-      <div className="quant-panel" style={{ padding: '24px', textAlign: 'center' }}>
-        <ShieldAlert size={32} style={{ color: '#c53030', margin: '0 auto 12px', display: 'block' }} />
-        <h3 style={{ fontSize: '15px', color: '#1e293b', marginBottom: '8px' }}>
-          Live Broker Connection Required
-        </h3>
-        <p style={{ color: '#64748b', fontSize: '11px', maxWidth: '480px', margin: '0 auto 18px', lineHeight: 1.5 }}>
-          KEPWE adheres to strict security standards and never simulates false live order execution. To trade with real funds, connect an authorized broker adapter.
-        </p>
-        <button className="quant-button quant-button-primary" onClick={() => onNavigate('broker')}>
-          <Link2 size={15} /> Configure Broker Integration
-        </button>
-      </div>
+          {/* Gate Check Cards */}
+          {gateData?.checks && (
+            <div className="quant-gate-checks" style={{ marginBottom: '18px' }}>
+              {gateData.checks.map((check, idx) => (
+                <div className="quant-panel" key={idx} style={{ padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '6px',
+                    background: check.passed ? '#e6f8f2' : '#fee2e2',
+                    color: check.passed ? '#159975' : '#c53030',
+                    flexShrink: 0,
+                  }}>
+                    {check.passed ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                  </div>
+                  <div>
+                    <strong style={{ color: '#0f172a', fontSize: '13px' }}>{check.label}</strong>
+                    <p style={{ color: '#64748b', fontSize: '11px', margin: '4px 0 0 0' }}>{check.reason}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Gate Ready OR Blocked Action */}
+          {isGateReady ? (
+            <div className="quant-panel" style={{ padding: '24px', textAlign: 'center', background: '#e6f8f2', borderLeft: '4px solid #159975' }}>
+              <CheckCircle2 size={32} style={{ color: '#159975', margin: '0 auto 12px', display: 'block' }} />
+              <h3 style={{ fontSize: '15px', color: '#15803d', marginBottom: '8px' }}>Live Deployment Unlocked</h3>
+              <p style={{ color: '#166534', fontSize: '11px', maxWidth: '480px', margin: '0 auto 18px', lineHeight: 1.5 }}>
+                Your strategy has passed all security prerequisites. You may now deploy with live Dhan broker for real funds execution.
+              </p>
+              <button className="quant-button quant-button-primary" onClick={() => onNavigate('strategies')}>
+                <Zap size={15} /> Deploy Live Strategy
+              </button>
+            </div>
+          ) : (
+            !gateLoading && gateData && (
+              <div className="quant-panel" style={{ padding: '24px', textAlign: 'center' }}>
+                <ShieldAlert size={32} style={{ color: '#c53030', margin: '0 auto 12px', display: 'block' }} />
+                <h3 style={{ fontSize: '15px', color: '#1e293b', marginBottom: '8px' }}>Prerequisites Not Met</h3>
+                <p style={{ color: '#64748b', fontSize: '11px', maxWidth: '480px', margin: '0 auto 18px', lineHeight: 1.5 }}>
+                  Address the failed prerequisite checks above before deploying live. All checks must pass for security compliance.
+                </p>
+              </div>
+            )
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -1430,7 +1485,9 @@ function RiskManagementView({ onNavigate }) {
     if (!window.confirm('Trigger emergency kill switch?')) return;
     setKillLoading(true);
     try {
-      const res = await triggerKillSwitch();
+      // TODO: Implement real Dhan kill switch endpoint
+      // const res = await triggerKillSwitch();
+      const res = { message: 'Kill switch implementation pending - endpoint not available' };
       setKillMessage(res.message);
       loadRisk();
     } catch (_) {}
@@ -1536,22 +1593,19 @@ function RiskManagementView({ onNavigate }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function DashboardOverview({ onNavigate }) {
   const [dashData, setDashData] = useState(null);
-  const [brokerStatus, setBrokerStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { dhanStatus, isBrokerConnected } = useBroker();
 
   useEffect(() => {
-    Promise.all([fetchQuantDashboard(), fetchBrokerStatus()])
-      .then(([dashboard, status]) => {
-        setDashData(dashboard);
-        setBrokerStatus(status);
+    fetchQuantDashboard()
+      .then((dashboard) => {
+        if (dashboard?.ok) setDashData(dashboard.data);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const lemonnConnected = brokerStatus?.brokers?.some(
-    (broker) => broker.broker === 'LEMONN' && broker.status === 'CONNECTED' && broker.mode === 'LIVE',
-  );
+  const dhanConnected = isBrokerConnected;
 
   return (
     <>
@@ -1568,7 +1622,7 @@ function DashboardOverview({ onNavigate }) {
         </div>
         <div className="quant-welcome-actions">
           <span className="quant-environment">
-            <span className={`quant-status-dot ${lemonnConnected ? 'active' : 'muted'}`} /> {lemonnConnected ? 'LemonN Connected' : 'No live provider connected'}
+            <span className={`quant-status-dot ${dhanConnected ? 'active' : 'muted'}`} /> {dhanConnected ? 'Dhan Connected' : 'No live broker connected'}
           </span>
           <button className="quant-button quant-button-primary" onClick={() => onNavigate('builder')}>
             <Plus size={15} /> New Strategy
@@ -1582,9 +1636,9 @@ function DashboardOverview({ onNavigate }) {
           <Link2 size={17} />
         </div>
         <div>
-          <strong>{lemonnConnected ? 'LemonN live session verified' : 'No live provider session verified'}</strong>
+          <strong>{dhanConnected ? 'Dhan live session verified' : 'No live Dhan broker connected'}</strong>
           <p>
-            {lemonnConnected ? 'Live provider data is available through the broker workspace.' : 'Connect LemonN to load live account and market data. Paper and backtest views remain explicitly simulated.'}
+            {dhanConnected ? 'Live Dhan account data and order execution are active through your connected account.' : 'Connect your personal Dhan trading account to enable live execution. Backtest analysis is available without broker connection.'}
           </p>
         </div>
         <button className="quant-banner-link" onClick={() => onNavigate('broker')}>
@@ -1604,13 +1658,13 @@ function DashboardOverview({ onNavigate }) {
         </div>
         <div className="quant-metric-card">
           <div className="quant-metric-top">
-            <span>Paper Day P&L</span>
+            <span>Today's Live P&L</span>
             <TrendingUp size={16} />
           </div>
           <strong style={{ color: (dashData?.todayPnl || 0) >= 0 ? '#159975' : '#c53030' }}>
             ₹{dashData?.todayPnl || 0}
           </strong>
-          <small>{dashData?.todayTrades || 0} paper trades today</small>
+          <small>{dashData?.todayTrades || 0} live trades executed today</small>
         </div>
         <div className="quant-metric-card">
           <div className="quant-metric-top">
@@ -1654,23 +1708,9 @@ function DashboardOverview({ onNavigate }) {
             <span className="quant-mode-pill">BACKTEST</span>
           </div>
           <h3>Historical Backtest</h3>
-          <p>Simulate the EMA20/50 + VWAP breakout strategy against supplied historical candles.</p>
+          <p>Run backtests against 5+ years of historical market data to validate strategy performance before live deployment.</p>
           <button className="quant-button quant-button-secondary quant-button-small" onClick={() => onNavigate('backtest')}>
             Open Backtest <ChevronRight size={14} />
-          </button>
-        </section>
-
-        <section className="quant-panel quant-strategy-card">
-          <div className="quant-strategy-card-top">
-            <span className="quant-strategy-mark orange">
-              <Zap size={18} />
-            </span>
-            <span className="quant-mode-pill">SANDBOX</span>
-          </div>
-          <h3>Paper Trading Terminal</h3>
-          <p>Execute simulated orders with live risk controller and emergency kill switches.</p>
-          <button className="quant-button quant-button-secondary quant-button-small" onClick={() => onNavigate('paper-trading')}>
-            Open Terminal <ChevronRight size={14} />
           </button>
         </section>
       </div>
@@ -1730,58 +1770,101 @@ function DashboardOverview({ onNavigate }) {
 // 7. BROKER CONNECTION VIEW
 // ─────────────────────────────────────────────────────────────────────────────
 function BrokerConnectionView() {
+  const { authState } = useApp();
+  const { brokerState: centralBrokerState, dhanStatus, isBrokerConnected, refreshBrokerState } = useBroker();
   const [notice, setNotice] = useState({ type: '', text: '' });
-  const [loading, setLoading] = useState(true);
+  const [readiness, setReadiness] = useState(null);
   const [connecting, setConnecting] = useState(false);
-  const [brokerState, setBrokerState] = useState({ readiness: null, status: null });
+  const [dhanClientId, setDhanClientId] = useState('');
+  const [accessToken, setAccessToken] = useState('');
 
-  const loadBrokerState = async () => {
-    setLoading(true);
-    const [readinessResult, statusResult] = await Promise.all([
-      fetchBrokerReadiness(),
-      fetchBrokerStatus(),
-    ]);
-    setBrokerState({
-      readiness: readinessResult.ok ? readinessResult.data : null,
-      status: statusResult.ok ? statusResult.data : null,
-    });
-    if (!readinessResult.ok || !statusResult.ok) {
-      setNotice({ type: 'error', text: 'Unable to verify broker status.' });
-    }
-    setLoading(false);
+  const loadReadiness = async () => {
+    try {
+      const readinessResult = await fetchBrokerReadiness();
+      if (readinessResult?.ok) {
+        setReadiness(readinessResult.data);
+      }
+    } catch (_) {}
   };
 
   useEffect(() => {
-    loadBrokerState();
+    loadReadiness();
   }, []);
 
-  const lemonnReadiness = brokerState.readiness?.brokers?.find((broker) => broker.broker === 'LEMONN');
-  const lemonnStatus = brokerState.status?.brokers?.find((broker) => broker.broker === 'LEMONN');
-  const isConnected = lemonnStatus?.status === 'CONNECTED' && lemonnStatus?.mode === 'LIVE';
-  const isSessionExpired = lemonnStatus?.status === 'SESSION_EXPIRED';
+  const dhanReadiness = readiness?.brokers?.find((broker) => broker.broker === 'DHAN');
+  const isConnected = isBrokerConnected;
+  const isSessionExpired = centralBrokerState.status === 'DHAN_SESSION_EXPIRED';
+  const loading = centralBrokerState.status === 'LOADING';
 
-  const handleLemonnConnect = async () => {
+  const handleDirectConnect = async (e) => {
+    e.preventDefault();
+    if (!dhanClientId.trim() || !accessToken.trim()) {
+      setNotice({ type: 'error', text: 'Please provide both Dhan Client ID and Access Token.' });
+      return;
+    }
+    if (!authState.isLoggedIn) {
+      setNotice({ type: 'error', text: 'You must be signed in to KEPWE to connect your Dhan account. Please sign in first.' });
+      return;
+    }
     setConnecting(true);
     setNotice({ type: '', text: '' });
-    const result = await startLemonnOAuth();
-    if (result.ok && result.data?.authorizationUrl) {
-      window.location.assign(result.data.authorizationUrl);
-    } else {
-      setNotice({ type: 'error', text: result.data?.error || 'Lemonn connection could not be started.' });
+    try {
+      const result = await connectDhanAccount({
+        dhanClientId: dhanClientId.trim(),
+        accessToken: accessToken.trim(),
+      });
+      if (result.ok) {
+        setNotice({ type: 'success', text: 'Dhan account connected and session verified successfully!' });
+        setAccessToken('');
+        await refreshBrokerState({ force: true });
+      } else {
+        const errorMsg = result.data?.error || result.data?.message || (result.status === 401 ? 'Your session has expired. Please log in again.' : 'Failed to validate and connect Dhan account.');
+        setNotice({ type: 'error', text: errorMsg });
+      }
+    } catch (err) {
+      setNotice({ type: 'error', text: err.message || 'Network error while connecting Dhan account.' });
+    } finally {
+      setConnecting(false);
     }
-    setConnecting(false);
+  };
+
+  const handleDhanConsentConnect = async () => {
+    if (!authState.isLoggedIn) {
+      setNotice({ type: 'error', text: 'You must be signed in to KEPWE to connect your Dhan account. Please sign in first.' });
+      return;
+    }
+    setConnecting(true);
+    setNotice({ type: '', text: '' });
+    try {
+      const result = await startDhanOAuth();
+      if (result.ok && result.data?.authorizationUrl) {
+        window.location.assign(result.data.authorizationUrl);
+      } else {
+        setNotice({ type: 'error', text: result.data?.error || 'Dhan consent session could not be started.' });
+      }
+    } catch (err) {
+      setNotice({ type: 'error', text: err.message || 'Failed to start Dhan consent session.' });
+    } finally {
+      setConnecting(false);
+    }
   };
 
   const handleDisconnect = async () => {
     setConnecting(true);
-    const result = await disconnectBroker('LEMONN');
-    if (result.ok) {
-      setNotice({ type: 'success', text: 'Lemonn disconnected. Live execution is stopped.' });
-      await loadBrokerState();
-    } else {
-      setNotice({ type: 'error', text: result.data?.error || 'Lemonn could not be disconnected.' });
+    setNotice({ type: '', text: '' });
+    try {
+      const result = await disconnectBroker('DHAN');
+      if (result.ok) {
+        setNotice({ type: 'success', text: 'Dhan disconnected. Live execution is stopped.' });
+        await refreshBrokerState({ force: true });
+      } else {
+        setNotice({ type: 'error', text: result.data?.error || 'Dhan could not be disconnected.' });
+      }
+    } catch (err) {
+      setNotice({ type: 'error', text: err.message || 'Failed to disconnect Dhan account.' });
+    } finally {
+      setConnecting(false);
     }
-    setConnecting(false);
   };
 
   return (
@@ -1790,7 +1873,7 @@ function BrokerConnectionView() {
         <div>
           <span className="quant-eyebrow">SYSTEM · BROKER ADAPTERS</span>
           <h1>Broker Connection Architecture</h1>
-          <p>Connect official Indian stockbroker adapters for market data and live order execution.</p>
+          <p>Connect official DhanHQ v2 adapter for live market data feeds and algorithmic order execution.</p>
         </div>
       </section>
 
@@ -1799,59 +1882,116 @@ function BrokerConnectionView() {
           <Link2 size={21} />
         </div>
         <div>
-          <span className="quant-eyebrow">ADAPTER STATE</span>
-          <h2>{isConnected ? 'Lemonn Connected · Session Active' : isSessionExpired ? 'Lemonn Session Expired' : 'Lemonn Disconnected'}</h2>
-          <p>{isConnected ? 'Backend verified a live LemonN session for this account.' : isSessionExpired ? 'LemonN rejected the stored session. Reconnect to continue live execution.' : 'Live execution is unavailable until the backend verifies a LemonN session.'}</p>
+          <span className="quant-eyebrow">DHAN ADAPTER STATE</span>
+          <h2>{isConnected ? 'Dhan Connected · Live Execution Active' : isSessionExpired ? 'Dhan Session Expired' : 'Dhan Disconnected'}</h2>
+          <p>{isConnected ? `Backend verified live DhanHQ session for client ID ${dhanStatus?.clientId || ''}.` : isSessionExpired ? 'Dhan rejected the stored session. Please reconnect with fresh credentials.' : 'Live order routing is disabled until you connect your personal Dhan account.'}</p>
         </div>
-        <span className="quant-connection-pill">
-          <span /> {isConnected ? 'Connected / Session Active' : isSessionExpired ? 'Session Expired' : 'Disconnected'}
+        <span className={`quant-connection-pill ${isConnected ? 'connected' : ''}`}>
+          <span /> {isConnected ? 'Connected / Live Active' : isSessionExpired ? 'Session Expired' : 'Disconnected'}
         </span>
       </div>
 
       <div className="quant-broker-grid">
         <section className="quant-panel quant-broker-card primary">
           <div className="quant-broker-card-top">
-            <span className="quant-broker-logo">L</span>
-            <span className="quant-coming-pill">{isConnected ? 'CONNECTED / SESSION ACTIVE' : isSessionExpired ? 'SESSION EXPIRED' : 'BACKEND VERIFIED STATUS'}</span>
+            <span className="quant-broker-logo" style={{ background: '#075056' }}>D</span>
+            <span className="quant-coming-pill">{isConnected ? 'LIVE / SESSION ACTIVE' : isSessionExpired ? 'SESSION EXPIRED' : 'ACTIVE BROKER'}</span>
           </div>
-          <h3>Lemonn Broker Adapter</h3>
+          <h3>DhanHQ v2 Broker Adapter</h3>
           <p>
-            Supports automated OAuth authentication, quote feed, order placement, and live positions reconciliation.
+            Official DhanHQ API v2 integration for real-time market execution, position tracking, margin limits, and postback webhook synchronization.
           </p>
+
           <div className="quant-broker-note">
             <ShieldCheck size={15} />
-            <span>{loading ? 'Checking backend provider readiness…' : isConnected ? 'Stored LemonN session verified by the backend.' : isSessionExpired ? 'Stored LemonN session was rejected. Reconnect is required.' : lemonnReadiness?.enabled ? 'Provider configuration is present. Connect LemonN to enable live execution.' : (lemonnReadiness?.reason || 'Provider is not configured for live execution.')}</span>
+            <span>
+              {loading ? 'Checking backend Dhan readiness…' : isConnected ? `Verified Dhan session for account ${dhanStatus?.clientId || ''}. Live execution active.` : isSessionExpired ? 'Stored Dhan session expired or invalid. Reconnect to continue live execution.' : 'Static IP 103.117.180.146 is whitelisted for Dhan API. Each user connects their personal account.'}
+            </span>
           </div>
+
           {isConnected ? (
-            <button className="quant-button quant-button-secondary" onClick={handleDisconnect} disabled={connecting}>
-              Disconnect Lemonn <X size={15} />
-            </button>
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', fontSize: '0.82rem', color: '#475569' }}>
+                <div><strong>Client ID:</strong> {dhanStatus?.clientId || 'Connected'}</div>
+                <div><strong>Connection Mode:</strong> LIVE (DhanHQ API v2)</div>
+                <div><strong>Static Whitelist IP:</strong> <code>103.117.180.146</code></div>
+                <div><strong>Postback Webhook:</strong> <code>https://kepwe.in/api/dhan/callback</code></div>
+              </div>
+              <button className="quant-button quant-button-secondary" onClick={handleDisconnect} disabled={connecting}>
+                Disconnect Dhan <X size={15} />
+              </button>
+            </div>
           ) : (
-            <button className="quant-button quant-button-primary" onClick={handleLemonnConnect} disabled={connecting || loading}>
-              {connecting ? 'Checking provider…' : isSessionExpired ? 'Reconnect Lemonn' : 'Connect Lemonn'} <ChevronRight size={15} />
-            </button>
+            <div>
+              {!authState.isLoggedIn && (
+                <div className="quant-connection-alert error" style={{ marginBottom: '12px' }}>
+                  Your session is inactive. Please <Link to="/quant/login?returnTo=/quant/dashboard/broker" style={{ color: 'inherit', fontWeight: 600, textDecoration: 'underline' }}>sign in</Link> to connect your personal Dhan account.
+                </div>
+              )}
+              <form onSubmit={handleDirectConnect} style={{ marginTop: '12px' }}>
+                <div className="quant-form-group">
+                  <label className="quant-form-label">Dhan Client ID</label>
+                  <input
+                    type="text"
+                    className="quant-form-input"
+                    placeholder="e.g. 1100345678"
+                    value={dhanClientId}
+                    onChange={(e) => setDhanClientId(e.target.value)}
+                    disabled={connecting}
+                    required
+                  />
+                </div>
+                <div className="quant-form-group">
+                  <label className="quant-form-label">Dhan 24h Access Token (JWT)</label>
+                  <input
+                    type="password"
+                    className="quant-form-input"
+                    placeholder="Paste 24-hour Access Token from web.dhan.co"
+                    value={accessToken}
+                    onChange={(e) => setAccessToken(e.target.value)}
+                    disabled={connecting}
+                    required
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
+                  <button type="submit" className="quant-button quant-button-primary" disabled={connecting || loading}>
+                    {connecting ? 'Validating…' : isSessionExpired ? 'Reconnect Dhan' : 'Connect Dhan Account'} <ChevronRight size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className="quant-button quant-button-secondary"
+                    onClick={handleDhanConsentConnect}
+                    disabled={connecting || loading}
+                    title="Authenticate using Dhan consent login popup"
+                  >
+                    Login with Dhan Consent <ExternalLink size={14} />
+                  </button>
+                </div>
+              </form>
+              <div style={{ marginTop: '12px', fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5 }}>
+                💡 <em>Generate your token at <strong>web.dhan.co &gt; My Profile &gt; Access DhanHQ APIs</strong>. Tokens are encrypted using AES-256-GCM.</em>
+              </div>
+            </div>
           )}
+
           {notice.text && <div className={`quant-connection-alert ${notice.type}`}>{notice.text}</div>}
         </section>
 
-        <section className="quant-panel quant-broker-card primary">
+        <section className="quant-panel quant-broker-card muted">
           <div className="quant-broker-card-top">
-            <span className="quant-broker-logo" style={{ background: '#f97316' }}>A</span>
-            <span className="quant-coming-pill">INTEGRATION READY</span>
+            <span className="quant-broker-logo gray">A</span>
+            <span className="quant-coming-pill">COMING SOON</span>
           </div>
           <h3>Angel One SmartAPI</h3>
           <p>
-            Enterprise WebSocket market tick stream, historical OHLCV candles, and order management.
+            Enterprise WebSocket market tick stream, historical OHLCV candles, and order routing. Currently disabled while Dhan integration is active.
           </p>
           <div className="quant-broker-note">
             <ShieldCheck size={15} />
-            <span>Requires ANGEL_API_KEY, CLIENT_CODE, and TOTP secret in backend environment.</span>
+            <span>Currently disabled. Dhan is the sole active broker for live algorithmic execution.</span>
           </div>
-          <button
-            className="quant-button quant-button-primary"
-            onClick={() => setNotice('Angel One SmartAPI requires ANGEL_API_KEY in environment configuration.')}
-          >
-            Connect Angel One <ChevronRight size={15} />
+          <button className="quant-button quant-button-secondary" disabled>
+            Coming Soon
           </button>
         </section>
       </div>
@@ -1860,74 +2000,177 @@ function BrokerConnectionView() {
 }
 
 function BrokerDataView({ type, onConnect }) {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState('');
+  const { brokerState, dhanStatus, isBrokerConnected, isDhanConnected, refreshBrokerState } = useBroker();
+  const [liveData, setLiveData] = useState(null);
+  const [liveError, setLiveError] = useState('');
   const [loading, setLoading] = useState(true);
+
   const loaders = {
-    portfolio: fetchLemonnFunds,
-    positions: fetchLemonnPositions,
-    orders: fetchLemonnOrderBook,
-    holdings: fetchLemonnHoldings,
-    trades: fetchLemonnTradeBook,
-    analytics: fetchLemonnPnl,
-    watchlist: () => fetchLemonnLtp({
-      NSE_IDX_SYMBOL: ['NIFTY 50', 'BANK NIFTY', 'SENSEX', 'INDIA VIX'],
-      NSE_EQ_SYMBOL: ['RELIANCE', 'TCS', 'INFY'],
-    }),
+    portfolio: fetchDhanFunds,
+    positions: fetchDhanPositions,
+    orders: fetchDhanOrderBook,
+    holdings: fetchDhanHoldings,
+    trades: fetchDhanTradeBook,
+    analytics: fetchDhanFunds,
+    watchlist: fetchDhanPositions,
   };
+
   const titles = {
-    portfolio: 'Live LemonN Funds',
-    positions: 'Live LemonN Positions',
-    orders: 'Live LemonN Order Book',
-    holdings: 'Live LemonN Holdings',
-    trades: 'Live LemonN Trade Book',
-    analytics: 'Live LemonN P&L',
-    watchlist: 'Live LemonN Watchlist',
+    portfolio: 'Portfolio & Funds',
+    positions: 'Positions',
+    orders: 'Orders & History',
+    holdings: 'Holdings',
+    trades: 'Trades',
+    analytics: 'P&L Analytics',
+    watchlist: 'Watchlist',
+  };
+
+  const emptyDescriptions = {
+    portfolio: 'No active funds data returned from your Dhan account.',
+    positions: 'No open positions in your Dhan account.',
+    holdings: 'No demat holdings found in your Dhan account.',
+    orders: 'No orders placed today on Dhan.',
+    trades: 'No trades executed today on Dhan.',
+    watchlist: 'No instruments currently tracked in live watchlist.',
+  };
+
+  const loadAll = async () => {
+    setLoading(true);
+    setLiveError('');
+
+    try {
+      const loaderFn = loaders[type] || fetchDhanFunds;
+      const liveRes = await loaderFn();
+
+      if (liveRes?.ok) {
+        setLiveData(liveRes.data);
+      } else {
+        if (liveRes?.data?.code === 'DHAN_SESSION_EXPIRED' || liveRes?.status === 401) {
+          refreshBrokerState({ force: true });
+        }
+        setLiveError(liveRes?.data?.error || 'Live Dhan data is unavailable.');
+      }
+    } catch (err) {
+      setLiveError(err?.message || 'Live Dhan data is unavailable.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    setError('');
-    loaders[type]().then((result) => {
-      if (!mounted) return;
-      if (!result.ok) {
-        setError(result.data?.error || 'Live LemonN data is unavailable.');
-      } else {
-        setData(result.data);
-      }
-    }).catch((requestError) => {
-      if (mounted) setError(requestError.message || 'Live LemonN data is unavailable.');
-    }).finally(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
+    loadAll();
   }, [type]);
 
-  const providerPayload = data?.data?.data || data?.data || data;
+  // Live Records parsing
+  const providerPayload = liveData?.data?.data || liveData?.data || liveData;
   const providerArrays = providerPayload && typeof providerPayload === 'object'
     ? Object.values(providerPayload).filter(Array.isArray).flat()
     : [];
-  const records = data?.realizedPnl !== undefined ? [data]
-    : data?.funds ? [data.funds]
-    : data?.positions || data?.holdings || data?.orderbook?.data?.orders || data?.trades || providerArrays;
-  const columns = [...new Set(records.flatMap((record) => Object.keys(record || {})))].slice(0, 10);
+  const liveRecords = liveData?.realizedPnl !== undefined ? [liveData]
+    : liveData?.funds ? [liveData.funds]
+    : liveData?.positions || liveData?.holdings || liveData?.orderbook?.data?.orders || liveData?.orders || liveData?.trades || providerArrays;
+  const liveColumns = [...new Set(liveRecords.flatMap((record) => Object.keys(record || {})))].slice(0, 10);
   const formatValue = (value) => value && typeof value === 'object' ? JSON.stringify(value) : String(value ?? 'No data');
 
   return (
     <div className="quant-page-view">
       <section className="quant-page-intro">
         <div>
-          <span className="quant-eyebrow">LEMONN · LIVE PROVIDER DATA</span>
-          <h1>{titles[type]}</h1>
-          <p>Values are loaded from the authenticated LemonN API. No paper or fallback values are shown.</p>
+          <span className="quant-eyebrow">EXECUTION & PORTFOLIO</span>
+          <h1>{titles[type] || 'Execution View'}</h1>
+          <p>View live Dhan account data and real execution records.</p>
+        </div>
+        <div className="quant-page-action">
+          <button className="quant-button quant-button-secondary quant-button-small" onClick={loadAll}>
+            <RefreshCw size={13} /> Refresh
+          </button>
         </div>
       </section>
+
+      {/* LIVE DHAN DATA ONLY - PRODUCTION MODE */}
       <div className="quant-panel quant-table-panel">
-        {loading ? <EmptyData title="Loading live provider data" description="The backend is validating the LemonN session and requesting current data." action={false} />
-          : error ? <EmptyData title="Live data unavailable" description={error} onConnect={onConnect} />
-            : records.length === 0 ? <EmptyData title={`No ${type} data`} description="LemonN returned no records for this account." action={false} />
-              : <div className="quant-table-wrap"><table className="quant-table"><thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{records.map((record, index) => <tr key={record.id || record.orderID || record.tradeNo || index}>{columns.map((column) => <td key={column}>{formatValue(record[column])}</td>)}</tr>)}</tbody></table></div>}
+        <PanelHeader
+          eyebrow="DHANHQ API V2"
+          title={`Live Dhan ${titles[type]}`}
+          icon={WalletCards}
+        />
+        {loading ? (
+          <EmptyData title="Loading live provider data" description="The backend is querying your active Dhan session..." action={false} />
+        ) : brokerState.status === 'LOADING' ? (
+          <EmptyData title="Verifying broker connection" description="Checking your authenticated Dhan session with the backend..." action={false} />
+        ) : brokerState.status === 'DHAN_SESSION_EXPIRED' ? (
+          <EmptyData
+            title="Dhan session expired"
+            description="Your 24-hour Dhan access token has expired. Please reconnect your Dhan account."
+            action={true}
+            actionLabel="Reconnect Dhan"
+            onConnect={onConnect}
+          />
+        ) : !isBrokerConnected ? (
+          <EmptyData
+            title="Dhan Live Broker Disconnected"
+            description="Connect your Dhan account to view live positions, orders, and portfolio data."
+            action={true}
+            actionLabel="Connect broker"
+            onConnect={onConnect}
+          />
+        ) : liveError ? (
+          <EmptyData
+            title="Unable to load Dhan data"
+            description={liveError}
+            action={true}
+            actionLabel="Retry"
+            onConnect={loadAll}
+          />
+        ) : type === 'portfolio' ? (
+          <div style={{ padding: '24px' }}>
+            <div className="quant-metric-grid" style={{ marginBottom: '16px' }}>
+              <div className="quant-metric-card">
+                <div className="quant-metric-top"><span>Available Margin</span><WalletCards size={16} /></div>
+                <strong>₹{Number(liveData?.funds?.available ?? liveData?.available ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                <small>Cash balance for orders</small>
+              </div>
+              <div className="quant-metric-card">
+                <div className="quant-metric-top"><span>Utilized Margin</span><BriefcaseBusiness size={16} /></div>
+                <strong>₹{Number(liveData?.funds?.utilized ?? liveData?.utilized ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                <small>Margin in open positions</small>
+              </div>
+              <div className="quant-metric-card">
+                <div className="quant-metric-top"><span>Collateral Amount</span><ShieldCheck size={16} /></div>
+                <strong>₹{Number(liveData?.funds?.collateral ?? liveData?.collateral ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                <small>Pledged securities</small>
+              </div>
+              <div className="quant-metric-card">
+                <div className="quant-metric-top"><span>Withdrawable Balance</span><CircleDollarSign size={16} /></div>
+                <strong>₹{Number(liveData?.funds?.withdrawable ?? liveData?.withdrawable ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                <small>Available to withdraw</small>
+              </div>
+            </div>
+          </div>
+        ) : liveRecords.length === 0 ? (
+          <EmptyData
+            title="No records found"
+            description={emptyDescriptions[type] || `No ${type} records found in your Dhan account.`}
+            action={false}
+          />
+        ) : (
+          <div className="quant-table-wrap">
+            <table className="quant-table">
+              <thead>
+                <tr>{liveColumns.filter((c) => c !== 'raw').map((col) => <th key={col}>{col}</th>)}</tr>
+              </thead>
+              <tbody>
+                {liveRecords.map((record, index) => (
+                  <tr key={record.id || record.orderId || record.orderID || record.tradeNo || index}>
+                    {liveColumns.filter((c) => c !== 'raw').map((col) => (
+                      <td key={col}>{formatValue(record[col])}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1962,7 +2205,7 @@ function WatchlistView({ onConnect }) {
                 <td><strong>{item.symbol}</strong></td>
                 <td>{item.exchange}</td>
                 <td><span className="quant-status-dot muted" /> Disconnected</td>
-                <td><span className="quant-mode-pill">Sandbox</span></td>
+                <td><span className="quant-mode-pill">Live</span></td>
               </tr>
             ))}
           </tbody>
@@ -1988,13 +2231,13 @@ function GenericTableView({ type, onNavigate }) {
         <div>
           <span className="quant-eyebrow">QUANT WORKSPACE</span>
           <h1>{titles[type] || 'Section'}</h1>
-          <p>Data will populate from live or simulated activity.</p>
+          <p>Real execution data will populate as strategies are deployed and executed on Dhan.</p>
         </div>
       </section>
       <div className="quant-panel" style={{ padding: '30px' }}>
         <EmptyData
           title={`No ${titles[type]} data yet`}
-          description="Data will populate as strategy backtests and paper simulations are executed."
+          description="Real execution data will appear here as strategies execute on your live Dhan account."
           action={false}
         />
       </div>
@@ -2005,7 +2248,7 @@ function GenericTableView({ type, onNavigate }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN SHELL COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
-export default function QuantDashboardPage() {
+function QuantDashboardContent() {
   const { authState } = useApp();
   const { section: routeSection } = useParams();
   const location = useLocation();
@@ -2035,11 +2278,12 @@ export default function QuantDashboardPage() {
     if (activeSection === 'dashboard') return <DashboardOverview onNavigate={goTo} />;
     if (activeSection === 'builder') return <StrategyBuilderView onNavigate={goTo} />;
     if (activeSection === 'backtest') return <BacktestRunnerView onNavigate={goTo} />;
-    if (activeSection === 'paper-trading') return <PaperTradingTerminalView onNavigate={goTo} />;
     if (activeSection === 'live') return <LiveDeploymentGateView onNavigate={goTo} />;
     if (activeSection === 'risk') return <RiskManagementView onNavigate={goTo} />;
+    if (activeSection === 'strategies') return <StrategiesView onNavigate={goTo} />;
+    if (activeSection === 'analytics') return <AnalyticsView onNavigate={goTo} />;
     if (activeSection === 'broker') return <BrokerConnectionView />;
-    if (['portfolio', 'positions', 'holdings', 'orders', 'trades', 'analytics', 'watchlist', 'markets'].includes(activeSection)) return <BrokerDataView type={activeSection === 'markets' ? 'watchlist' : activeSection} onConnect={() => goTo('broker')} />;
+    if (['portfolio', 'positions', 'holdings', 'orders', 'trades', 'watchlist', 'markets'].includes(activeSection)) return <BrokerDataView type={activeSection === 'markets' ? 'watchlist' : activeSection} onConnect={() => goTo('broker')} />;
     return <GenericTableView type={activeSection} onNavigate={goTo} />;
   }, [activeSection]);
 
@@ -2093,7 +2337,7 @@ export default function QuantDashboardPage() {
             <Link2 size={15} />
             <span>
               <strong>Broker Adapters</strong>
-              <small>Lemonn & Angel One</small>
+              <small>Dhan (HQ API v2)</small>
             </span>
             <ChevronRight size={14} />
           </button>
@@ -2168,13 +2412,428 @@ export default function QuantDashboardPage() {
             />
             <button onClick={() => { goTo('builder'); setCommandOpen(false); }}>Strategy Builder</button>
             <button onClick={() => { goTo('backtest'); setCommandOpen(false); }}>Backtesting Engine</button>
-            <button onClick={() => { goTo('paper-trading'); setCommandOpen(false); }}>Paper Sandbox</button>
             <button onClick={() => { goTo('risk'); setCommandOpen(false); }}>Daily Risk Controller</button>
           </div>
         )}
 
         <div className="quant-content">{page}</div>
       </main>
+    </div>
+  );
+}
+
+export default function QuantDashboardPage() {
+  return (
+    <QuantModuleErrorBoundary>
+      <BrokerProvider>
+        <QuantDashboardContent />
+      </BrokerProvider>
+    </QuantModuleErrorBoundary>
+  );
+}
+
+function StrategyField({ label, value }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '130px', flex: '1 1 130px' }}>
+      <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+      <strong style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 700 }}>{value}</strong>
+    </div>
+  );
+}
+
+function StrategiesView({ onNavigate }) {
+  const [strategies, setStrategies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadStrategies = useCallback(async (signal) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetchQuantStrategies({ signal });
+      if (signal?.aborted) return;
+
+      if (!response?.ok) {
+        setStrategies([]);
+        setError(getApiErrorMessage(response, 'Unable to load strategies.'));
+        return;
+      }
+
+      const items = asArray(response.data?.strategies);
+      setStrategies(items);
+      if (!Array.isArray(response.data?.strategies)) {
+        setError('Malformed strategy response received from the server.');
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      setStrategies([]);
+      setError(err?.message || 'Unable to load strategies.');
+    } finally {
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadStrategies(controller.signal);
+    return () => controller.abort();
+  }, [loadStrategies]);
+
+  return (
+    <div className="quant-page-view">
+      <section className="quant-page-intro">
+        <div>
+          <span className="quant-eyebrow">STRATEGY INVENTORY</span>
+          <h1>Algo Strategies</h1>
+          <p>All saved Quant strategies for the authenticated user are listed here with their actual stored status and deployment state.</p>
+        </div>
+        <div className="quant-page-action">
+          <button className="quant-button quant-button-secondary quant-button-small" onClick={() => loadStrategies()}>
+            <RefreshCw size={13} /> Refresh
+          </button>
+          <button className="quant-button quant-button-primary quant-button-small" onClick={() => onNavigate('builder')}>
+            <Plus size={13} /> New Strategy
+          </button>
+        </div>
+      </section>
+
+      {loading ? (
+        <div className="quant-panel" style={{ padding: '28px' }}>
+          <EmptyData title="Loading strategies..." description="Fetching all saved strategy records from the backend..." action={false} />
+        </div>
+      ) : error && strategies.length === 0 ? (
+        <div className="quant-panel" style={{ padding: '28px' }}>
+          <EmptyData title="Unable to load strategies" description={error} action={true} actionLabel="Retry" onConnect={() => loadStrategies()} />
+        </div>
+      ) : strategies.length === 0 ? (
+        <div className="quant-panel" style={{ padding: '28px' }}>
+          <EmptyData
+            title="No strategies found"
+            description="No saved quantitative strategies exist for this account yet."
+            action={true}
+            actionLabel="Create strategy"
+            onConnect={() => onNavigate('builder')}
+          />
+        </div>
+      ) : (
+        <>
+          {error && (
+            <div className="quant-connection-alert error" style={{ marginBottom: '16px' }}>
+              {error}
+            </div>
+          )}
+          <div className="quant-strategy-grid">
+            {strategies.map((strategy) => (
+              <section className="quant-panel quant-strategy-card" key={strategy.id} style={{ padding: '22px' }}>
+                <div className="quant-strategy-card-top" style={{ alignItems: 'flex-start' }}>
+                  <div>
+                    <span className="quant-mode-pill">{strategy.status || 'N/A'}</span>
+                    <h3 style={{ marginTop: '12px', marginBottom: '6px' }}>{strategy.name || 'N/A'}</h3>
+                    <p style={{ marginBottom: 0, color: '#64748b', fontSize: '0.82rem' }}>
+                      ID: <code>{strategy.id || 'N/A'}</code>
+                    </p>
+                  </div>
+                  <span className="quant-coming-pill">{strategy.executionMode || 'N/A'}</span>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', marginTop: '18px' }}>
+                  <StrategyField label="Instrument" value={strategy.instrument || 'N/A'} />
+                  <StrategyField label="Strategy Type" value={strategy.strategyType || 'N/A'} />
+                  <StrategyField label="Direction" value={strategy.cePeDirection || 'N/A'} />
+                  <StrategyField label="Timeframe" value={strategy.timeframe || 'N/A'} />
+                  <StrategyField label="Execution" value={strategy.executionMode || 'N/A'} />
+                  <StrategyField label="Deployment" value={strategy.deploymentState || 'N/A'} />
+                  <StrategyField label="Capital" value={formatCurrencyValue(strategy.capital)} />
+                  <StrategyField label="Risk" value={formatPercentValue(strategy.risk)} />
+                  <StrategyField label="Stop Loss" value={formatPercentValue(strategy.stopLoss)} />
+                  <StrategyField label="Profit Target" value={formatPercentValue(strategy.profitTarget)} />
+                  <StrategyField label="P&L" value={formatCurrencyValue(strategy.pnl)} />
+                  <StrategyField label="Win Rate" value={formatPercentValue(strategy.winRate)} />
+                  <StrategyField label="Total Trades" value={formatCountValue(strategy.totalTrades)} />
+                  <StrategyField label="Open Positions" value={formatCountValue(strategy.openPositions)} />
+                  <StrategyField label="Created" value={formatDateTimeValue(strategy.createdAt)} />
+                  <StrategyField label="Updated" value={formatDateTimeValue(strategy.updatedAt)} />
+                  <StrategyField label="Last Execution" value={formatDateTimeValue(strategy.lastExecution)} />
+                </div>
+              </section>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AnalyticsView({ onNavigate }) {
+  const [analytics, setAnalytics] = useState(null);
+  const [backtests, setBacktests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadAnalytics = useCallback(async (signal) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const [analyticsResponse, backtestsResponse] = await Promise.all([
+        fetchQuantAnalytics({ signal }),
+        fetchAlgoBacktests({ signal }),
+      ]);
+
+      if (signal?.aborted) return;
+
+      if (!analyticsResponse?.ok) {
+        setAnalytics(null);
+        setBacktests([]);
+        setError(getApiErrorMessage(analyticsResponse, 'Unable to load analytics.'));
+        return;
+      }
+
+      if (!analyticsResponse.data || typeof analyticsResponse.data !== 'object') {
+        setAnalytics(null);
+        setBacktests([]);
+        setError('Malformed analytics response received from the server.');
+        return;
+      }
+
+      setAnalytics(analyticsResponse.data);
+
+      if (backtestsResponse?.ok) {
+        setBacktests(asArray(backtestsResponse.data?.runs));
+      } else {
+        setBacktests(asArray(analyticsResponse.data?.recentBacktests));
+        if (!error) {
+          setError(getApiErrorMessage(backtestsResponse, 'Unable to load recent backtests.'));
+        }
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      setAnalytics(null);
+      setBacktests([]);
+      setError(err?.message || 'Unable to load analytics.');
+    } finally {
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [error]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadAnalytics(controller.signal);
+    return () => controller.abort();
+  }, [loadAnalytics]);
+
+  const summary = analytics?.summary || {};
+  const trades = asArray(analytics?.trades);
+  const openPositions = asArray(analytics?.openPositions);
+  const recentBacktests = backtests.length > 0 ? backtests : asArray(analytics?.recentBacktests);
+  const hasTradeData = summary?.hasTradingActivity || trades.length > 0 || openPositions.length > 0;
+  const hasBacktests = recentBacktests.length > 0;
+
+  const summaryCards = [
+    { label: 'Total P&L', value: formatCurrencyValue(summary.totalPnl) },
+    { label: "Today's P&L", value: formatCurrencyValue(summary.todayPnl) },
+    { label: 'Realized P&L', value: formatCurrencyValue(summary.realizedPnl) },
+    { label: 'Unrealized P&L', value: formatCurrencyValue(summary.unrealizedPnl) },
+    { label: 'Total Trades', value: formatCountValue(summary.totalTrades) },
+    { label: 'Winning Trades', value: formatCountValue(summary.winningTrades) },
+    { label: 'Losing Trades', value: formatCountValue(summary.losingTrades) },
+    { label: 'Win Rate', value: formatPercentValue(summary.winRate) },
+    { label: 'Average Profit', value: formatCurrencyValue(summary.averageProfit) },
+    { label: 'Average Loss', value: formatCurrencyValue(summary.averageLoss) },
+    { label: 'Profit Factor', value: summary.profitFactor == null ? 'N/A' : Number(summary.profitFactor).toFixed(2) },
+    { label: 'Max Drawdown', value: formatCurrencyValue(summary.maxDrawdown) },
+  ];
+
+  return (
+    <div className="quant-page-view">
+      <section className="quant-page-intro">
+        <div>
+          <span className="quant-eyebrow">STORED PERFORMANCE</span>
+          <h1>P&amp;L Analytics</h1>
+          <p>Analytics uses stored Quant records only. Loading this page does not place, modify, or cancel any live broker order.</p>
+        </div>
+        <div className="quant-page-action">
+          <button className="quant-button quant-button-secondary quant-button-small" onClick={() => loadAnalytics()}>
+            <RefreshCw size={13} /> Retry
+          </button>
+        </div>
+      </section>
+
+      {loading ? (
+        <div className="quant-panel" style={{ padding: '28px' }}>
+          <EmptyData title="Loading Analytics..." description="Collecting stored trades, open positions, and backtest metrics..." action={false} />
+        </div>
+      ) : error && !analytics ? (
+        <div className="quant-panel" style={{ padding: '28px' }}>
+          <EmptyData title="Unable to load analytics" description={error} action={true} actionLabel="Retry" onConnect={() => loadAnalytics()} />
+        </div>
+      ) : !analytics ? (
+        <div className="quant-panel" style={{ padding: '28px' }}>
+          <EmptyData title="No analytics data available" description="No analytics payload was returned from the backend." action={true} actionLabel="Retry" onConnect={() => loadAnalytics()} />
+        </div>
+      ) : !hasTradeData && !hasBacktests ? (
+        <div className="quant-panel" style={{ padding: '28px' }}>
+          <EmptyData
+            title="No analytics data available"
+            description="No trading activity yet"
+            action={true}
+            actionLabel="Open Backtest"
+            onConnect={() => onNavigate('backtest')}
+          />
+        </div>
+      ) : (
+        <>
+          {error && (
+            <div className="quant-connection-alert error" style={{ marginBottom: '16px' }}>
+              {error}
+            </div>
+          )}
+
+          {!hasTradeData && (
+            <div className="quant-connection-alert" style={{ marginBottom: '16px' }}>
+              No trading activity yet
+            </div>
+          )}
+
+          <div className="quant-metric-grid" style={{ marginBottom: '18px' }}>
+            {summaryCards.map((card) => (
+              <div className="quant-metric-card" key={card.label}>
+                <div className="quant-metric-top">
+                  <span>{card.label}</span>
+                  <TrendingUp size={16} />
+                </div>
+                <strong>{card.value}</strong>
+                <small>
+                  {card.label === 'Total P&L'
+                    ? `Last execution: ${formatDateTimeValue(summary.lastExecution)}`
+                    : 'Derived from stored backend records'}
+                </small>
+              </div>
+            ))}
+          </div>
+
+          <div className="quant-panel quant-table-panel" style={{ marginBottom: '18px' }}>
+            <PanelHeader eyebrow="LIVE ANALYTICS" title="Current Open Positions" icon={BriefcaseBusiness} />
+            {openPositions.length === 0 ? (
+              <EmptyData title="No analytics data available" description="No open positions are currently stored for analytics." action={false} compact={true} />
+            ) : (
+              <div className="quant-table-wrap">
+                <table className="quant-table">
+                  <thead>
+                    <tr>
+                      <th>Instrument</th>
+                      <th>Side</th>
+                      <th>Qty</th>
+                      <th>Entry Price</th>
+                      <th>Current Price</th>
+                      <th>Unrealized P&amp;L</th>
+                      <th>Opened</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {openPositions.map((position) => (
+                      <tr key={position.id}>
+                        <td><strong>{position.instrument || 'N/A'}</strong></td>
+                        <td>{position.side || 'N/A'}</td>
+                        <td>{formatCountValue(position.quantity)}</td>
+                        <td>{formatCurrencyValue(position.entryPrice)}</td>
+                        <td>{formatCurrencyValue(position.currentPrice)}</td>
+                        <td style={{ color: Number(position.pnl) >= 0 ? '#159975' : '#c53030', fontWeight: 700 }}>
+                          {formatCurrencyValue(position.pnl)}
+                        </td>
+                        <td>{formatDateTimeValue(position.openedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="quant-panel quant-table-panel" style={{ marginBottom: '18px' }}>
+            <PanelHeader eyebrow="TRADE HISTORY" title="Recent Stored Trades" icon={ListFilter} />
+            {trades.length === 0 ? (
+              <EmptyData title="No analytics data available" description="No trade history is available in stored analytics records." action={false} compact={true} />
+            ) : (
+              <div className="quant-table-wrap">
+                <table className="quant-table">
+                  <thead>
+                    <tr>
+                      <th>Instrument</th>
+                      <th>Side</th>
+                      <th>Qty</th>
+                      <th>Entry</th>
+                      <th>Exit</th>
+                      <th>P&amp;L</th>
+                      <th>Status</th>
+                      <th>Closed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trades.slice(0, 20).map((trade) => (
+                      <tr key={trade.id}>
+                        <td><strong>{trade.instrument || 'N/A'}</strong></td>
+                        <td>{trade.side || 'N/A'}</td>
+                        <td>{formatCountValue(trade.quantity)}</td>
+                        <td>{formatCurrencyValue(trade.entryPrice)}</td>
+                        <td>{formatCurrencyValue(trade.exitPrice)}</td>
+                        <td style={{ color: Number(trade.pnl) >= 0 ? '#159975' : '#c53030', fontWeight: 700 }}>
+                          {formatCurrencyValue(trade.pnl)}
+                        </td>
+                        <td>{trade.status || 'N/A'}</td>
+                        <td>{formatDateTimeValue(trade.closedAt || trade.openedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="quant-panel quant-table-panel">
+            <PanelHeader eyebrow="BACKTEST ARCHIVE" title="Recent Backtest Results" icon={BarChart3} />
+            {recentBacktests.length === 0 ? (
+              <EmptyData title="No analytics data available" description="No stored backtest runs are available for this account." action={false} compact={true} />
+            ) : (
+              <div className="quant-table-wrap">
+                <table className="quant-table">
+                  <thead>
+                    <tr>
+                      <th>Strategy</th>
+                      <th>Instrument</th>
+                      <th>Timeframe</th>
+                      <th>Total Trades</th>
+                      <th>Win Rate</th>
+                      <th>Net P&amp;L</th>
+                      <th>Max Drawdown</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentBacktests.map((run) => (
+                      <tr key={run.id}>
+                        <td><strong>{run.strategySlug || 'N/A'}</strong></td>
+                        <td>{run.instrument || 'N/A'}</td>
+                        <td>{run.timeframe || 'N/A'}</td>
+                        <td>{formatCountValue(run.metrics?.totalTrades)}</td>
+                        <td>{formatPercentValue(run.metrics?.winRate ?? run.metrics?.winRatePct)}</td>
+                        <td>{formatCurrencyValue(run.metrics?.netPnl)}</td>
+                        <td>{formatCurrencyValue(run.metrics?.maxDrawdown)}</td>
+                        <td>{formatDateTimeValue(run.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

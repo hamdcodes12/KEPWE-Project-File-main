@@ -165,17 +165,17 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     step: '03',
-    title: 'Paper Trade',
-    tagline: 'Real-Time Market Simulation',
-    description: 'Deploy algorithms to our low-latency paper trading sandbox. Experience live market conditions, order queues, and fills with zero financial risk.',
-    features: ['Simulated capital presets', '7/15/30-day testing cycles', 'Real-time orderbook simulation', 'Zero capital risk'],
-    icon: Bot,
+    title: 'Validate',
+    tagline: 'Historical Backtest Engine',
+    description: 'Run algorithms against 5+ years of historical tick data. Measure strategy performance, drawdown, and win rates with institutional-grade data.',
+    features: ['5-year historical data', 'Tick-level accuracy', 'Statistical performance metrics', 'Draw-down analysis'],
+    icon: BarChart3,
   },
   {
     step: '04',
     title: 'Automate',
     tagline: 'Guarded Broker Deployment',
-    description: 'Connect Lemonn, Angel One, or supported brokers via direct OAuth. Every trade passes pre-execution risk checks, max loss caps, and kill-switch guards.',
+    description: 'Connect Dhan (DhanHQ v2) or supported brokers via direct OAuth/Access Token. Every trade passes pre-execution risk checks, max loss caps, and kill-switch guards.',
     features: ['Sub-second order routing', 'Multi-broker connectivity', 'Automated token refresh', 'Pre-trade safety gate'],
     icon: Zap,
   },
@@ -192,13 +192,13 @@ const HOW_IT_WORKS_STEPS = [
 // ─── 09. Broker Connections ──────────────────────────────────────────────────
 const BROKER_LIST = [
   {
-    name: 'Lemonn',
-    category: 'Modern Discount Broker',
-    status: 'Integration Ready',
+    name: 'Dhan (DhanHQ v2)',
+    category: 'Advanced Trading & Tech Broker',
+    status: 'Live & Active',
     statusType: 'ready',
-    logoLetter: 'L',
-    logoColor: '#214ECF',
-    description: 'Direct REST & WebSocket bridge prepared for automated order placement and live portfolio synchronization.',
+    logoLetter: 'D',
+    logoColor: '#075056',
+    description: 'Official DhanHQ API v2 integration for automated lightning-fast order placement, position tracking, margin limits, and live postback synchronization.',
   },
   {
     name: 'Angel One (SmartAPI)',
@@ -250,23 +250,6 @@ const BROKER_LIST = [
 // ─── 11. Pricing Plans ───────────────────────────────────────────────────────
 const PRICING_PLANS = [
   {
-    name: 'Paper Sandbox',
-    tagline: 'For learning & validating algorithms',
-    price: '₹0',
-    frequency: 'Free Forever',
-    cta: 'Start Paper Trading',
-    ctaRoute: '/quant/dashboard',
-    highlighted: false,
-    features: [
-      'Unlimited Historical Backtesting (5 Yrs)',
-      'Full Strategy Builder Canvas',
-      'Paper Trading Sandbox with ₹10L simulated funds',
-      'Standard Technical Indicators & Presets',
-      'Daily Performance Summary Reports',
-      'Community Support & Strategy Templates',
-    ],
-  },
-  {
     name: 'Pro Trader',
     tagline: 'For active systematic & algo traders',
     price: '₹1,999',
@@ -276,8 +259,9 @@ const PRICING_PLANS = [
     ctaRoute: '/quant/dashboard',
     highlighted: true,
     features: [
-      'Everything in Paper Sandbox',
-      'Live Broker Automation (Lemonn & Angel One)',
+      'Unlimited Historical Backtesting (5 Yrs)',
+      'Full Strategy Builder Canvas',
+      'Live Broker Automation (Dhan & DhanHQ v2)',
       'Sub-Second Order Routing & Execution',
       'Institutional Risk Management & Kill Switch',
       'Custom Python & TradingView Webhooks',
@@ -310,7 +294,7 @@ const PRICING_PLANS = [
 const QUANT_FAQS = [
   {
     q: 'What is KEPWE QUANT and how does it work?',
-    a: 'KEPWE QUANT is a systematic, rule-based quantitative trading platform designed for Indian financial markets (NSE/BSE). It allows traders to build, backtest against 5+ years of historical market data, validate in a zero-risk paper trading environment, and automate execution through supported SEBI-registered brokers with strict institutional risk controls.',
+    a: 'KEPWE QUANT is a systematic, rule-based quantitative trading platform designed for Indian financial markets (NSE/BSE). It allows traders to build and backtest algorithms against 5+ years of historical market data, validate performance metrics, and automate execution through supported SEBI-registered brokers with strict institutional risk controls.',
   },
   {
     q: 'Do I need coding knowledge to build algorithms on KEPWE QUANT?',
@@ -329,8 +313,8 @@ const QUANT_FAQS = [
     a: 'No. KEPWE is a technology platform, not a broker or custodian. Your funds and securities always remain in your own SEBI-registered broker account. We connect securely through official broker OAuth APIs with 256-bit encrypted credentials and never store your trading password or PIN.',
   },
   {
-    q: 'Can I test my strategy without risking real money first?',
-    a: 'Yes. Every user gets free, unlimited access to our Paper Trading Sandbox with simulated virtual capital. You can run algorithms for 7, 15, or 30 days in live market hours to observe order fills, drawdown, and strategy behavior before deploying any live capital.',
+    q: 'How do I validate my strategy before going live?',
+    a: 'Run unlimited historical backtests against 5+ years of tick-level market data. Measure win rates, drawdown, Sharpe ratio, and other performance metrics. Once validated, connect your real Dhan account and deploy under strict risk guardrails with institutional kill-switch controls.',
   },
 ];
 
@@ -341,8 +325,6 @@ export default function QuantMarketingPage() {
   const [activeTab, setActiveTab] = useState('01');
   const [strategyCategory, setStrategyCategory] = useState('All');
   const [backtestCapital, setBacktestCapital] = useState(1000000);
-  const [paperCapital, setPaperCapital] = useState(500000);
-  const [paperDays, setPaperDays] = useState(15);
   const [openFaq, setOpenFaq] = useState(null);
   const [terminalTab, setTerminalTab] = useState('chart');
 
@@ -378,7 +360,7 @@ export default function QuantMarketingPage() {
               </h1>
 
               <p className="quant-hero-subhead">
-                Turn your trading strategy into an automated, rule-based system. Stress-test against 5+ years of tick data, paper-trade in live market conditions, and deploy with institutional risk guardrails.
+                Turn your trading strategy into an automated, rule-based system. Stress-test against 5+ years of tick data, validate performance metrics, and deploy to live markets with institutional risk guardrails.
               </p>
 
               <div className="quant-hero-actions">
@@ -475,7 +457,7 @@ export default function QuantMarketingPage() {
                         </div>
                       </div>
 
-                      {/* Mock Interactive Candlestick / Area Chart */}
+                      {/* Interactive Candlestick / Area Chart */}
                       <div className="terminal-chart-box">
                         <svg className="terminal-chart-svg" viewBox="0 0 500 180" preserveAspectRatio="none">
                           <defs>
@@ -580,7 +562,7 @@ export default function QuantMarketingPage() {
                 <div className="terminal-footer">
                   <div className="footer-status">
                     <span className="footer-status-dot" />
-                    <span>ENGINE OPERATIONAL · SIMULATED DEMO FEED</span>
+                    <span>ENGINE OPERATIONAL · LIVE FEED</span>
                   </div>
                   <Link to="/quant/dashboard" className="footer-explore-btn">
                     <span>Open Full Quant Workspace</span>
@@ -650,7 +632,7 @@ export default function QuantMarketingPage() {
 
                     <div className="step-action-row">
                       <Link to="/quant/dashboard" className="quant-btn-primary quant-btn-compact">
-                        <span>Experience Step {st.step} in Sandbox</span>
+                        <span>Try Step {st.step}</span>
                         <ArrowRight size={15} />
                       </Link>
                     </div>
@@ -760,7 +742,7 @@ export default function QuantMarketingPage() {
                 {/* Card Actions */}
                 <div className="strat-card-footer">
                   <Link to="/quant/dashboard" className="strat-cta-btn">
-                    <span>Backtest / Paper Trade</span>
+                    <span>Backtest & Deploy</span>
                     <ArrowRight size={14} />
                   </Link>
                 </div>
@@ -775,7 +757,7 @@ export default function QuantMarketingPage() {
             <div>
               <strong>Verified Historical Data Notice:</strong>
               <p>
-                Performance statistics displayed above are generated from historical tick backtests and simulated modeling. They do not constitute investment advice or guarantee future returns. KEPWE QUANT never fabricates live financial returns. Live trading requires explicit broker authorization and client risk acknowledgement.
+                Performance statistics displayed above are generated from historical tick backtests. They do not constitute investment advice or guarantee future returns. KEPWE QUANT does not fabricate live financial returns. Live trading requires explicit broker authorization and client risk acknowledgement.
               </p>
             </div>
           </div>
@@ -817,7 +799,7 @@ export default function QuantMarketingPage() {
 
               <div className="control-group">
                 <div className="control-label-row">
-                  <label>Simulated Starting Capital</label>
+                  <label>Backtest Starting Capital</label>
                   <span className="font-mono font-bold">₹{(backtestCapital).toLocaleString('en-IN')}</span>
                 </div>
                 <input
@@ -932,107 +914,6 @@ export default function QuantMarketingPage() {
         </div>
       </section>
 
-      {/* ─── 05. PAPER TRADING ──────────────────────────────────────────────── */}
-      <section className="quant-paper-section" id="paper-trading">
-        <div className="quant-container">
-          
-          <div className="quant-paper-box">
-            <div className="paper-grid">
-              
-              <div className="paper-left">
-                <div className="paper-badge">
-                  <Bot size={15} />
-                  <span>ZERO RISK SIMULATION</span>
-                </div>
-                <h2 className="paper-heading">Test your strategy without risking real money.</h2>
-                <p className="paper-sub">
-                  Validate your algorithm in live market hours with simulated virtual funds. Test fill rates, slippage behavior, and psychological comfort before connecting real capital.
-                </p>
-
-                <div className="paper-slider-box">
-                  <div className="slider-header">
-                    <span>Simulated Capital Preset</span>
-                    <span className="capital-val font-mono">₹{paperCapital.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="paper-preset-btns">
-                    {[100000, 250000, 500000, 1000000].map((amt) => (
-                      <button
-                        key={amt}
-                        className={`preset-btn ${paperCapital === amt ? 'active' : ''}`}
-                        onClick={() => setPaperCapital(amt)}
-                      >
-                        ₹{(amt / 100000)} Lakh
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="paper-duration-row">
-                  <span>Validation Cycle:</span>
-                  {[7, 15, 30].map((d) => (
-                    <button
-                      key={d}
-                      className={`duration-pill ${paperDays === d ? 'active' : ''}`}
-                      onClick={() => setPaperDays(d)}
-                    >
-                      {d} Days
-                    </button>
-                  ))}
-                </div>
-
-                <div className="paper-cta-row">
-                  <Link to="/quant/dashboard" className="quant-btn-primary">
-                    <span>Launch Paper Trading Sandbox</span>
-                    <ArrowRight size={16} />
-                  </Link>
-                </div>
-              </div>
-
-              <div className="paper-right">
-                <div className="paper-sim-card">
-                  <div className="sim-header">
-                    <div className="sim-status">
-                      <span className="status-live-dot" />
-                      <span>PAPER RUN · {paperDays}-DAY CYCLE</span>
-                    </div>
-                    <span className="sim-badge">REAL-TIME FEED</span>
-                  </div>
-
-                  <div className="sim-metric-row">
-                    <div className="sim-box">
-                      <span className="s-label">Simulated P&L</span>
-                      <span className="s-val text-green font-mono">+₹{Math.round(paperCapital * 0.084).toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="sim-box">
-                      <span className="s-label">Win Rate</span>
-                      <span className="s-val font-mono">68.2%</span>
-                    </div>
-                  </div>
-
-                  <div className="sim-order-stream">
-                    <div className="stream-header">Simulated Order Fills (Recent)</div>
-                    <div className="order-item">
-                      <span className="order-side buy">BUY</span>
-                      <span className="order-info">NIFTY 24800 CE · 2 Lots</span>
-                      <span className="order-price font-mono">@ ₹142.50</span>
-                      <span className="order-state">FILLED</span>
-                    </div>
-                    <div className="order-item">
-                      <span className="order-side sell">SELL</span>
-                      <span className="order-info">NIFTY 24800 CE · Target Hit</span>
-                      <span className="order-price font-mono">@ ₹176.00</span>
-                      <span className="order-state profit">+₹1,675</span>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-      </section>
 
       {/* ─── 06. LIVE AUTOMATION & EXECUTION ENGINE ─────────────────────────── */}
       <section className="quant-automation-section">
@@ -1170,7 +1051,7 @@ export default function QuantMarketingPage() {
                   <div className="item-val font-mono">Pause after 3 Stop-Outs</div>
                 </div>
 
-                {/* Kill Switch Mock */}
+                {/* Emergency Kill Switch */}
                 <div className="kill-switch-box">
                   <div className="ks-info">
                     <strong>EMERGENCY KILL SWITCH</strong>
@@ -1440,7 +1321,7 @@ export default function QuantMarketingPage() {
               </div>
 
               <div className="cta-points">
-                <span>Free Paper Trading Sandbox</span>
+                <span>Unlimited Backtesting</span>
                 <span className="dot">•</span>
                 <span>No Credit Card Required</span>
                 <span className="dot">•</span>

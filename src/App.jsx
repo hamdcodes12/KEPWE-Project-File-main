@@ -434,7 +434,6 @@ function App() {
           <Route path="/indexpilot-algo/dashboard" element={<ProtectedAlgoRoute />} />
           <Route path="/indexpilot-algo/strategies" element={<ProtectedAlgoRoute />} />
           <Route path="/indexpilot-algo/backtest" element={<ProtectedAlgoRoute />} />
-          <Route path="/indexpilot-algo/paper-trading" element={<ProtectedAlgoRoute />} />
           <Route path="/indexpilot-algo/trades" element={<ProtectedAlgoRoute />} />
           <Route path="/indexpilot-algo/positions" element={<ProtectedAlgoRoute />} />
           <Route path="/indexpilot-algo/settings" element={<ProtectedAlgoRoute />} />

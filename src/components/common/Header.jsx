@@ -249,10 +249,6 @@ const Header = () => {
                   <Building2 size={16} />
                   <span>Customer Portal</span>
                 </Link>
-                <Link to={getPortalLink('crm', '/crm')} onClick={() => setPortalsDropdownOpen(false)} className="portals-dropdown-item" style={{ color: '#059669' }}>
-                  <Activity size={16} />
-                  <span>Sales CRM</span>
-                </Link>
                 <Link to={getPortalLink('indexpilot', '/app/dashboard')} onClick={() => setPortalsDropdownOpen(false)} className="portals-dropdown-item" style={{ color: '#0284C7' }}>
                   <TrendingUp size={16} />
                   <span>IndexPilot</span>
@@ -372,9 +368,6 @@ const Header = () => {
                 <div className="mobile-drawer-sublinks">
                   <Link to={getPortalLink('customer-portal', '/customer-portal')} onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link" style={{ color: '#214ECF', fontWeight: 600 }}>
                     <Building2 size={16} style={{ display: 'inline', marginRight: '6px' }} /> Customer Portal
-                  </Link>
-                  <Link to={getPortalLink('crm', '/crm')} onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link" style={{ color: '#059669', fontWeight: 600 }}>
-                    <Activity size={16} style={{ display: 'inline', marginRight: '6px' }} /> Sales CRM
                   </Link>
                   <Link to={getPortalLink('indexpilot', '/app/dashboard')} onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link" style={{ color: '#0284C7', fontWeight: 600 }}>
                     <TrendingUp size={16} style={{ display: 'inline', marginRight: '6px' }} /> IndexPilot

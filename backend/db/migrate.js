@@ -82,6 +82,7 @@ async function main() {
     await applySqlFile(client, join(__dirname, 'profile_avatar_and_crm_seeds.sql'), 'profile_avatar_and_crm_seeds.sql');
     await applySqlFile(client, join(__dirname, 'product_memberships_schema.sql'), 'product_memberships_schema.sql');
     await applySqlFile(client, join(__dirname, 'quant_additions.sql'), 'quant_additions.sql');
+    await applySqlFile(client, join(__dirname, 'dhan_integration.sql'), 'dhan_integration.sql');
 
     console.log('[migrate] Migration completed successfully.');
   } catch (err) {
