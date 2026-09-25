@@ -1,0 +1,574 @@
+import { apiFetch, downloadAuthenticatedFile } from './client';
+
+// 1. Dashboard
+export async function fetchLedgerDashboard(params = {}) {
+  const query = new URLSearchParams();
+  if (params.datePreset) query.set('datePreset', params.datePreset);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  if (params.chartInterval) query.set('chartInterval', params.chartInterval);
+
+  const qs = query.toString();
+  return apiFetch(`/ledger/dashboard${qs ? `?${qs}` : ''}`);
+}
+
+// 1.1 Financial Profile (PRD Section 11 & Section 68)
+export async function fetchLedgerProfile() {
+  return apiFetch('/ledger/profile');
+}
+
+export async function updateLedgerProfile(data) {
+  return apiFetch('/ledger/profile', { method: 'PATCH', body: data });
+}
+
+// 2. Accounts
+export async function fetchLedgerAccounts() {
+  return apiFetch('/ledger/accounts');
+}
+
+export async function createLedgerAccount(data) {
+  return apiFetch('/ledger/accounts', { method: 'POST', body: data });
+}
+
+export async function updateLedgerAccount(accountId, data) {
+  return apiFetch(`/ledger/accounts/${accountId}`, { method: 'PATCH', body: data });
+}
+
+export async function deleteLedgerAccount(accountId) {
+  return apiFetch(`/ledger/accounts/${accountId}`, { method: 'DELETE' });
+}
+
+// 3. Transactions
+export async function fetchLedgerTransactions(params = {}) {
+  const query = new URLSearchParams();
+  if (params.search) query.set('search', params.search);
+  if (params.type) query.set('type', params.type);
+  if (params.category) query.set('category', params.category);
+  if (params.accountId) query.set('accountId', params.accountId);
+  if (params.datePreset) query.set('datePreset', params.datePreset);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  if (params.counterparty) query.set('counterparty', params.counterparty);
+  if (params.sortBy) query.set('sortBy', params.sortBy);
+  if (params.sortOrder) query.set('sortOrder', params.sortOrder);
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+
+  const qs = query.toString();
+  return apiFetch(`/ledger/transactions${qs ? `?${qs}` : ''}`);
+}
+
+export async function createLedgerTransaction(data) {
+  return apiFetch('/ledger/transactions', { method: 'POST', body: data });
+}
+
+export async function updateLedgerTransaction(transactionId, data) {
+  return apiFetch(`/ledger/transactions/${transactionId}`, { method: 'PATCH', body: data });
+}
+
+export async function deleteLedgerTransaction(transactionId) {
+  return apiFetch(`/ledger/transactions/${transactionId}`, { method: 'DELETE' });
+}
+
+export async function fetchLedgerTransaction(transactionId) {
+  return apiFetch(`/ledger/transactions/${transactionId}`);
+}
+
+export async function importLedgerStatement(data) {
+  return apiFetch('/ledger/transactions/import', { method: 'POST', body: data });
+}
+export async function importLedgerStatementFile(data) { return apiFetch('/ledger/statements/import-file', { method: 'POST', body: data }); }
+export async function fetchLedgerStatementImportHistory() { return apiFetch('/ledger/statements/import-history'); }
+
+// Phase 6: Add / Upload Financial Data
+export async function parseLedgerData(data) {
+  return apiFetch('/ledger/data/parse', { method: 'POST', body: data });
+}
+
+export async function commitLedgerImport(data) {
+  return apiFetch('/ledger/data/commit', { method: 'POST', body: data });
+}
+
+export async function recordLedgerMonthlyIncome(data) {
+  return apiFetch('/ledger/data/monthly-income', { method: 'POST', body: data });
+}
+
+export async function recordLedgerRecurringExpense(data) {
+  return apiFetch('/ledger/data/recurring-expense', { method: 'POST', body: data });
+}
+
+export async function fetchLedgerDataImportHistory() {
+  return apiFetch('/ledger/data/import-history');
+}
+
+// Phase 7: AI Insights & Recommendations (AI CFO)
+export async function fetchCfoInsights() {
+  return apiFetch('/ledger/cfo/insights');
+}
+
+export async function evaluateCfoAffordability(data) {
+  return apiFetch('/ledger/cfo/affordability', { method: 'POST', body: data });
+}
+
+export async function askCfoQuestion(question) {
+  return apiFetch('/ledger/cfo/ask', { method: 'POST', body: { question } });
+}
+
+// Phase 8: Savings Goal Engine
+export async function fetchLedgerGoals() {
+  return apiFetch('/ledger/goals');
+}
+
+export async function createLedgerGoal(data) {
+  return apiFetch('/ledger/goals', { method: 'POST', body: data });
+}
+
+export async function updateLedgerGoal(goalId, data) {
+  return apiFetch(`/ledger/goals/${goalId}`, { method: 'PATCH', body: data });
+}
+
+export async function deleteLedgerGoal(goalId) {
+  return apiFetch(`/ledger/goals/${goalId}`, { method: 'DELETE' });
+}
+
+export async function contributeToLedgerGoal(goalId, amount) {
+  return apiFetch(`/ledger/goals/${goalId}/contribute`, { method: 'POST', body: { amount } });
+}
+
+export async function reconcileLedgerTransaction(transactionId, data = {}) {
+  return apiFetch(`/ledger/transactions/${transactionId}/reconcile`, { method: 'POST', body: data });
+}
+
+export async function fetchLedgerIntegrationStatus() {
+  return apiFetch('/ledger/integrations/status');
+}
+
+export async function createLedgerPayment(data) {
+  return apiFetch('/ledger/payments', { method: 'POST', body: data });
+}
+
+export async function createLedgerPaymentLink(data) {
+  return apiFetch('/ledger/payments/links', { method: 'POST', body: data });
+}
+
+export async function fetchLedgerPaymentStatus(params) {
+  const query = new URLSearchParams(params);
+  return apiFetch(`/ledger/payments/status?${query.toString()}`);
+}
+
+export async function createLedgerRefund(paymentId, provider, data) {
+  return apiFetch(`/ledger/payments/${paymentId}/refunds?provider=${encodeURIComponent(provider)}`, { method: 'POST', body: data });
+}
+
+export async function fetchLedgerRefund(refundId, provider) {
+  return apiFetch(`/ledger/refunds/${refundId}?provider=${encodeURIComponent(provider)}`);
+}
+
+export async function fetchLedgerSettlements(provider, params = {}) {
+  const query = new URLSearchParams({ provider, ...params });
+  return apiFetch(`/ledger/settlements?${query.toString()}`);
+}
+
+export async function verifyLedgerBankAccount(data) { return apiFetch('/ledger/idspay/bank-account/verify', { method: 'POST', body: data }); }
+export async function verifyLedgerPennyDrop(data) { return apiFetch('/ledger/idspay/bank-account/penny-drop', { method: 'POST', body: data }); }
+export async function verifyLedgerIfsc(data) { return apiFetch('/ledger/idspay/ifsc/verify', { method: 'POST', body: data }); }
+export async function verifyLedgerUpi(data) { return apiFetch('/ledger/idspay/upi/verify', { method: 'POST', body: data }); }
+export async function fetchLedgerIdspayStatement(data) { return apiFetch('/ledger/idspay/statement', { method: 'POST', body: data }); }
+export async function fetchLedgerIdspayTransactions(data) { return apiFetch('/ledger/idspay/transactions', { method: 'POST', body: data }); }
+export async function fetchLedgerIdspayBalance(data) { return apiFetch('/ledger/idspay/balance', { method: 'POST', body: data }); }
+export async function fetchLedgerAaConsents() { return apiFetch('/ledger/aa/consents'); }
+export async function fetchLedgerAaAccounts() { return apiFetch('/ledger/aa/accounts'); }
+export async function discoverLedgerAaAccounts(data) { return apiFetch('/ledger/aa/accounts/discover', { method: 'POST', body: data }); }
+export async function linkLedgerAaAccount(data) { return apiFetch('/ledger/aa/accounts/link', { method: 'POST', body: data }); }
+export async function syncLedgerAaAccount(id, data = {}) { return apiFetch(`/ledger/aa/accounts/${id}/sync`, { method: 'POST', body: data }); }
+export async function disconnectLedgerAaAccount(id) { return apiFetch(`/ledger/aa/accounts/${id}/disconnect`, { method: 'POST' }); }
+export async function createLedgerAaConsent(data) { return apiFetch('/ledger/aa/consents', { method: 'POST', body: data }); }
+export async function fetchLedgerAaConsent(id) { return apiFetch(`/ledger/aa/consents/${id}`); }
+export async function revokeLedgerAaConsent(id) { return apiFetch(`/ledger/aa/consents/${id}/revoke`, { method: 'POST' }); }
+export async function notifyLedgerAaConsent(id, data = {}) { return apiFetch(`/ledger/aa/consents/${id}/notify`, { method: 'POST', body: data }); }
+export async function fetchLedgerAaConsentEvents(id) { return apiFetch(`/ledger/aa/consents/${id}/events`); }
+export async function fetchLedgerAaConsentHistory(customerHandle) { return apiFetch(`/ledger/aa/consent-history?customerHandle=${encodeURIComponent(customerHandle)}`); }
+export async function requestLedgerAaFi(id, data) { return apiFetch(`/ledger/aa/consents/${id}/fi-requests`, { method: 'POST', body: data }); }
+export async function fetchLedgerAaFi(id) { return apiFetch(`/ledger/aa/fi-requests/${id}/fetch`); }
+export async function fetchLedgerAaAccountData(id, action, params = {}) { return apiFetch(`/ledger/aa/accounts/${id}/${action}?${new URLSearchParams(params).toString()}`); }
+
+// 4. Receivables (Invoices)
+export async function fetchLedgerReceivables(params = {}) {
+  const query = new URLSearchParams();
+  if (params.search) query.set('search', params.search);
+  if (params.status) query.set('status', params.status);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+
+  const qs = query.toString();
+  return apiFetch(`/ledger/receivables${qs ? `?${qs}` : ''}`);
+}
+
+export async function createLedgerReceivable(data) {
+  return apiFetch('/ledger/receivables', { method: 'POST', body: data });
+}
+
+export async function recordReceivablePayment(invoiceId, data) {
+  return apiFetch(`/ledger/receivables/${invoiceId}/payments`, { method: 'POST', body: data });
+}
+
+export async function deleteLedgerReceivable(invoiceId) {
+  return apiFetch(`/ledger/receivables/${invoiceId}`, { method: 'DELETE' });
+}
+
+// 5. Payables (Vendor Bills)
+export async function fetchLedgerPayables(params = {}) {
+  const query = new URLSearchParams();
+  if (params.search) query.set('search', params.search);
+  if (params.status) query.set('status', params.status);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+
+  const qs = query.toString();
+  return apiFetch(`/ledger/payables${qs ? `?${qs}` : ''}`);
+}
+
+export async function createLedgerPayable(data) {
+  return apiFetch('/ledger/payables', { method: 'POST', body: data });
+}
+
+export async function recordPayablePayment(billId, data) {
+  return apiFetch(`/ledger/payables/${billId}/payments`, { method: 'POST', body: data });
+}
+
+export async function deleteLedgerPayable(billId) {
+  return apiFetch(`/ledger/payables/${billId}`, { method: 'DELETE' });
+}
+
+// 6. Reports & Export Engine
+export async function fetchLedgerReports(params = {}) {
+  const query = new URLSearchParams();
+  if (params.reportType) query.set('reportType', params.reportType);
+  if (params.period) query.set('period', params.period);
+  if (params.datePreset) query.set('datePreset', params.datePreset);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  if (params.category) query.set('category', params.category);
+  if (params.accountId) query.set('accountId', params.accountId);
+  if (params.type) query.set('type', params.type);
+
+  const qs = query.toString();
+  return apiFetch(`/ledger/reports${qs ? `?${qs}` : ''}`);
+}
+
+export async function downloadLedgerReportExport(params = {}) {
+  const query = new URLSearchParams();
+  if (params.format) query.set('format', params.format);
+  if (params.reportType) query.set('reportType', params.reportType);
+  if (params.period) query.set('period', params.period);
+  if (params.datePreset) query.set('datePreset', params.datePreset);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  if (params.category) query.set('category', params.category);
+  if (params.accountId) query.set('accountId', params.accountId);
+  if (params.type) query.set('type', params.type);
+
+  const qs = query.toString();
+  const response = await downloadAuthenticatedFile(`/ledger/reports/export${qs ? `?${qs}` : ''}`);
+
+  let filename = `Kepwe_Ledger_Report.${params.format || 'pdf'}`;
+  const disposition = response.headers.get('Content-Disposition');
+  if (disposition && disposition.includes('filename=')) {
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) filename = match[1];
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+  return { success: true, filename };
+}
+
+// 7. Categories & Settings
+export async function fetchLedgerCategories() {
+  return apiFetch('/ledger/categories');
+}
+
+export async function createLedgerCategory(data) {
+  return apiFetch('/ledger/categories', { method: 'POST', body: data });
+}
+
+export async function fetchLedgerSettings() {
+  return apiFetch('/ledger/settings');
+}
+
+export async function updateLedgerSettings(data) {
+  return apiFetch('/ledger/settings', { method: 'PATCH', body: data });
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ── V1 PRODUCTION ACCOUNTING & COMPLIANCE API CLIENTS ────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Company Profile & Chart of Accounts
+export async function fetchCompanyProfile() {
+  return apiFetch('/v1/companies/profile');
+}
+
+export async function updateCompanyProfile(data) {
+  return apiFetch('/v1/companies/profile', { method: 'PATCH', body: data });
+}
+
+export async function fetchChartOfAccounts() {
+  return apiFetch('/v1/accounts');
+}
+
+export async function createChartOfAccount(data) {
+  return apiFetch('/v1/accounts', { method: 'POST', body: data });
+}
+
+// Double-Entry Journals
+export async function fetchJournals(params = {}) {
+  const query = new URLSearchParams();
+  if (params.status) query.set('status', params.status);
+  if (params.referenceType) query.set('referenceType', params.referenceType);
+  if (params.search) query.set('search', params.search);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+  const qs = query.toString();
+  return apiFetch(`/v1/journals${qs ? `?${qs}` : ''}`);
+}
+
+export async function postJournalEntry(data) {
+  return apiFetch('/v1/journals', { method: 'POST', body: data });
+}
+
+export async function voidJournalEntry(id, reason) {
+  return apiFetch(`/v1/journals/${id}/void`, { method: 'POST', body: { reason } });
+}
+
+// Financial Reports
+export async function fetchGeneralLedger(accountId, params = {}) {
+  const query = new URLSearchParams();
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  const qs = query.toString();
+  return apiFetch(`/v1/ledger/${accountId}${qs ? `?${qs}` : ''}`);
+}
+
+export async function fetchTrialBalance(asOfDate) {
+  const qs = asOfDate ? `?asOfDate=${asOfDate}` : '';
+  return apiFetch(`/v1/trial-balance${qs}`);
+}
+
+export async function fetchProfitLossStatement(params = {}) {
+  const query = new URLSearchParams();
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  const qs = query.toString();
+  return apiFetch(`/v1/reports/profit-loss${qs ? `?${qs}` : ''}`);
+}
+
+export async function fetchBalanceSheetStatement(asOfDate) {
+  const qs = asOfDate ? `?asOfDate=${asOfDate}` : '';
+  return apiFetch(`/v1/reports/balance-sheet${qs}`);
+}
+
+export async function fetchCashFlowStatement(params = {}) {
+  const query = new URLSearchParams();
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+  const qs = query.toString();
+  return apiFetch(`/v1/reports/cash-flow${qs ? `?${qs}` : ''}`);
+}
+
+// GST Engine & Returns
+export async function calculateGst(data) {
+  return apiFetch('/v1/gst/calculate', { method: 'POST', body: data });
+}
+
+export async function fetchGstr1(taxPeriod) {
+  return apiFetch(`/v1/gst/returns/gstr-1?taxPeriod=${taxPeriod}`);
+}
+
+export async function fetchGstr3b(taxPeriod) {
+  return apiFetch(`/v1/gst/returns/gstr-3b?taxPeriod=${taxPeriod}`);
+}
+
+export async function runGstReconciliation(data) {
+  return apiFetch('/v1/gst/reconciliation/run', { method: 'POST', body: data });
+}
+
+export async function fetchGstReconciliationRecords() {
+  return apiFetch('/v1/gst/reconciliation/records');
+}
+
+export async function importGstr2bFeed(data) {
+  return apiFetch('/v1/gst/reconciliation/import-2b', { method: 'POST', body: data });
+}
+
+// E-Invoice & E-Way Bill
+export async function generateIrn(data) {
+  return apiFetch('/v1/gst/einvoice/irn', { method: 'POST', body: data });
+}
+
+export async function cancelIrn(data) {
+  return apiFetch('/v1/gst/einvoice/cancel', { method: 'POST', body: data });
+}
+
+export async function generateEWayBill(data) {
+  return apiFetch('/v1/gst/ewaybill/generate', { method: 'POST', body: data });
+}
+
+export async function cancelEWayBill(data) {
+  return apiFetch('/v1/gst/ewaybill/cancel', { method: 'POST', body: data });
+}
+
+// TDS Engine
+export async function fetchTdsRules() {
+  return apiFetch('/v1/tds/rules');
+}
+
+export async function calculateTds(data) {
+  return apiFetch('/v1/tds/calculate', { method: 'POST', body: data });
+}
+
+export async function fetchTdsTransactions(params = {}) {
+  const query = new URLSearchParams();
+  if (params.sectionCode) query.set('sectionCode', params.sectionCode);
+  if (params.status) query.set('status', params.status);
+  const qs = query.toString();
+  return apiFetch(`/v1/tds/transactions${qs ? `?${qs}` : ''}`);
+}
+
+export async function recordTdsChallan(data) {
+  return apiFetch('/v1/tds/challans', { method: 'POST', body: data });
+}
+
+export async function fetchTdsChallans() {
+  return apiFetch('/v1/tds/challans');
+}
+
+export async function fetchForm26q(quarter) {
+  return apiFetch(`/v1/tds/returns/form-26q?quarter=${quarter}`);
+}
+
+// Payroll
+export async function fetchPayrollEmployees() {
+  return apiFetch('/v1/payroll/employees');
+}
+
+export async function createPayrollEmployee(data) {
+  return apiFetch('/v1/payroll/employees', { method: 'POST', body: data });
+}
+
+export async function executePayrollRun(data) {
+  return apiFetch('/v1/payroll/runs', { method: 'POST', body: data });
+}
+
+export async function fetchPayrollRuns() {
+  return apiFetch('/v1/payroll/runs');
+}
+
+export async function fetchPayslips(runId) {
+  return apiFetch(`/v1/payroll/runs/${runId}/payslips`);
+}
+
+export async function disburseSalaries(runId, data) {
+  return apiFetch(`/v1/payroll/runs/${runId}/disburse`, { method: 'POST', body: data });
+}
+
+// Bank Reconciliation
+export async function importBankStatement(data) {
+  return apiFetch('/v1/banks/statements/import', { method: 'POST', body: data });
+}
+
+export async function importBankStatementFile(data) {
+  return apiFetch('/v1/banks/statements/import', { method: 'POST', body: data });
+}
+
+export async function fetchBankStatements() {
+  return apiFetch('/v1/banks/statements');
+}
+
+export async function fetchBankStatementLines(statementId) {
+  return apiFetch(`/v1/banks/statements/${statementId}/lines`);
+}
+
+export async function matchBankLine(data) {
+  return apiFetch('/v1/banks/reconciliation/match', { method: 'POST', body: data });
+}
+
+// Fixed Assets
+export async function fetchFixedAssets() {
+  return apiFetch('/v1/fixed-assets');
+}
+
+export async function createFixedAsset(data) {
+  return apiFetch('/v1/fixed-assets', { method: 'POST', body: data });
+}
+
+export async function executeDepreciationRun(data) {
+  return apiFetch('/v1/fixed-assets/depreciation/run', { method: 'POST', body: data });
+}
+
+export async function fetchDepreciationRuns() {
+  return apiFetch('/v1/fixed-assets/depreciation/runs');
+}
+
+// Compliance Calendar
+export async function fetchComplianceTasks(params = {}) {
+  const query = new URLSearchParams();
+  if (params.category) query.set('category', params.category);
+  if (params.status) query.set('status', params.status);
+  const qs = query.toString();
+  return apiFetch(`/v1/compliance/tasks${qs ? `?${qs}` : ''}`);
+}
+
+export async function completeComplianceTask(taskId, data = {}) {
+  return apiFetch(`/v1/compliance/tasks/${taskId}/complete`, { method: 'POST', body: data });
+}
+
+// Filing Preparation & Approval
+export async function fetchFilingPreparations() {
+  return apiFetch('/v1/filing-prep');
+}
+
+export async function createFilingDraft(data) {
+  return apiFetch('/v1/filing-prep/draft', { method: 'POST', body: data });
+}
+
+export async function approveFiling(filingId, data) {
+  return apiFetch(`/v1/filing-prep/${filingId}/approve`, { method: 'POST', body: data });
+}
+
+export async function submitFiling(filingId) {
+  return apiFetch(`/v1/filing-prep/${filingId}/submit`, { method: 'POST' });
+}
+
+// Integrations & Audit Trail
+export async function fetchIntegrationsStatus() {
+  return apiFetch('/v1/integrations/status');
+}
+
+export async function testIntegration(providerKey) {
+  return apiFetch(`/v1/integrations/${providerKey}/test`, { method: 'POST' });
+}
+
+export async function fetchAuditTrail(params = {}) {
+  const query = new URLSearchParams();
+  if (params.entityType) query.set('entityType', params.entityType);
+  if (params.action) query.set('action', params.action);
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+  const qs = query.toString();
+  return apiFetch(`/v1/audit${qs ? `?${qs}` : ''}`);
+}
+

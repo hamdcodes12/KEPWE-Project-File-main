@@ -1,0 +1,26 @@
+.section-header {
+  margin-bottom: var(--spacing-10);
+  max-width: 800px;
+}
+
+.section-header.text-center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section-header h2 {
+  margin-bottom: var(--spacing-3);
+}
+
+.section-header .mt-3 {
+  margin-top: var(--spacing-3);
+}
+
+.section-header.dark h2,
+.section-header.dark p {
+  color: var(--color-text-light);
+}
+
+.section-header.dark .text-muted {
+  color: var(--color-text-light-muted);
+}

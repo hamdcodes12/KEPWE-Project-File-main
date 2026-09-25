@@ -1,0 +1,180 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║          KEPWE RENDER DEPLOYMENT - ENVIRONMENT VARIABLES SETUP              ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+STEP 1: Generate Required Secrets
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Generate BROKER_TOKEN_ENCRYPTION_KEY (32 bytes):
+┌──────────────────────────────────────────────────────────────────────────┐
+│ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" │
+└──────────────────────────────────────────────────────────────────────────┘
+Copy the output ← Save this value
+
+Generate JWT_SECRET (48 bytes):
+┌──────────────────────────────────────────────────────────────────────────┐
+│ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))" │
+└──────────────────────────────────────────────────────────────────────────┘
+Copy the output ← Save this value
+
+
+STEP 2: Add to Render Dashboard
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Go to: https://dashboard.render.com
+2. Select your "KEPWE" service
+3. Click "Environment" (left sidebar)
+4. Click "Add Environment Variable"
+5. Add each variable below:
+
+
+CRITICAL VARIABLES (Must Have)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Variable Name:              BROKER_TOKEN_ENCRYPTION_KEY
+Value:                      (Paste 32-byte hex from Step 1)
+Status:                     ✓ REQUIRED
+
+Variable Name:              JWT_SECRET
+Value:                      (Paste 48-byte hex from Step 1)
+Status:                     ✓ REQUIRED
+
+Variable Name:              NODE_ENV
+Value:                      production
+Status:                     ✓ REQUIRED
+
+Variable Name:              VITE_API_BASE_URL
+Value:                      /api
+Status:                     ✓ REQUIRED
+
+Variable Name:              VITE_APP_NAME
+Value:                      KEPWE - Everything Your Business Needs
+Status:                     ✓ REQUIRED
+
+Variable Name:              VITE_APP_ENV
+Value:                      production
+Status:                     ✓ REQUIRED
+
+
+EMAIL SETUP (For OTP Authentication)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Go to https://resend.com → Sign up
+2. Get your API key from Settings → API Keys
+3. Add to Render:
+
+Variable Name:              RESEND_API_KEY
+Value:                      (Paste your Resend API key)
+Status:                     ✓ REQUIRED (for OTP)
+
+Variable Name:              OTP_FROM_EMAIL
+Value:                      KEPWE <help@kepwe.in>
+Status:                     Optional (uses default if not set)
+
+
+OPTIONAL: Razorpay Payments
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Go to https://dashboard.razorpay.com → Settings → API Keys
+2. Copy your Live Key ID and Live Key Secret
+3. Add to Render:
+
+Variable Name:              RAZORPAY_KEY_ID
+Value:                      rzp_live_XXXXXXXXXXXX
+Status:                     Optional (payments)
+
+Variable Name:              RAZORPAY_KEY_SECRET
+Value:                      XXXXXXXXXXXXXXXXXXXXXXXX
+Status:                     Optional (payments)
+
+Variable Name:              VITE_RAZORPAY_KEY_ID
+Value:                      rzp_live_XXXXXXXXXXXX
+Status:                     Optional (payments)
+
+
+OPTIONAL: Dhan Trading Integration
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Variable Name:              DHAN_API_KEY
+Value:                      (From Dhan dashboard)
+Status:                     Optional (live trading)
+
+Variable Name:              DHAN_API_SECRET
+Value:                      (From Dhan dashboard)
+Status:                     Optional (live trading)
+
+Variable Name:              DHAN_REDIRECT_URL
+Value:                      https://your-kepwe-service.onrender.com/api/lemonn/callback
+Status:                     Optional (OAuth callbacks)
+
+
+STEP 3: Save & Deploy
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After adding all variables:
+  1. Click "Save" button in Render
+  2. Render will automatically redeploy
+  3. Wait for deployment to complete (2-5 minutes)
+  4. Check the deployment logs:
+
+     Expected success message:
+     ✓ [migrate] Migration completed successfully.
+     ✓ [server] Listening on port 3000
+     ✓ Build successful!
+
+
+STEP 4: Access Your App
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Once deployed, visit:
+  🌐 Frontend: https://your-kepwe-service.onrender.com
+  📡 API:      https://your-kepwe-service.onrender.com/api
+  👤 Admin:    https://your-kepwe-service.onrender.com/admin-login
+
+
+TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ "Missing required production environment variables"
+  → Check if BROKER_TOKEN_ENCRYPTION_KEY is set in Render Environment
+  → Check if JWT_SECRET is set
+
+❌ "Build failed"
+  → Frontend build issue (check syntax)
+  → Run locally: npm run build
+
+❌ "Database connection failed"
+  → Verify SUPABASE_DB_URL is set to the existing Supabase Postgres URL in Render
+  → Check PostgreSQL is running
+
+❌ "OTP not sending"
+  → Verify RESEND_API_KEY is set
+  → Verify domain is verified in Resend account
+
+
+CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+☐ Generated BROKER_TOKEN_ENCRYPTION_KEY (32-byte hex)
+☐ Generated JWT_SECRET (48-byte hex)
+☐ Added BROKER_TOKEN_ENCRYPTION_KEY to Render Environment
+☐ Added JWT_SECRET to Render Environment
+☐ Added NODE_ENV = production
+☐ Added VITE_API_BASE_URL = /api
+☐ Added other VITE_ variables
+☐ Added RESEND_API_KEY (or get from Resend)
+☐ Clicked "Save" in Render
+☐ Waited for deployment to complete
+☐ Checked deployment logs for success
+☐ Verified app loads at onrender.com URL
+
+✅ All done! Your KEPWE app should now be live on Render.
+
+
+NEED HELP?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+See detailed setup guide: RENDER_DEPLOYMENT_ENV_SETUP.md
+Render docs: https://render.com/docs/environment-variables

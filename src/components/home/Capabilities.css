@@ -1,0 +1,120 @@
+.capabilities-section {
+  padding: 96px 0;
+  background-color: #F7F9FC;
+  border-top: 1px solid #E4E7EC;
+  border-bottom: 1px solid #E4E7EC;
+  position: relative;
+}
+
+.capabilities-header {
+  max-width: 740px;
+  margin: 0 auto 52px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.capabilities-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #EFF4FF;
+  border: 1px solid rgba(33, 78, 207, 0.18);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #214ECF;
+}
+
+.capabilities-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #214ECF;
+}
+
+.capabilities-title {
+  font-size: clamp(2rem, 3.8vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #111827;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.capabilities-subtitle {
+  font-size: clamp(0.96rem, 1.3vw, 1.12rem);
+  color: #667085;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* Capabilities Grid */
+.capabilities-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.capability-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(17, 24, 39, 0.02);
+}
+
+.capability-card:hover {
+  transform: translateY(-3px);
+  border-color: #214ECF;
+  box-shadow: 0 12px 28px -4px rgba(33, 78, 207, 0.08);
+}
+
+.capability-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #EFF4FF;
+  display: grid;
+  place-items: center;
+}
+
+.capability-card-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.capability-card-desc {
+  font-size: 0.88rem;
+  color: #667085;
+  line-height: 1.55;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .capabilities-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .capabilities-grid {
+    grid-template-columns: 1fr;
+  }
+  .capabilities-section {
+    padding: 64px 0;
+  }
+}

@@ -1,0 +1,2 @@
+- [Package manager workspaces](package-manager-workspaces.md) — verify install location because nested manifests may otherwise pollute the repository root.
+- [Provider-backed financial surfaces](provider-backed-surfaces.md) — distinguish unavailable broker data from zero values until an approved adapter is active.

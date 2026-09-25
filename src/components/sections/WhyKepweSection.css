@@ -1,0 +1,84 @@
+/* Why Kepwe Section Stylesheet - Background #F7F9FC */
+.why-kepwe-section {
+  background-color: #F7F9FC;
+  padding: 96px 0;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+@media (min-width: 1024px) {
+  .why-kepwe-section {
+    padding: 112px 0;
+  }
+}
+
+.why-header {
+  max-width: 640px;
+  margin: 0 auto 56px;
+}
+
+.why-title {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(1.85rem, 3vw + 0.5rem, 2.75rem);
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.025em;
+  margin-bottom: 12px;
+}
+
+.why-subtitle {
+  font-size: 1.05rem;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.why-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.why-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 28px 24px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.03);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.why-card:hover {
+  transform: translateY(-4px);
+  border-color: #214ECF;
+  box-shadow: 0 10px 24px -4px rgba(16, 24, 40, 0.06);
+}
+
+.why-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.why-card-heading {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+}
+
+.why-card-desc {
+  font-size: 0.9rem;
+  color: #667085;
+  line-height: 1.55;
+}

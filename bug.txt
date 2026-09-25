@@ -1,0 +1,210 @@
+# KEPWE LEDGER — BUG TRACKER & REAL-WORLD QA LOG
+# Protocol: Autonomous Real-World Browser QA + Bug Finding + Bug Fixing
+
+============================================================
+PHASE 5 — KEPWE LEDGER MAIN DASHBOARD
+QA Session: 2026-09-24
+============================================================
+
+------------------------------------------------------------
+BUG #001
+Phase: Phase 5 - Ledger Main Dashboard
+Date: 2026-09-24
+Severity: HIGH
+Type: Frontend
+Page/Route: /ledger/app (Main Dashboard)
+Steps to Reproduce:
+1. Log in as an authenticated user with transactions in the current month.
+2. On the Main Dashboard, open the Date Preset dropdown (topbar).
+3. Select "Last Month" (which has no transactions).
+4. Observe the page.
+Expected Result:
+The dashboard should gracefully display the period summary or honest empty state for "Last Month" without crashing.
+Actual Result:
+React runtime error: "Objects are not valid as a React child (found: object with keys {label, tab})." Main content body crashed and became blank.
+Root Cause:
+In backend/src/services/ledger.service.js, default cfoInsight.action when hasFinancialData is false was returned as an object `{ label: 'Upload Statement', tab: 'upload' }`, while in LedgerDashboardPage.jsx line 975 it was directly rendered as JSX `{dashboardData.cfoInsight.action}`. When the user switched to an empty period, React threw an exception attempting to render the object.
+Fix Applied:
+1. Updated LedgerDashboardPage.jsx to safely extract string label: `typeof dashboardData.cfoInsight.action === 'object' ? dashboardData.cfoInsight.action.label : dashboardData.cfoInsight.action`.
+2. Updated backend/src/services/ledger.service.js to consistently return action as a string ('Review Spending' or 'Upload Statement') and actionObj as the object.
+Retest Result:
+PASSED. Real browser retest confirmed changing to "Last Month" gracefully renders honest empty state (Health Score: —, Income: ₹0, Outflows: ₹0, Savings: ₹0) with button label "Upload Statement". Zero React crashes or object rendering errors. Cycling across all presets (This Month, Last Month, All Records, This Fiscal Year, Today) verified clean.
+Status: FIXED
+------------------------------------------------------------
+
+------------------------------------------------------------
+BUG #002
+Phase: Phase 5 - Ledger Main Dashboard
+Date: 2026-09-24
+Severity: HIGH
+Type: API / Backend
+Page/Route: /api/ledger/profile (Financial Profile Save)
+Steps to Reproduce:
+1. In the Main Dashboard, open the "Financial Profile" modal.
+2. Enter "Monthly Salary" (e.g. ₹1,00,000) and other profile fields.
+3. Click "Save Financial Profile".
+4. Check PostgreSQL database table `ledger_financial_profiles`.
+Expected Result:
+`salary_income` or `monthly_income` in `ledger_financial_profiles` should be set to 100000.00.
+Actual Result:
+`salary_income` remained 0.00 because `financialProfileSchema` in `backend/src/routes/ledger.routes.js` lacked the `monthlySalary` field, causing Zod schema stripping to omit `monthlySalary` from `req.validatedBody`.
+Root Cause:
+`financialProfileSchema` declared `salaryIncome` but the frontend form submitted `monthlySalary`. Zod validation silently stripped `monthlySalary` before passing data to the service layer.
+Fix Applied:
+1. Added `monthlySalary: z.number().nonnegative().optional()` to `financialProfileSchema` in `backend/src/routes/ledger.routes.js`.
+2. Updated frontend profile submission in `LedgerDashboardPage.jsx` to send both `monthlySalary` and `salaryIncome`.
+Retest Result:
+PASSED. Real browser retest executed: submitted Monthly Salary ₹1,00,000, verified successful modal save, re-opened modal to confirm input value reloaded 100000. Inspected PostgreSQL table directly: confirmed `salary_income = 100000.00`, `emergency_savings = 250000.00`, `monthly_debt_obligations = 15000.00`, `monthly_savings_target = 35000.00`. 100% verified.
+Status: FIXED
+------------------------------------------------------------
+
+============================================================
+PHASE 6 — KEPWE LEDGER: ADD / UPLOAD FINANCIAL DATA
+QA Session: 2026-09-24
+============================================================
+
+------------------------------------------------------------
+BUG #003
+Phase: Phase 6 - Add / Upload Financial Data
+Date: 2026-09-24
+Severity: CRITICAL
+Type: Parsing / Logic
+Page/Route: /api/ledger/data/parse (CSV Statement Ingestion)
+Steps to Reproduce:
+1. Upload or parse a standard bank CSV containing columns: Date, Description, Debit, Credit, Balance, RefNo.
+2. Include a credit row where Description is "SALARY CREDIT ACME CORP", Debit is empty, Credit is "85000.00".
+3. Run parser.
+Expected Result:
+The row should be identified as a Credit transaction with amount 85,000.00 and type "income".
+Actual Result:
+Row was silently skipped because Credit amount was extracted as 0.
+Root Cause:
+In statement-parser.service.js, the column matching helper findVal used `cleanK.includes(v)`. When testing variants for Credit (which includes abbreviation 'cr'), 'description'.includes('cr') returned true, falsely matching the 'Description' column as the 'Credit' column and attempting to parse the text description as a numeric amount.
+Fix Applied:
+Updated findVal in statement-parser.service.js to implement a two-pass matcher: exact header match first (`cleanK === v`), and only allow substring/prefix matches for variant tokens of length >= 4, completely preventing short abbreviations like 'cr' or 'dr' from matching unrelated headers like 'description'.
+Retest Result:
+PASSED. All rows with Credit and Debit correctly extracted without cross-header false positives.
+Status: FIXED
+------------------------------------------------------------
+
+------------------------------------------------------------
+BUG #004
+Phase: Phase 6 - Add / Upload Financial Data
+Date: 2026-09-24
+Severity: HIGH
+Type: Logic / Parsing
+Page/Route: /api/ledger/data/parse (Number Parser)
+Steps to Reproduce:
+1. Parse any amount with decimal cents/paise such as "450.00" or "85000.00".
+2. Observe returned amount.
+Expected Result:
+450.00 should parse to 450, 85000.00 should parse to 85000.
+Actual Result:
+Decimal point was stripped, converting 450.00 to 45000 and 85000.00 to 8500000.
+Root Cause:
+In statement-parser.service.js, parseNumber used regex `replace(/[,₹\sINRRs.]/gi, '')`. The unescaped dot inside the character class removed the decimal point from all monetary strings.
+Fix Applied:
+Changed regex in parseNumber to `replace(/[₹,\s]/g, '').replace(/INR|Rs\.?/gi, '').trim()`, preserving the decimal point.
+Retest Result:
+PASSED. Verified 450.00 -> 450, 85,000.00 -> 85000, and 1,200.50 -> 1200.50.
+Status: FIXED
+------------------------------------------------------------
+
+------------------------------------------------------------
+BUG #005
+Phase: Phase 6 - Add / Upload Financial Data
+Date: 2026-09-24
+Severity: HIGH
+Type: Duplicate Detection
+Page/Route: /api/ledger/data/parse (detectDuplicates)
+Steps to Reproduce:
+1. Record a transaction on 2026-09-12 for ₹1,200 (Swiggy).
+2. Upload a statement containing the same transaction on 2026-09-12 for ₹1,200 (Swiggy).
+3. Run duplicate detection.
+Expected Result:
+Transaction is flagged with `isDuplicate: true` and 95%+ confidence.
+Actual Result:
+`isDuplicate` was false.
+Root Cause:
+PostgreSQL driver returns DATE columns as JavaScript Date objects. Using `String(ex.transaction_date).slice(0, 10)` returned 'Sat Sep 12' instead of '2026-09-12', causing date comparison with ISO string '2026-09-12' to fail.
+Fix Applied:
+Updated SQL query in detectDuplicates to use `to_char(transaction_date, 'YYYY-MM-DD') AS transaction_date` and sanitized with normalizeDate.
+Retest Result:
+PASSED. Verified exact duplicate detection flags Row 1 with 95% confidence and identifies matching database row.
+Status: FIXED
+------------------------------------------------------------
+
+------------------------------------------------------------
+BUG #006
+Phase: Phase 6 - Add / Upload Financial Data
+Date: 2026-09-24
+Severity: MEDIUM
+Type: Database / API
+Page/Route: /api/ledger/data/monthly-income
+Steps to Reproduce:
+1. Submit monthly income entry with amount = 45000, sourceType = 'freelance'.
+2. Observe backend response.
+Expected Result:
+Row inserted into ledger_financial_profiles and ledger_transactions.
+Actual Result:
+Database error: `inconsistent types deduced for parameter $2: integer versus numeric (code 42P08)`.
+Root Cause:
+In ledger.service.js recordMonthlyIncome, SQL statement contained `CASE WHEN $3 = 'salary' THEN $2 ELSE 0 END`. PostgreSQL type inference could not resolve the parameter type between numeric $2 and integer literal 0.
+Fix Applied:
+Added explicit `::numeric` casts: `CASE WHEN $3 = 'salary' THEN $2::numeric ELSE 0.00 END`.
+Retest Result:
+PASSED. Monthly income records successfully persisted in PostgreSQL and financial profile freelance_income updated to 45000.00.
+Status: FIXED
+------------------------------------------------------------
+
+============================================================
+PHASE 7 — AI INSIGHTS & RECOMMENDATIONS
+QA Session: 2026-09-25
+============================================================
+
+------------------------------------------------------------
+BUG #007
+Phase: Phase 7 - AI Insights & Recommendations
+Date: 2026-09-25
+Severity: HIGH
+Type: Database / Query
+Page/Route: /api/ledger/cfo/insights & /api/ledger/cfo/affordability
+Steps to Reproduce:
+1. Call getComprehensiveCfoInsights or evaluateAffordability for an authenticated user with ledger accounts.
+2. Observe backend query execution.
+Expected Result:
+Liquid cash reserves calculated from ledger_accounts balances.
+Actual Result:
+Database query failed with error: `column "balance" does not exist in table ledger_accounts`.
+Root Cause:
+In cfo-intelligence.service.js, SQL queries referenced `SELECT balance, type FROM ledger_accounts`, but the database schema definition in ledger_accounts defines the column as `current_balance`.
+Fix Applied:
+Updated queries in cfo-intelligence.service.js to `SELECT current_balance AS balance, type FROM ledger_accounts`.
+Retest Result:
+PASSED. Real browser and automated tests verified liquid cash correctly fetched from ledger_accounts and used in emergency coverage and affordability calculations.
+Status: FIXED
+------------------------------------------------------------
+
+------------------------------------------------------------
+BUG #008
+Phase: Phase 7 - AI Insights & Recommendations
+Date: 2026-09-25
+Severity: MEDIUM
+Type: Logic / Intelligence
+Page/Route: /api/ledger/cfo/insights (Expense Reduction Engine)
+Steps to Reproduce:
+1. Seed recurring essential expenses (Rent, Electricity) and loan EMIs alongside entertainment subscriptions (Netflix, Spotify).
+2. Run expense reduction detection.
+Expected Result:
+Subscriptions review specifically targets discretionary/entertainment memberships and recurring services (Netflix, Spotify).
+Actual Result:
+Rent and home loan EMIs were tagged as recurring subscriptions under reduction opportunities because `t.is_recurring` was checked without classification scoping.
+Root Cause:
+In cfo-intelligence.service.js, `recurringTx` filter checked `t.is_recurring` unconditionally without checking `classification === 'Lifestyle'` or subscription-specific keyword matching.
+Fix Applied:
+Updated `recurringTx` filter to match explicit subscription keywords (streaming, software, memberships) or `is_recurring && classification === 'Lifestyle'`, ensuring essential rent and loan EMIs remain categorized under Essential Bills and Debt Obligations in the Surplus Engine.
+Retest Result:
+PASSED. Verified in automated test and real browser QA: Rent and EMIs are properly accounted for in the Surplus waterfall, while Expense Reduction Engine targets true discretionary subscription leaks.
+Status: FIXED
+------------------------------------------------------------
+

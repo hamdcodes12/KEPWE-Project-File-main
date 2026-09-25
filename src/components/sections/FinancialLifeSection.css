@@ -1,0 +1,113 @@
+/* Financial Life Section Stylesheet - Background Rhythm #F7F9FC */
+.financial-life-section {
+  background-color: #F7F9FC;
+  padding: 96px 0;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+@media (min-width: 1024px) {
+  .financial-life-section {
+    padding: 112px 0;
+  }
+}
+
+.life-header {
+  max-width: 640px;
+  margin: 0 auto 56px;
+}
+
+.life-title {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(1.85rem, 3vw + 0.5rem, 2.65rem);
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.025em;
+  margin-bottom: 12px;
+}
+
+.life-subtitle {
+  font-size: 1.05rem;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.life-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.life-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 32px 28px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.03);
+  display: flex;
+  flex-direction: column;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.life-card:hover {
+  transform: translateY(-4px);
+  border-color: #214ECF;
+  box-shadow: 0 10px 24px -4px rgba(16, 24, 40, 0.06);
+}
+
+.life-card-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #214ECF;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+
+.life-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: #F7F9FC;
+  border: 1px solid #E4E7EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.life-card-heading {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+.life-card-text {
+  font-size: 0.925rem;
+  color: #667085;
+  line-height: 1.55;
+  margin-bottom: 24px;
+  flex: 1;
+}
+
+.life-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #214ECF;
+}
+
+.life-card-link svg {
+  transition: transform 180ms ease;
+}
+
+.life-card:hover .life-card-link svg {
+  transform: translateX(4px);
+}

@@ -1,0 +1,116 @@
+-- IndexPilot Algo Engine persistence.
+-- Additive and idempotent: safe to apply after algo_additions.sql.
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS algo_orders (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    internal_order_id   UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+    broker_order_id     VARCHAR(120),
+    broker_account_id   UUID REFERENCES broker_accounts(id) ON DELETE SET NULL,
+    user_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    strategy_id         UUID REFERENCES algo_strategies(id) ON DELETE SET NULL,
+    execution_mode      VARCHAR(10) NOT NULL DEFAULT 'LIVE' CHECK (execution_mode = 'LIVE'),
+    instrument          VARCHAR(80) NOT NULL,
+    side                VARCHAR(10) NOT NULL CHECK (side IN ('BUY', 'SELL')),
+    quantity            INTEGER NOT NULL CHECK (quantity > 0),
+    filled_quantity     INTEGER NOT NULL DEFAULT 0 CHECK (filled_quantity >= 0 AND filled_quantity <= quantity),
+    price               NUMERIC(14,4) NOT NULL CHECK (price > 0),
+    average_fill_price  NUMERIC(14,4),
+    stop_loss           NUMERIC(14,4) CHECK (stop_loss IS NULL OR stop_loss > 0),
+    target              NUMERIC(14,4) CHECK (target IS NULL OR target > 0),
+    status              VARCHAR(24) NOT NULL DEFAULT 'CREATED'
+                        CHECK (status IN ('CREATED', 'RECOVERY_PENDING', 'SUBMITTED', 'PARTIALLY_FILLED', 'FILLED', 'CANCELLED', 'REJECTED')),
+    rejection_reason    TEXT,
+    metadata            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS risk_events (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             UUID REFERENCES users(id) ON DELETE CASCADE,
+    event_type          VARCHAR(60) NOT NULL,
+    reason              TEXT NOT NULL,
+    severity            VARCHAR(12) NOT NULL DEFAULT 'HIGH' CHECK (severity IN ('INFO', 'WARN', 'HIGH', 'CRITICAL')),
+    metadata            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS algo_backtest_runs (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    strategy_slug       VARCHAR(80) NOT NULL,
+    instrument          VARCHAR(80) NOT NULL,
+    timeframe           VARCHAR(20) NOT NULL,
+    from_date           DATE,
+    to_date             DATE,
+    parameters          JSONB NOT NULL DEFAULT '{}'::jsonb,
+    results             JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE algo_orders ADD COLUMN IF NOT EXISTS broker_account_id UUID REFERENCES broker_accounts(id) ON DELETE SET NULL;
+ALTER TABLE algo_orders ADD COLUMN IF NOT EXISTS signal_key VARCHAR(300);
+
+CREATE INDEX IF NOT EXISTS idx_algo_orders_user_created ON algo_orders(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_algo_orders_broker_order ON algo_orders(broker_account_id, broker_order_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_algo_orders_signal_key ON algo_orders(user_id, signal_key) WHERE signal_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_risk_events_user_created ON risk_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_backtest_runs_user_created ON algo_backtest_runs(user_id, created_at DESC);
+
+ALTER TABLE algo_orders ADD COLUMN IF NOT EXISTS filled_quantity INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE algo_orders ADD COLUMN IF NOT EXISTS average_fill_price NUMERIC(14,4);
+ALTER TABLE algo_orders DROP CONSTRAINT IF EXISTS algo_orders_filled_quantity_check;
+ALTER TABLE algo_orders ADD CONSTRAINT algo_orders_filled_quantity_check
+    CHECK (filled_quantity >= 0 AND filled_quantity <= quantity);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_algo_open_user_symbol
+    ON algo_positions(user_id, symbol) WHERE status = 'OPEN';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_algo_pending_user_instrument
+    ON algo_orders(user_id, instrument)
+    WHERE status IN ('CREATED', 'RECOVERY_PENDING', 'SUBMITTED', 'PARTIALLY_FILLED');
+
+CREATE TABLE IF NOT EXISTS broker_execution_events (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    broker_account_id   UUID NOT NULL REFERENCES broker_accounts(id) ON DELETE CASCADE,
+    broker_order_id     VARCHAR(120) NOT NULL,
+    status              VARCHAR(40) NOT NULL,
+    filled_quantity     INTEGER NOT NULL DEFAULT 0,
+    average_price       NUMERIC(14,4),
+    payload_hash        CHAR(64) NOT NULL,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (broker_account_id, broker_order_id, status, filled_quantity, average_price)
+);
+
+ALTER TABLE broker_execution_events ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'broker_execution_events' AND policyname = 'broker_execution_events_owner') THEN
+                CREATE POLICY broker_execution_events_owner ON broker_execution_events
+                    USING (broker_account_id IN (
+                        SELECT id FROM broker_accounts
+                        WHERE user_id = current_setting('app.current_user_id', true)::uuid
+                    ));
+        END IF;
+END $$;
+
+ALTER TABLE algo_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE risk_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE algo_backtest_runs ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'algo_orders' AND policyname = 'algo_orders_owner') THEN
+        CREATE POLICY algo_orders_owner ON algo_orders USING (user_id = current_setting('app.current_user_id', true)::uuid) WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'risk_events' AND policyname = 'risk_events_owner') THEN
+        CREATE POLICY risk_events_owner ON risk_events USING (user_id = current_setting('app.current_user_id', true)::uuid) WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'algo_backtest_runs' AND policyname = 'algo_backtest_runs_owner') THEN
+        CREATE POLICY algo_backtest_runs_owner ON algo_backtest_runs USING (user_id = current_setting('app.current_user_id', true)::uuid) WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+    END IF;
+END $$;
+
+ALTER TABLE algo_settings ALTER COLUMN max_consecutive_losses SET DEFAULT 2;
+
+COMMIT;

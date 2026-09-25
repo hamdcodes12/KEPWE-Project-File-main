@@ -1,0 +1,343 @@
+/* New Company Page Premium Service Cards Hero Section Styles */
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+.nc-hero-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px 100px;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Background Lighting & Gradients */
+.nc-bg-glow {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.nc-bg-glow-blue {
+  top: -10%;
+  left: 12%;
+  width: 650px;
+  height: 650px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0) 70%);
+  filter: blur(40px);
+}
+
+.nc-bg-glow-cyan {
+  bottom: 10%;
+  left: 5%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.05) 0%, rgba(20, 184, 166, 0) 70%);
+  filter: blur(45px);
+}
+
+.nc-bg-glow-lavender {
+  bottom: -5%;
+  right: 10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.04) 0%, rgba(124, 58, 237, 0) 70%);
+  filter: blur(50px);
+}
+
+/* Technical Subtle Grid Overlay */
+.nc-bg-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(to right, rgba(226, 232, 240, 0.45) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 232, 240, 0.45) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at 50% 45%, black 40%, transparent 85%);
+  -webkit-mask-image: radial-gradient(circle at 50% 45%, black 40%, transparent 85%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Floating Decorative Elements */
+.nc-float-dot-1 {
+  position: absolute;
+  top: 22%;
+  left: 13%;
+  width: 9px;
+  height: 9px;
+  background: #14B8A6;
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(20, 184, 166, 0.4);
+  animation: ncFloat 6s ease-in-out infinite;
+  z-index: 2;
+}
+
+.nc-float-dot-2 {
+  position: absolute;
+  bottom: 26%;
+  right: 14%;
+  width: 8px;
+  height: 8px;
+  background: #214ECF;
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.4);
+  animation: ncFloat 8s ease-in-out infinite 1s;
+  z-index: 2;
+}
+
+.nc-float-circle-1 {
+  position: absolute;
+  top: 28%;
+  right: 13%;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(20, 184, 166, 0.35);
+  border-radius: 50%;
+  animation: ncFloat 7s ease-in-out infinite 0.5s;
+  z-index: 2;
+}
+
+.nc-float-circle-2 {
+  position: absolute;
+  bottom: 32%;
+  left: 11%;
+  width: 25px;
+  height: 25px;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  border-radius: 50%;
+  animation: ncFloat 9s ease-in-out infinite 1.5s;
+  z-index: 2;
+}
+
+@keyframes ncFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-11px) scale(1.04);
+  }
+}
+
+/* Hero Content Container */
+.nc-hero-container {
+  position: relative;
+  z-index: 10;
+  max-width: 1060px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* 1. /new-company Pill Badge */
+.nc-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(37, 99, 235, 0.07);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 999px;
+  padding: 8px 18px;
+  margin-bottom: 20px;
+  transition: all 220ms ease;
+  animation: ncFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.nc-badge-pill:hover {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.12);
+}
+
+.nc-badge-icon {
+  color: #1D4ED8;
+}
+
+.nc-badge-text {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1D4ED8;
+  letter-spacing: -0.01em;
+}
+
+/* 2. Main Heading */
+.nc-hero-heading {
+  font-family: 'Archivo Black', 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(38px, 4.8vw + 1rem, 64px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: #111827;
+  margin: 0 0 16px 0;
+  max-width: 900px;
+  animation: ncFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 100ms both;
+}
+
+.nc-accent-blue {
+  color: #214ECF;
+}
+
+/* 3. Subtitle */
+.nc-hero-subtitle {
+  font-size: 18px;
+  font-weight: 500;
+  color: #64748B;
+  line-height: 1.5;
+  margin: 0 auto 40px;
+  max-width: 720px;
+  animation: ncFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 200ms both;
+}
+
+/* 4. 3-Column Premium Service Card Grid */
+.nc-service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+  max-width: 1020px;
+  margin-bottom: 48px;
+}
+
+/* Individual Premium Service Card */
+.nc-service-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.035);
+  padding: 18px 20px;
+  box-sizing: border-box;
+  text-align: left;
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+  animation: ncFadeUp 550ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  backdrop-filter: blur(8px);
+}
+
+.nc-service-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(37, 99, 235, 0.25);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.09);
+  background: #FFFFFF;
+}
+
+/* Icon Container with Custom Soft Tint */
+.nc-icon-container {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 200ms ease;
+}
+
+.nc-service-card:hover .nc-icon-container {
+  transform: scale(1.05);
+}
+
+/* Service Name Text */
+.nc-service-title {
+  color: #172033;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+/* 5. Primary CTA Button */
+.nc-cta-wrap {
+  animation: ncFadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) 400ms both;
+}
+
+.nc-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #214ECF;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 32px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  cursor: pointer;
+}
+
+.nc-btn-primary:hover {
+  background: #1D4ED8;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.28);
+}
+
+.nc-btn-primary .nc-btn-arrow {
+  transition: transform 180ms ease;
+}
+
+.nc-btn-primary:hover .nc-btn-arrow {
+  transform: translateX(4px);
+}
+
+/* Fade Up Keyframe Animation */
+@keyframes ncFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 900px) {
+  .nc-service-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+}
+
+@media (max-width: 600px) {
+  .nc-hero-wrapper {
+    padding: 60px 16px 80px;
+  }
+
+  .nc-hero-heading {
+    font-size: 36px;
+  }
+
+  .nc-hero-subtitle {
+    font-size: 16px;
+    margin-bottom: 32px;
+  }
+
+  .nc-service-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .nc-btn-primary {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

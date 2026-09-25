@@ -1,0 +1,108 @@
+# Render Blueprint — KEPWE (single-service deployment)
+# Docs: https://render.com/docs/blueprint-spec
+#
+# This defines ONE web service that:
+#   1. Builds the React/Vite frontend into `dist/`
+#   2. Installs the Express backend dependencies
+#   3. Runs the Express server, which serves the built frontend AND the
+#      `/api/*` routes from the same process/port.
+#
+# To use: push this repo to GitHub/GitLab, then in the Render dashboard
+# choose "New +" -> "Blueprint" and point it at this repo. Render will read
+# this file automatically. Secret values (marked sync: false) must be filled
+# in manually in the Render dashboard after the service is created.
+
+services:
+  - type: web
+    name: kepwe-app
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm run render-build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render sets PORT automatically; the app reads it via process.env.PORT.
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL  
+        value: https://vzqjoncaupafwcdrktde.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cWpvbmNhdXBhZndjZHJrdGRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjc2NjE0NTYsImV4cCI6MjA0MzIzNzQ1Nn0.sb_publishable_3IqNZMi5m1G5ugIb9Z_8CA_70mOSE-O
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: ADMIN_BOOTSTRAP_ENABLED
+        value: "true"
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_BOOTSTRAP_RESET_PASSWORD
+        value: "false"
+      - key: CORS_ORIGINS
+        value: ""
+      - key: VITE_API_BASE_URL
+        value: /api
+      - key: VITE_APP_NAME
+        value: "KEPWE - Everything Your Business Needs"
+      - key: VITE_APP_ENV
+        value: production
+      - key: UPSTOX_API_KEY
+        sync: false
+      - key: UPSTOX_API_SECRET
+        sync: false
+      - key: UPSTOX_ACCESS_TOKEN
+        sync: false
+      - key: UPSTOX_REDIRECT_URI
+        sync: false
+      - key: UPSTOX_TIMEOUT_MS
+        value: "8000"
+      - key: UPSTOX_CACHE_TTL_MS
+        value: "60000"
+      - key: BROKER_TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: DHAN_API_KEY
+        sync: false
+      - key: DHAN_API_SECRET
+        sync: false
+      - key: DHAN_REDIRECT_URL
+        value: https://kepwe.in/api/lemonn/callback
+      - key: DHAN_STATIC_IP
+        value: "103.117.180.146"
+      - key: DHAN_TIMEOUT_MS
+        value: "10000"
+      - key: ANGEL_ONE_API_KEY
+        sync: false
+      - key: ANGEL_ONE_CLIENT_CODE
+        sync: false
+      - key: ANGEL_ONE_TOTP_SECRET
+        sync: false
+      - key: ANGEL_ONE_PASSWORD
+        sync: false
+      - key: ANGEL_ONE_MPIN
+        sync: false
+      - key: ANGEL_ONE_CLIENT_LOCAL_IP
+        sync: false
+      - key: ANGEL_ONE_CLIENT_PUBLIC_IP
+        sync: false
+      - key: ANGEL_ONE_MAC_ADDRESS
+        sync: false
+      - key: ANGEL_ONE_STATIC_IP
+        sync: false
+      - key: DHAN_WEBHOOK_TOKEN
+        sync: false
+      - key: ANGEL_ONE_WEBHOOK_TOKEN
+        sync: false
+      - key: OUTBOUND_PUBLIC_IP
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: OTP_FROM_EMAIL
+        value: "KEPWE <help@kepwe.in>"
+
