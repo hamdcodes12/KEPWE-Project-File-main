@@ -46,6 +46,14 @@ CREATE INDEX IF NOT EXISTS idx_ledger_fin_profiles_user ON ledger_financial_prof
 -- 3. Extend ledger_categories with classification
 ALTER TABLE ledger_categories ADD COLUMN IF NOT EXISTS classification VARCHAR(50);
 
+-- Deduplicate existing category rows before creating unique index
+DELETE FROM ledger_categories a
+USING ledger_categories b
+WHERE a.ctid < b.ctid
+  AND COALESCE(a.user_id, '00000000-0000-0000-0000-000000000000') = COALESCE(b.user_id, '00000000-0000-0000-0000-000000000000')
+  AND a.type = b.type
+  AND a.name = b.name;
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ledger_categories_name_user 
     ON ledger_categories (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'), type, name);
 

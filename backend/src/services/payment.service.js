@@ -17,6 +17,7 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { pool } from '../config/db.js';
 import { upgradeToPaidPlan, logSubscriptionEvent } from './subscription.service.js';
+import { handleLedgerRazorpayWebhook, isLedgerSubscriptionOrder } from './ledger-subscription.service.js';
 
 // ── Razorpay SDK instance ──────────────────────────────────────────────────
 // key_id / key_secret are read lazily (at call time) to survive the dotenv
@@ -234,15 +235,18 @@ export async function verifyPaymentAndActivate(userId, razorpayOrderId, razorpay
  * @param {object} parsedBody - Already-parsed JSON body (from express middleware)
  * @param {string} signature  - x-razorpay-signature header value
  */
-export async function handleRazorpayWebhook(rawBody, parsedBody, signature) {
+export async function handleRazorpayWebhook(rawBody, parsedBody, signature, suppliedEventId = null) {
   // ── 1. Verify webhook signature against raw bytes ──────────────────────
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
   if (!secret) {
     console.error('[webhook] RAZORPAY_WEBHOOK_SECRET is not configured');
     throw new Error('Webhook secret not configured');
   }
 
   const bodyToVerify = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody);
+  if (!/^[a-f\d]{64}$/i.test(signature || '')) {
+    throw new Error('Invalid webhook signature');
+  }
   const expectedSig = crypto
     .createHmac('sha256', secret)
     .update(bodyToVerify)
@@ -254,6 +258,11 @@ export async function handleRazorpayWebhook(rawBody, parsedBody, signature) {
 
   const event   = parsedBody?.event;
   const payment = parsedBody?.payload?.payment?.entity;
+
+  if (payment?.notes?.product === 'ledger' || await isLedgerSubscriptionOrder(payment?.order_id)) {
+    const eventId = suppliedEventId || parsedBody?.id || parsedBody?.event_id || payment?.id;
+    return handleLedgerRazorpayWebhook(bodyToVerify, parsedBody, signature, eventId);
+  }
 
   console.log('[webhook] Received event:', event, payment?.id || '(no payment)');
 

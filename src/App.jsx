@@ -290,6 +290,7 @@ function App() {
 
           {/* ── KEPWE LEDGER workspace (Authenticated) ─────────────── */}
           <Route path="/ledger/app" element={<ProtectedLedgerRoute><LedgerDashboardPage /></ProtectedLedgerRoute>} />
+          <Route path="/ledger/pricing" element={<ProtectedLedgerRoute><LedgerDashboardPage /></ProtectedLedgerRoute>} />
           <Route path="/ledger/workspace" element={<Navigate to="/ledger/app" replace />} />
           <Route path="/ledger-workspace" element={<Navigate to="/ledger/app" replace />} />
           <Route path="/dashboard" element={<Navigate to="/ledger/app" replace />} />

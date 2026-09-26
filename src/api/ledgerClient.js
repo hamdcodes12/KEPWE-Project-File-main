@@ -1,5 +1,9 @@
 import { apiFetch, downloadAuthenticatedFile } from './client';
 
+export async function fetchLedgerSubscription() {
+  return apiFetch('/ledger/subscription');
+}
+
 // 1. Dashboard
 export async function fetchLedgerDashboard(params = {}) {
   const query = new URLSearchParams();

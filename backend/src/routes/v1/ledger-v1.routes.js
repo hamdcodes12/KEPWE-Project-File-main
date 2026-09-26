@@ -16,10 +16,14 @@ import { parseStatementFile } from '../../services/ledger-provider.service.js';
 
 import { requireIdempotency } from '../../middleware/idempotency.js';
 import { requireProductAccess } from '../../middleware/product-auth.js';
+import { requireLedgerFeature, limitLedgerHistory } from '../../middleware/ledger-plan.middleware.js';
 
 const router = Router();
 router.use(requireIdempotency());
 router.use(requireProductAccess('ledger'));
+
+const requireAdvancedReports = requireLedgerFeature('advanced_reports');
+const requireAssetTracking = requireLedgerFeature('asset_tracking');
 
 // Helper to determine active company ID (with strict tenant isolation enforcement)
 function getActiveCompanyId(req) {
@@ -80,7 +84,7 @@ router.post('/accounts', requireAuth, async (req, res, next) => {
 });
 
 // ── 3. DOUBLE-ENTRY JOURNALS ────────────────────────────────────────────────
-router.get('/journals', requireAuth, async (req, res, next) => {
+router.get('/journals', requireAuth, limitLedgerHistory, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const result = await accountingEngine.getJournalEntries(companyId, req.query);
@@ -115,7 +119,7 @@ router.post('/journals/:id/void', requireAuth, async (req, res, next) => {
 });
 
 // ── 4. GENERAL LEDGER & TRIAL BALANCE ────────────────────────────────────────
-router.get('/ledger/:accountId', requireAuth, async (req, res, next) => {
+router.get('/ledger/:accountId', requireAuth, requireAdvancedReports, limitLedgerHistory, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const result = await accountingEngine.getGeneralLedger(
@@ -130,7 +134,7 @@ router.get('/ledger/:accountId', requireAuth, async (req, res, next) => {
   }
 });
 
-router.get('/trial-balance', requireAuth, async (req, res, next) => {
+router.get('/trial-balance', requireAuth, requireAdvancedReports, limitLedgerHistory, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const result = await accountingEngine.getTrialBalance(companyId, req.query.asOfDate);
@@ -141,7 +145,7 @@ router.get('/trial-balance', requireAuth, async (req, res, next) => {
 });
 
 // ── 5. FINANCIAL REPORTS ────────────────────────────────────────────────────
-router.get('/reports/profit-loss', requireAuth, async (req, res, next) => {
+router.get('/reports/profit-loss', requireAuth, requireAdvancedReports, limitLedgerHistory, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const result = await accountingEngine.getProfitAndLoss(companyId, req.query.dateFrom, req.query.dateTo);
@@ -151,7 +155,7 @@ router.get('/reports/profit-loss', requireAuth, async (req, res, next) => {
   }
 });
 
-router.get('/reports/balance-sheet', requireAuth, async (req, res, next) => {
+router.get('/reports/balance-sheet', requireAuth, requireAdvancedReports, limitLedgerHistory, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const result = await accountingEngine.getBalanceSheet(companyId, req.query.asOfDate);
@@ -161,7 +165,7 @@ router.get('/reports/balance-sheet', requireAuth, async (req, res, next) => {
   }
 });
 
-router.get('/reports/cash-flow', requireAuth, async (req, res, next) => {
+router.get('/reports/cash-flow', requireAuth, requireAdvancedReports, limitLedgerHistory, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const result = await accountingEngine.getCashFlowStatement(companyId, req.query.dateFrom, req.query.dateTo);
@@ -172,7 +176,7 @@ router.get('/reports/cash-flow', requireAuth, async (req, res, next) => {
 });
 
 // ── 6. INVOICES ─────────────────────────────────────────────────────────────
-router.get('/invoices', requireAuth, async (req, res, next) => {
+router.get('/invoices', requireAuth, limitLedgerHistory, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const result = await invoiceEngine.getGstInvoices(companyId, req.query);
@@ -206,7 +210,7 @@ router.post('/invoices/:id/payments', requireAuth, async (req, res, next) => {
 });
 
 // ── 7. PURCHASES / VENDOR BILLS ─────────────────────────────────────────────
-router.get('/purchases', requireAuth, async (req, res, next) => {
+router.get('/purchases', requireAuth, limitLedgerHistory, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const result = await invoiceEngine.getVendorBills(companyId, req.query);
@@ -548,7 +552,7 @@ router.post('/banks/reconciliation/match', requireAuth, async (req, res, next) =
 });
 
 // ── 14. FIXED ASSETS & DEPRECIATION ──────────────────────────────────────────
-router.get('/fixed-assets', requireAuth, async (req, res, next) => {
+router.get('/fixed-assets', requireAuth, requireAssetTracking, limitLedgerHistory, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const assets = await fixedAssetsEngine.getFixedAssets(companyId);
@@ -558,7 +562,7 @@ router.get('/fixed-assets', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/fixed-assets', requireAuth, async (req, res, next) => {
+router.post('/fixed-assets', requireAuth, requireAssetTracking, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const asset = await fixedAssetsEngine.createFixedAsset(companyId, req.userId, req.body);
@@ -568,7 +572,7 @@ router.post('/fixed-assets', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/fixed-assets/depreciation/run', requireAuth, async (req, res, next) => {
+router.post('/fixed-assets/depreciation/run', requireAuth, requireAssetTracking, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const result = await fixedAssetsEngine.executeDepreciationRun(companyId, req.userId, req.body);
@@ -578,7 +582,7 @@ router.post('/fixed-assets/depreciation/run', requireAuth, async (req, res, next
   }
 });
 
-router.get('/fixed-assets/depreciation/runs', requireAuth, async (req, res, next) => {
+router.get('/fixed-assets/depreciation/runs', requireAuth, requireAssetTracking, limitLedgerHistory, async (req, res, next) => {
   try {
     const companyId = getActiveCompanyId(req);
     const runs = await fixedAssetsEngine.getDepreciationRuns(companyId);

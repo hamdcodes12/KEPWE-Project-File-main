@@ -29,6 +29,12 @@ services:
       # Render sets PORT automatically; the app reads it via process.env.PORT.
       - key: SUPABASE_DB_URL
         sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
       - key: NEXT_PUBLIC_SUPABASE_URL  
         value: https://vzqjoncaupafwcdrktde.supabase.co
       - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY

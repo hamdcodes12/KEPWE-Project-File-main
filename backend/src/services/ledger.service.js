@@ -1,6 +1,7 @@
 import { pool, hasDb } from '../config/db.js';
 import crypto from 'crypto';
 import { formatDateOnly } from '../lib/date-utils.js';
+import { assertLedgerLimit } from './ledger-subscription.service.js';
 
 // ── Helper: Safe Currency Rounding ──────────────────────────────────────────
 export function roundMoney(val) {
@@ -118,33 +119,53 @@ export async function getAccounts(userId) {
 export async function createAccount(userId, data) {
   const openingBalance = roundMoney(data.openingBalance || 0);
   const accountId = crypto.randomUUID();
-
-  if (data.isDefault) {
-    await pool.query(`UPDATE ledger_accounts SET is_default = FALSE WHERE user_id = $1`, [userId]);
+  const accountType = data.type || 'Bank Account';
+  const client = await pool.connect();
+  let row;
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
+    if (accountType === 'Bank Account') {
+      const count = await client.query(
+        `SELECT COUNT(*)::int AS count FROM ledger_accounts
+         WHERE user_id = $1 AND type = 'Bank Account' AND is_active = TRUE`,
+        [userId]
+      );
+      await assertLedgerLimit(userId, 'bank_accounts', count.rows[0].count, client);
+    }
+    if (data.isDefault) {
+      await client.query(`UPDATE ledger_accounts SET is_default = FALSE WHERE user_id = $1`, [userId]);
+    }
+    const res = await client.query(
+      `INSERT INTO ledger_accounts
+         (id, user_id, name, type, account_number, bank_name, ifsc_code, upi_id, opening_balance, current_balance, currency, is_default, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING *`,
+      [
+        accountId,
+        userId,
+        data.name,
+        accountType,
+        data.accountNumber || null,
+        data.bankName || null,
+        data.ifscCode || null,
+        data.upiId || null,
+        openingBalance,
+        openingBalance,
+        data.currency || 'INR',
+        Boolean(data.isDefault),
+        data.notes || null,
+      ]
+    );
+    row = res.rows[0];
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-  const res = await pool.query(
-    `INSERT INTO ledger_accounts
-       (id, user_id, name, type, account_number, bank_name, ifsc_code, upi_id, opening_balance, current_balance, currency, is_default, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-     RETURNING *`,
-    [
-      accountId,
-      userId,
-      data.name,
-      data.type || 'Bank Account',
-      data.accountNumber || null,
-      data.bankName || null,
-      data.ifscCode || null,
-      data.upiId || null,
-      openingBalance,
-      openingBalance,
-      data.currency || 'INR',
-      Boolean(data.isDefault),
-      data.notes || null,
-    ]
-  );
   await recordAuditLog(userId, 'CREATE', 'ACCOUNT', accountId, { name: data.name });
-  const row = res.rows[0];
   return {
     id: row.id,
     name: row.name,
@@ -2306,17 +2327,17 @@ export async function recordRecurringExpense(userId, data) {
   };
 }
 
-export async function getImportHistory(userId) {
+export async function getImportHistory(userId, historyStart = null) {
   const res = await pool.query(
     `SELECT i.id, i.file_name, i.file_type, i.source_type, i.institution, i.closing_balance,
             i.imported_count, i.duplicate_count, i.failed_count, i.status, i.created_at,
             a.name AS account_name
      FROM ledger_statement_imports i
      LEFT JOIN ledger_accounts a ON a.id = i.account_id
-     WHERE i.user_id = $1
+    WHERE i.user_id = $1 AND ($2::date IS NULL OR i.created_at >= $2::date)
      ORDER BY i.created_at DESC
      LIMIT 50`,
-    [userId]
+      [userId, historyStart]
   );
   return res.rows.map((r) => ({
     id: r.id,

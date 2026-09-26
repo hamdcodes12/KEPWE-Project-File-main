@@ -38,6 +38,7 @@ import {
   Zap,
 } from 'lucide-react';
 import './LedgerMarketingPage.css';
+import LedgerPricingSection from '../../components/ledger/LedgerPricingSection';
 
 // ─── 04. Core Features Pillars ───────────────────────────────────────────────
 const CORE_FEATURES = [
@@ -829,6 +830,8 @@ export default function LedgerMarketingPage() {
 
         </div>
       </section>
+
+      <LedgerPricingSection />
 
       {/* ─── 12. FAQ SECTION ────────────────────────────────────────────────── */}
       <section className="ledger-faq-section" id="faq">

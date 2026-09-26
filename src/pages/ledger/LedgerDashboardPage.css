@@ -141,6 +141,34 @@
   font-weight: 700;
 }
 
+.ledger-plan-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 16px 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 6px;
+  color: #D7E2DE;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ledger-plan-status button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #86D2B0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ledger-plan-status button:hover {
+  color: #FFFFFF;
+  text-decoration: underline;
+}
+
 .ledger-sidebar-nav {
   flex: 1;
   overflow-y: auto;
@@ -185,6 +213,14 @@
   background: var(--ledger-primary);
   color: #FFFFFF;
   box-shadow: 0 4px 12px rgba(33, 78, 207, 0.3);
+}
+
+.sidebar-nav-item.locked {
+  color: #7F8B99;
+}
+
+.sidebar-nav-item.locked > svg {
+  color: #A9B7C3;
 }
 
 .nav-item-content {

@@ -124,6 +124,7 @@ async function main() {
     await applySqlFile(client, join(__dirname, 'ledger_production_system.sql'), 'ledger_production_system.sql');
     await applySqlFile(client, join(__dirname, 'ledger_production_v2.sql'), 'ledger_production_v2.sql');
     await applySqlFile(client, join(__dirname, 'ledger_integrations.sql'), 'ledger_integrations.sql');
+    await applySqlFile(client, join(__dirname, 'ledger_subscriptions.sql'), 'ledger_subscriptions.sql');
     await applySqlFile(client, join(__dirname, 'profile_avatar_and_crm_seeds.sql'), 'profile_avatar_and_crm_seeds.sql');
     await applySqlFile(client, join(__dirname, 'product_memberships_schema.sql'), 'product_memberships_schema.sql');
     await applySqlFile(client, join(__dirname, 'quant_additions.sql'), 'quant_additions.sql');
@@ -135,6 +136,16 @@ async function main() {
     await applySqlFile(client, join(__dirname, 'dhan_integration.sql'), 'dhan_integration.sql');
     await applySqlFile(client, join(__dirname, 'quant_subscription_system.sql'), 'quant_subscription_system.sql');
     await applySqlFile(client, join(__dirname, 'fix_quant_memberships.sql'), 'fix_quant_memberships.sql');
+    // Deduplicate ledger_categories before applying the PRD dashboard migration
+    // which adds a UNIQUE INDEX that would fail if duplicate (user_id, type, name) rows exist.
+    await client.query(`
+      DELETE FROM ledger_categories a
+      USING ledger_categories b
+      WHERE a.ctid < b.ctid
+        AND COALESCE(a.user_id, '00000000-0000-0000-0000-000000000000') = COALESCE(b.user_id, '00000000-0000-0000-0000-000000000000')
+        AND a.type = b.type
+        AND a.name = b.name
+    `);
     await applySqlFile(client, join(__dirname, 'ledger_prd_dashboard.sql'), 'ledger_prd_dashboard.sql');
     await applySqlFile(client, join(__dirname, 'ledger_prd_phase6_upload.sql'), 'ledger_prd_phase6_upload.sql');
     await applySqlFile(client, join(__dirname, 'ledger_prd_phase8_goals.sql'), 'ledger_prd_phase8_goals.sql');

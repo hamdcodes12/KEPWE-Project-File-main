@@ -79,11 +79,13 @@ export async function runAutoMigrations(client) {
       'ledger_production_system.sql',
       'ledger_production_v2.sql',
       'ledger_integrations.sql',
+      'ledger_subscriptions.sql',
       'profile_avatar_and_crm_seeds.sql',
       'product_memberships_schema.sql',
       'quant_additions.sql',
       'ledger_prd_dashboard.sql',
-      'ledger_prd_phase6_upload.sql'
+      'ledger_prd_phase6_upload.sql',
+      'ledger_prd_phase8_goals.sql'
     ];
 
     for (const file of files) {
@@ -150,6 +152,16 @@ export async function runAutoMigrations(client) {
       const integrationsPath = resolve(__dirname, '../../db/ledger_integrations.sql');
       if (fs.existsSync(integrationsPath)) {
         const sql = fs.readFileSync(integrationsPath, 'utf-8');
+        if (client.exec) await client.exec(sql); else await client.query(sql);
+      }
+    }
+    const ledgerPlansCheck = await client.query(`
+      SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ledger_plans') AS exists;
+    `);
+    if (!ledgerPlansCheck.rows[0]?.exists) {
+      const plansPath = resolve(__dirname, '../../db/ledger_subscriptions.sql');
+      if (fs.existsSync(plansPath)) {
+        const sql = fs.readFileSync(plansPath, 'utf-8');
         if (client.exec) await client.exec(sql); else await client.query(sql);
       }
     }

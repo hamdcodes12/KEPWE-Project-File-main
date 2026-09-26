@@ -8,9 +8,86 @@ import * as parserService from '../services/statement-parser.service.js';
 import * as cfoIntelligenceService from '../services/cfo-intelligence.service.js';
 import * as goalsService from '../services/goals.service.js';
 import * as financialReportsService from '../services/financial-reports.service.js';
+import * as ledgerSubscriptionService from '../services/ledger-subscription.service.js';
+import { limitLedgerHistory, requireLedgerAiInsight, requireLedgerFeature, trackLedgerDashboardInsight } from '../middleware/ledger-plan.middleware.js';
 
 const router = Router();
+router.get('/ledger/plans', async (_req, res, next) => {
+  try {
+    res.json({ plans: await ledgerSubscriptionService.listLedgerPlans() });
+  } catch (err) {
+    next(err);
+  }
+});
 router.use('/ledger', requireProductAccess('ledger'));
+
+router.get('/ledger/subscription', requireAuth, async (req, res, next) => {
+  try {
+    res.json({ subscription: await ledgerSubscriptionService.getLedgerSubscription(req.userId) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/ledger/subscription/orders', requireAuth, validateBody(z.object({
+  planCode: z.enum(['PRO', 'PRO_PLUS']),
+  billingPeriod: z.enum(['monthly', 'yearly']),
+}).strict()), async (req, res, next) => {
+  try {
+    const order = await ledgerSubscriptionService.createLedgerPaymentOrder(
+      req.userId,
+      req.validatedBody.planCode,
+      req.validatedBody.billingPeriod
+    );
+    res.status(201).json({
+      order: {
+        orderId: order.razorpay_order_id,
+        amount: Math.round(Number(order.amount_inr) * 100),
+        currency: order.currency,
+        planCode: order.planCode,
+        planName: order.planName,
+        billingPeriod: order.billingPeriod,
+      },
+      razorpayKeyId: order.keyId,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 502).json({ error: err.message || 'Unable to create Razorpay order.' });
+  }
+});
+
+router.post('/ledger/subscription/verify', requireAuth, validateBody(z.object({
+  razorpay_order_id: z.string().min(1),
+  razorpay_payment_id: z.string().min(1),
+  razorpay_signature: z.string().min(1),
+}).strict()), async (req, res) => {
+  try {
+    const subscription = await ledgerSubscriptionService.verifyLedgerPayment(
+      req.userId,
+      req.validatedBody.razorpay_order_id,
+      req.validatedBody.razorpay_payment_id,
+      req.validatedBody.razorpay_signature
+    );
+    res.json({ success: true, subscription });
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ error: err.message || 'Payment verification failed.' });
+  }
+});
+
+router.post('/ledger/subscription/failure', requireAuth, validateBody(z.object({
+  orderId: z.string().min(1),
+  reason: z.string().max(500).optional(),
+}).strict()), async (req, res, next) => {
+  try {
+    const updated = await ledgerSubscriptionService.markLedgerPaymentFailed(
+      req.userId,
+      req.validatedBody.orderId,
+      req.validatedBody.reason
+    );
+    res.json({ success: true, updated });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ── Validation Schemas ──────────────────────────────────────────────────────
 const accountSchema = z.object({
@@ -280,9 +357,10 @@ const goalContributeSchema = z.object({
 // ============================================================================
 
 // 1. Dashboard
-router.get('/ledger/dashboard', requireAuth, async (req, res, next) => {
+router.get('/ledger/dashboard', requireAuth, limitLedgerHistory, trackLedgerDashboardInsight, async (req, res, next) => {
   try {
     const data = await ledgerService.getDashboardData(req.userId, req.query);
+    if (!req.includeLedgerAiInsight) data.cfoInsight = null;
     res.json(data);
   } catch (err) {
     next(err);
@@ -332,6 +410,9 @@ router.post('/ledger/accounts', requireAuth, validateBody(accountSchema), async 
     const account = await ledgerService.createAccount(req.userId, req.validatedBody);
     res.status(201).json({ account });
   } catch (err) {
+    if (err.code === 'LEDGER_PLAN_LIMIT_REACHED') {
+      return res.status(403).json({ error: err.message, code: err.code, limit: err.limit, upgradeUrl: '/ledger/pricing' });
+    }
     next(err);
   }
 });
@@ -376,8 +457,8 @@ router.post('/ledger/statements/import-file', requireAuth, validateBody(statemen
   try { res.status(201).json(await integrationService.importStatementFile(req.userId, req.validatedBody)); }
   catch (err) { next(err); }
 });
-router.get('/ledger/statements/import-history', requireAuth, async (req, res, next) => {
-  try { res.json({ imports: await integrationService.listStatementImports(req.userId) }); }
+router.get('/ledger/statements/import-history', requireAuth, limitLedgerHistory, async (req, res, next) => {
+  try { res.json({ imports: await integrationService.listStatementImports(req.userId, req.ledgerHistoryCutoff) }); }
   catch (err) { next(err); }
 });
 
@@ -389,7 +470,7 @@ router.post('/ledger/transactions/:id/reconcile', requireAuth, async (req, res, 
   } catch (err) { next(err); }
 });
 
-router.get('/ledger/transactions', requireAuth, async (req, res, next) => {
+router.get('/ledger/transactions', requireAuth, limitLedgerHistory, async (req, res, next) => {
   try {
     const result = await ledgerService.getTransactions(req.userId, req.query);
     res.json(result);
@@ -537,9 +618,9 @@ router.post('/ledger/data/recurring-expense', requireAuth, validateBody(recurrin
 });
 
 // 5. Statement Import History
-router.get('/ledger/data/import-history', requireAuth, async (req, res, next) => {
+router.get('/ledger/data/import-history', requireAuth, limitLedgerHistory, async (req, res, next) => {
   try {
-    const imports = await ledgerService.getImportHistory(req.userId);
+    const imports = await ledgerService.getImportHistory(req.userId, req.ledgerHistoryCutoff);
     res.json({ imports });
   } catch (err) {
     next(err);
@@ -547,9 +628,22 @@ router.get('/ledger/data/import-history', requireAuth, async (req, res, next) =>
 });
 
 // ── Phase 7: AI CFO Insights & Intelligence ───────────────────────────
-router.get('/ledger/cfo/insights', requireAuth, async (req, res, next) => {
+router.get('/ledger/cfo/insights', requireAuth, requireLedgerAiInsight, async (req, res, next) => {
   try {
-    const insights = await cfoIntelligenceService.getComprehensiveCfoInsights(req.userId);
+    let insights = await cfoIntelligenceService.getComprehensiveCfoInsights(req.userId);
+    const plan = await ledgerSubscriptionService.getLedgerEntitlements(req.userId);
+    if (plan.features?.ai_personal_cfo !== true) {
+      insights = {
+        ...insights,
+        metrics: Object.fromEntries(Object.entries(insights.metrics || {}).filter(([key]) => [
+          'monthlyIncome', 'recordedExpenses', 'recordedSavings', 'savingsRate',
+          'essentialExpenses', 'lifestyleExpenses', 'financialExpenses', 'otherExpenses',
+        ].includes(key))),
+        reductionOpportunities: (insights.reductionOpportunities || []).filter((item) => item.type !== 'recurring_subscriptions'),
+        alerts: (insights.alerts || []).filter((item) => ['savings_target_shortfall', 'cfo_healthy_state'].includes(item.id)),
+      };
+      delete insights.surplusAllocation;
+    }
     res.json({
       success: true,
       insights,
@@ -559,7 +653,7 @@ router.get('/ledger/cfo/insights', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/ledger/cfo/affordability', requireAuth, validateBody(affordabilitySchema), async (req, res, next) => {
+router.post('/ledger/cfo/affordability', requireAuth, requireLedgerFeature('affordability_analysis'), validateBody(affordabilitySchema), async (req, res, next) => {
   try {
     const evaluation = await cfoIntelligenceService.evaluateAffordability(req.userId, req.validatedBody);
     res.json({
@@ -571,7 +665,7 @@ router.post('/ledger/cfo/affordability', requireAuth, validateBody(affordability
   }
 });
 
-router.post('/ledger/cfo/ask', requireAuth, validateBody(cfoQuestionSchema), async (req, res, next) => {
+router.post('/ledger/cfo/ask', requireAuth, requireLedgerFeature('ai_personal_cfo'), validateBody(cfoQuestionSchema), async (req, res, next) => {
   try {
     const response = await cfoIntelligenceService.processNaturalLanguageCfoQuery(req.userId, req.validatedBody.question);
     res.json({
@@ -604,7 +698,7 @@ router.post('/ledger/goals', requireAuth, validateBody(goalCreateSchema), async 
       goal,
     });
   } catch (err) {
-    res.status(400).json({ error: err.message || 'Failed to create savings goal.' });
+    res.status(err.statusCode || 400).json({ error: err.message || 'Failed to create savings goal.', code: err.code, limit: err.limit, upgradeUrl: err.code === 'LEDGER_PLAN_LIMIT_REACHED' ? '/ledger/pricing' : undefined });
   }
 });
 
@@ -645,7 +739,7 @@ router.post('/ledger/goals/:id/contribute', requireAuth, validateBody(goalContri
 });
 
 // 4. Receivables (Invoices)
-router.get('/ledger/receivables', requireAuth, async (req, res, next) => {
+router.get('/ledger/receivables', requireAuth, limitLedgerHistory, async (req, res, next) => {
   try {
     const result = await ledgerService.getReceivables(req.userId, req.query);
     res.json(result);
@@ -686,7 +780,7 @@ router.delete('/ledger/receivables/:id', requireAuth, async (req, res, next) => 
 });
 
 // 5. Payables (Vendor Bills)
-router.get('/ledger/payables', requireAuth, async (req, res, next) => {
+router.get('/ledger/payables', requireAuth, limitLedgerHistory, async (req, res, next) => {
   try {
     const result = await ledgerService.getPayables(req.userId, req.query);
     res.json(result);
@@ -727,7 +821,7 @@ router.delete('/ledger/payables/:id', requireAuth, async (req, res, next) => {
 });
 
 // 6. Reports & Export Engine
-router.get('/ledger/reports', requireAuth, async (req, res, next) => {
+router.get('/ledger/reports', requireAuth, requireLedgerFeature('advanced_reports'), limitLedgerHistory, async (req, res, next) => {
   try {
     const reportType = req.query.reportType;
     if (['trial_balance', 'balance_sheet', 'pnl', 'receivables_aging', 'payables_aging', 'account_summary'].includes(reportType)) {
@@ -743,7 +837,7 @@ router.get('/ledger/reports', requireAuth, async (req, res, next) => {
   }
 });
 
-router.get('/ledger/reports/export', requireAuth, async (req, res, next) => {
+router.get('/ledger/reports/export', requireAuth, requireLedgerFeature('report_export'), limitLedgerHistory, async (req, res, next) => {
   try {
     const format = (req.query.format || 'pdf').toLowerCase();
     const reportData = await financialReportsService.getComprehensiveReport(req.userId, req.query);
@@ -896,8 +990,14 @@ ledgerWebhookRoutes.post('/webhooks/:provider', async (req, res, next) => {
     const timestamp = req.get('x-webhook-timestamp') || '';
     const signatureValid = integrationService.verifyWebhookSignature(provider, rawBody, signature, timestamp);
     if (!signatureValid) return res.status(401).json({ error: 'Invalid webhook signature' });
-    const eventId = req.get('x-event-id') || req.body?.id || req.body?.event_id;
+    const eventId = req.get('x-razorpay-event-id') || req.get('x-event-id') || req.body?.id || req.body?.event_id;
     if (!eventId) return res.status(400).json({ error: 'Webhook event id is required' });
+    if (provider === 'RAZORPAY' && await ledgerSubscriptionService.isLedgerSubscriptionOrder(
+      req.body?.payload?.payment?.entity?.order_id
+    )) {
+      const result = await ledgerSubscriptionService.handleLedgerRazorpayWebhook(rawBody, req.body, signature, eventId);
+      return res.status(result.duplicate ? 200 : 202).json({ received: true, ...result });
+    }
     const result = await integrationService.recordWebhook(provider, eventId, req.body?.event || req.body?.type || 'unknown', req.body, signatureValid);
     res.status(result.duplicate ? 200 : 202).json({ received: true, duplicate: result.duplicate });
   } catch (err) { next(err); }

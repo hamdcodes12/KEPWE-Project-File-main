@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { pool } from '../config/db.js';
 import { AccountAggregatorAdapter } from '../integrations/account-aggregator-adapter.js';
 import * as providerService from './ledger-provider.service.js';
+import { getLedgerHistoryStart } from './ledger-subscription.service.js';
 
 const money = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const dateOnly = (value) => String(value || new Date().toISOString()).slice(0, 10);
@@ -147,12 +148,13 @@ export async function importStatementFile(userId, data) {
   return importStatement(userId, { ...parsed, accountId: data.accountId });
 }
 
-export async function listStatementImports(userId) {
+export async function listStatementImports(userId, historyStart = null) {
   const result = await pool.query(
     `SELECT id, account_id, file_name, file_type, status, imported_count, duplicate_count,
             failed_count, failed_rows, error_message, created_at
-     FROM ledger_statement_imports WHERE user_id = $1 ORDER BY created_at DESC`,
-    [userId]
+    FROM ledger_statement_imports WHERE user_id = $1 AND ($2::date IS NULL OR created_at >= $2::date)
+    ORDER BY created_at DESC`,
+      [userId, historyStart]
   );
   return result.rows;
 }
@@ -344,7 +346,12 @@ export async function reconcileTransaction(userId, transactionId, data = {}) {
 }
 
 export async function getTransaction(userId, transactionId) {
-  const result = await pool.query(`SELECT * FROM ledger_transactions WHERE id = $1 AND user_id = $2`, [transactionId, userId]);
+  const historyStart = await getLedgerHistoryStart(userId);
+  const result = await pool.query(
+    `SELECT * FROM ledger_transactions WHERE id = $1 AND user_id = $2
+       AND ($3::date IS NULL OR transaction_date >= $3::date)`,
+    [transactionId, userId, historyStart]
+  );
   return result.rows[0] ? mapTransaction(result.rows[0]) : null;
 }
 

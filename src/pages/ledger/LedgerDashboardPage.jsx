@@ -49,13 +49,15 @@ import {
   ArrowRight,
   UploadCloud
 } from 'lucide-react';
+import LedgerPricingSection from '../../components/ledger/LedgerPricingSection';
 import {
   fetchLedgerDashboard,
   fetchLedgerAccounts,
   fetchLedgerCategories,
   createLedgerTransaction,
   fetchLedgerProfile,
-  updateLedgerProfile
+  updateLedgerProfile,
+  fetchLedgerSubscription
 } from '../../api/ledgerClient';
 
 // Sub Views
@@ -97,7 +99,7 @@ export default function LedgerDashboardPage() {
   const location = useLocation();
 
   // Active navigation tab
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(location.pathname === '/ledger/pricing' ? 'billing' : 'dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Global filters
@@ -106,6 +108,7 @@ export default function LedgerDashboardPage() {
 
   // Live Data State
   const [dashboardData, setDashboardData] = useState(null);
+  const [ledgerSubscription, setLedgerSubscription] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -156,11 +159,12 @@ export default function LedgerDashboardPage() {
     setLoading(true);
     setError('');
     try {
-      const [dashRes, accRes, catRes, profRes] = await Promise.all([
+      const [dashRes, accRes, catRes, profRes, subRes] = await Promise.all([
         fetchLedgerDashboard({ datePreset, chartInterval }),
         fetchLedgerAccounts(),
         fetchLedgerCategories(),
         fetchLedgerProfile(),
+        fetchLedgerSubscription(),
       ]);
 
       if (dashRes.ok) {
@@ -191,6 +195,9 @@ export default function LedgerDashboardPage() {
           city: profRes.data.profile.city || '',
         });
       }
+      if (subRes.ok && subRes.data?.subscription) {
+        setLedgerSubscription(subRes.data.subscription);
+      }
     } catch (err) {
       setError(err.message || 'Error communicating with ledger services.');
     } finally {
@@ -203,6 +210,11 @@ export default function LedgerDashboardPage() {
       loadAllData();
     }
   }, [authState.isLoggedIn, loadAllData]);
+
+  useEffect(() => {
+    window.addEventListener('ledger-subscription-updated', loadAllData);
+    return () => window.removeEventListener('ledger-subscription-updated', loadAllData);
+  }, [loadAllData]);
 
   // Quick Add Handler
   const handleQuickAddSubmit = async (e) => {
@@ -324,6 +336,10 @@ export default function LedgerDashboardPage() {
             <div className="brand-subtitle">AI PERSONAL CFO</div>
           </div>
         </div>
+        <div className="ledger-plan-status">
+          <span>{ledgerSubscription?.display_name || 'Ledger'} plan</span>
+          <button type="button" onClick={() => setActiveTab('billing')}>Plan details</button>
+        </div>
 
         {/* Back to Kepwe Main Website */}
         <div className="ledger-back-home-container">
@@ -337,26 +353,30 @@ export default function LedgerDashboardPage() {
           <div className="nav-section-label">Personal CFO</div>
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'cfo', label: 'AI CFO & Insights', icon: Sparkles },
+            { id: 'cfo', label: 'AI CFO & Insights', icon: Sparkles, requiredFeature: 'ai_personal_cfo' },
             { id: 'goals', label: 'Savings Goals', icon: Target },
             { id: 'transactions', label: 'Transactions', icon: Receipt, count: dashboardData?.recentTransactions?.length },
             { id: 'income', label: 'Income', icon: TrendingUp },
             { id: 'expenses', label: 'Expenses', icon: TrendingDown },
             { id: 'accounts', label: 'Accounts', icon: Wallet, count: accounts.length },
             { id: 'reports', label: 'Reports', icon: FileText },
+            { id: 'billing', label: 'Plan & billing', icon: CreditCard },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+            const isLocked = Boolean(item.requiredFeature && ledgerSubscription?.features?.[item.requiredFeature] !== true);
             return (
               <button
                 key={item.id}
-                onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
-                className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
+                onClick={() => { setActiveTab(isLocked ? 'billing' : item.id); setSidebarOpen(false); }}
+                className={`sidebar-nav-item ${isActive ? 'active' : ''} ${isLocked ? 'locked' : ''}`}
+                aria-label={isLocked ? `${item.label}, upgrade required` : item.label}
               >
                 <div className="nav-item-content">
                   <Icon size={18} />
                   <span>{item.label}</span>
                 </div>
+                {isLocked && <FolderLock size={14} aria-hidden="true" />}
                 {item.alertCount > 0 ? (
                   <span className="nav-badge alert">{item.alertCount}</span>
                 ) : item.count !== undefined && item.count > 0 ? (
@@ -463,6 +483,7 @@ export default function LedgerDashboardPage() {
                 {activeTab === 'payables' && 'Bills, EMIs & Payables'}
                 {activeTab === 'accounts' && 'Financial Accounts'}
                 {activeTab === 'reports' && 'CFO Financial Reports'}
+                {activeTab === 'billing' && 'Ledger plan & billing'}
                 {activeTab === 'journals' && 'General Ledger Journal'}
                 {activeTab === 'bank_rec' && 'Bank Statement Processing'}
                 {activeTab === 'connections' && 'Bring Your Financial Data'}
@@ -1449,6 +1470,10 @@ export default function LedgerDashboardPage() {
                 else setActiveTab(tab);
               }}
             />
+          )}
+
+          {activeTab === 'billing' && (
+            <LedgerPricingSection compact />
           )}
 
           {/* TAB: SETTINGS */}

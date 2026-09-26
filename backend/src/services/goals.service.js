@@ -1,4 +1,5 @@
 import { pool } from '../config/db.js';
+import { assertLedgerLimit } from './ledger-subscription.service.js';
 
 const query = (text, params) => pool.query(text, params);
 
@@ -156,30 +157,46 @@ export async function createGoal(userId, data) {
 
   const status = current >= target ? 'completed' : 'in_progress';
 
-  const res = await query(
-    `INSERT INTO ledger_goals (
-       user_id, name, type, category, target_amount, current_amount, 
-       target_date, monthly_contribution, priority, status, color, icon, notes
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-     RETURNING *`,
-    [
-      userId,
-      name.trim(),
-      type,
-      category || type,
-      target,
-      current,
-      targetDate || null,
-      finalMonthlyContribution,
-      priority,
-      status,
-      color,
-      icon,
-      notes
-    ]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
+    const count = await client.query(
+      'SELECT COUNT(*)::int AS count FROM ledger_goals WHERE user_id = $1',
+      [userId]
+    );
+    await assertLedgerLimit(userId, 'savings_goals', count.rows[0].count, client);
 
-  return enrichGoal(res.rows[0]);
+    const res = await client.query(
+      `INSERT INTO ledger_goals (
+         user_id, name, type, category, target_amount, current_amount,
+         target_date, monthly_contribution, priority, status, color, icon, notes
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING *`,
+      [
+        userId,
+        name.trim(),
+        type,
+        category || type,
+        target,
+        current,
+        targetDate || null,
+        finalMonthlyContribution,
+        priority,
+        status,
+        color,
+        icon,
+        notes
+      ]
+    );
+    await client.query('COMMIT');
+    return enrichGoal(res.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 /**

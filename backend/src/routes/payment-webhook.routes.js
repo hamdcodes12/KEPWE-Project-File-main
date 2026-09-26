@@ -37,18 +37,16 @@ router.post('/razorpay', async (req, res) => {
   // Use the raw body buffer captured by app.js for signature verification.
   // Falling back to req.body is unsafe (JSON.stringify is not the inverse of
   // raw bytes in all cases), but we keep it as a last resort for dev mode.
-  const rawBody = req.rawBody
-    ? req.rawBody
-    : Buffer.from(JSON.stringify(req.body));
+  const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body));
 
   try {
-    await handleRazorpayWebhook(rawBody, req.body, signature);
+    const eventId = req.get('x-razorpay-event-id') || req.body?.id || req.body?.event_id;
+    await handleRazorpayWebhook(rawBody, req.body, signature, eventId);
     return res.json({ success: true });
   } catch (error) {
-    // Always return 200 to prevent Razorpay from retrying indefinitely.
-    // The error is logged for manual investigation.
     console.error('[webhook] Error processing Razorpay webhook:', error.message);
-    return res.status(200).json({ success: false, error: 'Webhook processing failed' });
+    const status = error.statusCode || (error.message?.includes('WEBHOOK_SECRET') ? 503 : 500);
+    return res.status(status).json({ success: false, error: 'Webhook processing failed' });
   }
 });
 
