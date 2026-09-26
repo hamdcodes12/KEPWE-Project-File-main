@@ -94,7 +94,9 @@ let activeRefreshPromise = null;
 export async function apiFetch(path, options = {}) {
   const { method = 'GET', body, headers = {}, auth = true, signal } = options;
 
-  const h = { 'Content-Type': 'application/json', ...headers };
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  const h = { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...headers };
+  const requestBody = body ? (isFormData ? body : JSON.stringify(body)) : undefined;
   if (auth) {
     const token = getAccessToken();
     if (token) h.Authorization = `Bearer ${token}`;
@@ -103,7 +105,7 @@ export async function apiFetch(path, options = {}) {
   let res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: h,
-    body: body ? JSON.stringify(body) : undefined,
+    body: requestBody,
     credentials: 'include',
     signal,
   });
@@ -146,7 +148,7 @@ export async function apiFetch(path, options = {}) {
       res = await fetch(`${API_BASE}${path}`, {
         method,
         headers: h,
-        body: body ? JSON.stringify(body) : undefined,
+        body: requestBody,
         credentials: 'include',
         signal,
       });

@@ -81,6 +81,10 @@ const CreditStatusPage = () => {
             <Clock size={14} color="#214ECF" />
             <span>Live Status Updates</span>
           </div>
+          <Link to="/credit/health" className="credit-health-link">
+            <FileText size={15} />
+            <span>Credit Health Score</span>
+          </Link>
         </div>
       </div>
 

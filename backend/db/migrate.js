@@ -149,6 +149,7 @@ async function main() {
     await applySqlFile(client, join(__dirname, 'ledger_prd_dashboard.sql'), 'ledger_prd_dashboard.sql');
     await applySqlFile(client, join(__dirname, 'ledger_prd_phase6_upload.sql'), 'ledger_prd_phase6_upload.sql');
     await applySqlFile(client, join(__dirname, 'ledger_prd_phase8_goals.sql'), 'ledger_prd_phase8_goals.sql');
+    await applySqlFile(client, join(__dirname, 'credit_report_analysis.sql'), 'credit_report_analysis.sql');
 
     console.log('[migrate] Migration completed successfully.');
   } catch (err) {

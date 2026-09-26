@@ -16,6 +16,9 @@ dotenv.config();
 const { Pool } = pg;
 
 const isPgliteTest = process.env.KEPWE_PGLITE_TEST === 'true';
+if (isPgliteTest && process.env.NODE_ENV === 'production') {
+  throw new Error('PGlite test storage is forbidden in production');
+}
 const configuredDatabaseUrl = process.env.SUPABASE_DB_URL || null;
 const databaseUrl = isPgliteTest ? null : configuredDatabaseUrl;
 const isExternalPg = Boolean(databaseUrl && !isPgliteTest);
@@ -85,7 +88,8 @@ export async function runAutoMigrations(client) {
       'quant_additions.sql',
       'ledger_prd_dashboard.sql',
       'ledger_prd_phase6_upload.sql',
-      'ledger_prd_phase8_goals.sql'
+      'ledger_prd_phase8_goals.sql',
+      'credit_report_analysis.sql'
     ];
 
     for (const file of files) {
@@ -343,6 +347,20 @@ export async function runAutoMigrations(client) {
         sql = sql.replace(/\bcitext\b/gi, 'VARCHAR(255)');
         if (client.exec) await client.exec(sql); else await client.query(sql);
         console.log('[db] quant_subscription_system.sql migration applied successfully.');
+      }
+    }
+
+    const creditReportCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'credit_report_analyses'
+      ) AS exists;
+    `);
+    if (!creditReportCheck.rows[0]?.exists) {
+      const creditReportPath = resolve(__dirname, '../../db/credit_report_analysis.sql');
+      if (fs.existsSync(creditReportPath)) {
+        const sql = fs.readFileSync(creditReportPath, 'utf-8');
+        if (client.exec) await client.exec(sql); else await client.query(sql);
       }
     }
 

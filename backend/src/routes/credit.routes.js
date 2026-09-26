@@ -2,12 +2,101 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, validateBody } from '../middleware/auth.js';
 import { requireProductAccess } from '../middleware/product-auth.js';
-import { pool } from '../config/db.js';
+import multer from 'multer';
+import { pool, withRLSContext } from '../config/db.js';
+import { processCreditReportPdf } from '../services/credit-report.service.js';
 
 const router = Router();
 
 // Enforce Credit product authorization on all endpoints
 router.use(requireProductAccess('credit'));
+
+const reportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 0 },
+}).single('report');
+
+function handleReportUpload(req, res, next) {
+  reportUpload(req, res, (err) => {
+    if (!err) return next();
+    const tooLarge = err.code === 'LIMIT_FILE_SIZE';
+    return res.status(tooLarge ? 413 : 400).json({
+      error: tooLarge ? 'Report PDF must be 10 MB or smaller.' : 'Upload one PDF report file.',
+    });
+  });
+}
+
+router.get('/report', async (req, res, next) => {
+  try {
+    const result = await withRLSContext(req.userId, (client) => client.query(
+      `SELECT id, original_filename, normalized_data, score_result, extraction_method, processed_at
+       FROM credit_report_analyses WHERE user_id = $1`,
+      [req.userId]
+    ));
+    if (!result.rows.length) return res.json({ report: null });
+    const row = result.rows[0];
+    return res.json({
+      report: {
+        id: row.id,
+        fileName: row.original_filename,
+        extractionMethod: row.extraction_method,
+        processedAt: row.processed_at,
+        normalizedData: row.normalized_data,
+        score: row.score_result.score,
+        warnings: row.score_result.warnings,
+        recommendations: row.score_result.recommendations,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/report', handleReportUpload, async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Choose a credit report PDF to upload.' });
+    const analysis = await processCreditReportPdf(req.file.buffer);
+    const fileName = (req.file.originalname || 'credit-report.pdf').replace(/[\\/\0-\x1f]/g, '_').slice(0, 255);
+    const result = await withRLSContext(req.userId, (client) => client.query(
+      `INSERT INTO credit_report_analyses
+         (user_id, original_filename, report_pdf, normalized_data, score_result, extraction_method, processed_at)
+       VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         original_filename = EXCLUDED.original_filename,
+         report_pdf = EXCLUDED.report_pdf,
+         normalized_data = EXCLUDED.normalized_data,
+         score_result = EXCLUDED.score_result,
+         extraction_method = EXCLUDED.extraction_method,
+         processed_at = NOW()
+       RETURNING id, processed_at`,
+      [req.userId, fileName, req.file.buffer, JSON.stringify(analysis.normalizedData), JSON.stringify(analysis), analysis.extractionMethod]
+    ));
+    return res.status(201).json({
+      report: {
+        id: result.rows[0].id,
+        fileName,
+        extractionMethod: analysis.extractionMethod,
+        processedAt: result.rows[0].processed_at,
+        ...analysis,
+      },
+    });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    next(err);
+  }
+});
+
+router.delete('/report', async (req, res, next) => {
+  try {
+    await withRLSContext(req.userId, (client) => client.query(
+      'DELETE FROM credit_report_analyses WHERE user_id = $1',
+      [req.userId]
+    ));
+    return res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * GET /api/credit/workspace

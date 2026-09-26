@@ -22,6 +22,7 @@ import LoansPage from './pages/solutions/LoansPage';
 import CreditEligibilityPage from './pages/credit/CreditEligibilityPage';
 import CreditApplicationPage from './pages/credit/CreditApplicationPage';
 import CreditStatusPage from './pages/credit/CreditStatusPage';
+import CreditHealthPage from './pages/credit/CreditHealthPage';
 import IndustryPages from './pages/business/IndustryPages';
 import BusinessOnboardingPage from './pages/business/BusinessOnboardingPage';
 import ComplianceCalendarPage from './pages/resources/ComplianceCalendarPage';
@@ -328,6 +329,7 @@ function App() {
             <Route path="/portal/onboarding-checklist" element={<ProtectedCustomerPortalRoute><CustomerOnboardingChecklistPage /></ProtectedCustomerPortalRoute>} />
             <Route path="/credit" element={<LoansPage />} />
             <Route path="/credit/workspace" element={<ProtectedCreditRoute><CreditStatusPage /></ProtectedCreditRoute>} />
+            <Route path="/credit/health" element={<ProtectedCreditRoute><CreditHealthPage /></ProtectedCreditRoute>} />
             <Route path="/credit/eligibility" element={<CreditEligibilityPage />} />
             <Route path="/credit/results" element={<CreditEligibilityPage />} />
             <Route path="/credit/apply" element={<CreditApplicationPage />} />
