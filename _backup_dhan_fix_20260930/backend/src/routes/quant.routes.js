@@ -184,57 +184,31 @@ async function getDhanLiveSnapshot(userId) {
     return { connected: false, status: 'FAIL', code: 'SUPABASE_UNAVAILABLE', blocker: `Supabase connectivity failed while loading Dhan session: ${error.message}` };
   }
   const broker = result.rows[0];
-  if (!broker) {
-    return { connected: false, code: 'DHAN_NOT_CONNECTED', blocker: 'No Dhan account is connected for this user.' };
+  if (!broker || !['CONNECTED', 'PARTIALLY_CONNECTED'].includes(broker.status) || broker.connection_mode !== 'LIVE') {
+    return { connected: false, blocker: 'Dhan is not connected in LIVE mode.' };
   }
-  if (broker.status === 'SESSION_EXPIRED') {
-    return { connected: false, code: 'DHAN_SESSION_EXPIRED', brokerStatus: broker.status, blocker: 'Dhan rejected the stored session. Reconnect with a fresh access token.' };
-  }
-  if (!['CONNECTED', 'PARTIALLY_CONNECTED'].includes(broker.status) || broker.connection_mode !== 'LIVE') {
-    return { connected: false, code: 'DHAN_NOT_CONNECTED', brokerStatus: broker.status, blocker: 'Dhan is not connected in LIVE mode.' };
-  }
-  if (!broker.access_token_ciphertext) return { connected: false, code: 'DHAN_NOT_CONNECTED', blocker: 'Dhan access token is unavailable.' };
-
-  let adapter;
-  let profile;
-  let funds;
+  if (!broker.access_token_ciphertext) return { connected: false, blocker: 'Dhan access token is unavailable.' };
   try {
-    adapter = getBrokerAdapter('DHAN', 'LIVE', {
+    const adapter = getBrokerAdapter('DHAN', 'LIVE', {
       dhanClientId: broker.client_id,
       accessToken: decryptBrokerSecret(broker.access_token_ciphertext),
       tokenExpiresAt: broker.token_expires_at,
     });
-    // Same verified session the status endpoint uses: /v2/profile first.
-    [profile, funds] = await Promise.all([adapter.getProfile(), adapter.getMargin()]);
-  } catch (error) {
-    const expired = error?.code === 'BROKER_SESSION_EXPIRED';
-    return {
-      connected: false,
-      code: expired ? 'DHAN_SESSION_EXPIRED' : 'DHAN_SESSION_CHECK_FAILED',
-      blocker: `Dhan session check failed: ${error.message}`,
-      dhanErrorCode: error?.providerErrorCode ?? null,
-    };
-  }
-  if (String(profile?.clientId || '') !== String(broker.client_id)) {
-    return { connected: false, code: 'DHAN_IDENTITY_MISMATCH', blocker: 'Dhan account identity does not match the connected client ID.' };
-  }
-
-  const sessionInfo = {
-    sessionConnected: true,
-    clientId: broker.client_id,
-    availableMargin: Number(funds?.available),
-    dataPlan: profile?.dataPlan || null,
-    dataValidity: profile?.dataValidity || null,
-  };
-  try {
-    const quote = await adapter.getMarketData({ exchange: 'IDX_I', symbolToken: '13' });
+    const [profile, funds, quote] = await Promise.all([
+      adapter.getProfile(),
+      adapter.getMargin(),
+      adapter.getMarketData({ exchange: 'IDX_I', symbolToken: '13' }),
+    ]);
     const price = extractDhanLtp(quote);
     const ltt = extractDhanLtt(quote);
+    if (String(profile?.clientId || '') !== String(broker.client_id)) {
+      return { connected: false, blocker: 'Dhan account identity does not match the connected client ID.' };
+    }
     if (!Number.isFinite(price) || price <= 0) {
-      return { connected: false, code: 'DHAN_NO_LIVE_PRICE', ...sessionInfo, blocker: 'Dhan returned no live NIFTY 50 price.' };
+      return { connected: false, blocker: 'Dhan returned no live NIFTY 50 price.' };
     }
     if (!isFreshDhanTimestamp(ltt)) {
-      return { connected: false, code: 'DHAN_STALE_PRICE', ...sessionInfo, blocker: 'Dhan returned a stale or invalid NIFTY 50 last-trade time.' };
+      return { connected: false, blocker: 'Dhan returned a stale or invalid NIFTY 50 last-trade time.' };
     }
     return {
       connected: true,
@@ -242,21 +216,12 @@ async function getDhanLiveSnapshot(userId) {
       symbol: 'NIFTY 50',
       price,
       ltt,
-      ...sessionInfo,
+      availableMargin: Number(funds.available),
+      clientId: broker.client_id,
       lastUpdated: new Date().toISOString(),
     };
   } catch (error) {
-    if (error?.dataApiRejected) {
-      return {
-        connected: false,
-        code: 'DHAN_DATA_API_UNAVAILABLE',
-        ...sessionInfo,
-        dhanHttpStatus: error.httpStatus ?? null,
-        dhanErrorCode: error.providerErrorCode ?? null,
-        blocker: `Dhan session is valid, but Dhan rejected the market-data request (HTTP ${error.httpStatus}). Dhan reports Data API plan: ${sessionInfo.dataPlan || 'unknown'}.`,
-      };
-    }
-    return { connected: false, code: 'DHAN_MARKET_DATA_ERROR', ...sessionInfo, blocker: `Dhan live data unavailable: ${error.message}` };
+    return { connected: false, blocker: `Dhan live data unavailable: ${error.message}` };
   }
 }
 

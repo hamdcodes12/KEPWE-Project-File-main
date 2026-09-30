@@ -136,18 +136,13 @@ async function parseJsonResponse(broker, response) {
     payload = null;
   }
   if (!response.ok) {
-    const providerErrorCode = payload?.errorCode || payload?.errorcode || payload?.remarks?.error_code || null;
-    const providerMessage = payload?.remarks?.message
+    const message = payload?.remarks?.message
       || payload?.errorMessage
       || payload?.message
       || payload?.error
-      || null;
-    const message = [providerErrorCode, providerMessage].filter(Boolean).join(': ') || `HTTP ${response.status}`;
+      || payload?.errorcode
+      || `HTTP ${response.status}`;
     const err = new BrokerApiError(broker, message, response.status >= 500 ? 502 : response.status);
-    err.httpStatus = response.status;
-    err.providerErrorCode = providerErrorCode;
-    err.providerErrorType = payload?.errorType || null;
-    err.providerMessage = providerMessage;
     if (response.status === 401 || response.status === 403 || /expired|invalid token|unauthorized/i.test(String(message))) {
       err.code = 'BROKER_SESSION_EXPIRED';
       err.statusCode = 401;
@@ -202,19 +197,6 @@ function normalizeTokenExpiry(value, fallbackMs = null) {
     if (!Number.isNaN(parsed.getTime())) return parsed;
   }
   return fallbackMs ? new Date(Date.now() + fallbackMs) : null;
-}
-
-/**
- * Dhan /v2/profile returns tokenValidity as "DD/MM/YYYY HH:mm" in IST (UTC+05:30).
- * Returns a UTC Date or null when the value is absent/unparseable.
- */
-export function parseDhanTokenValidity(value) {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(String(value || '').trim());
-  if (!match) return null;
-  const [, dd, mm, yyyy, hh, min, ss = '0'] = match;
-  const utcMs = Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), Number(ss)) - (330 * 60 * 1000);
-  const parsed = new Date(utcMs);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function assertTokenNotExpired(broker, expiresAt) {
@@ -715,7 +697,7 @@ export class DhanAdapter extends BrokerAdapter {
     return this.isConfigured() ? LIVE_CAPABILITIES : BROKER_CAPABILITIES;
   }
 
-  async request(path, { method = 'GET', body, query, signal, authenticated = true, authHost = false, dataApi = false, headers: extraHeaders = {} } = {}) {
+  async request(path, { method = 'GET', body, query, signal, authenticated = true, authHost = false, headers: extraHeaders = {} } = {}) {
     if (authHost && !this.configFields().every((field) => Boolean(text(field)))) {
       throw new BrokerCapabilityError(this.name, `configuration (${this.configFields().join(', ')})`);
     }
@@ -752,23 +734,6 @@ export class DhanAdapter extends BrokerAdapter {
       return await parseJsonResponse(this.name, response);
     } catch (error) {
       if (error.name === 'AbortError') throw new BrokerApiError(this.name, 'request timed out', 504);
-      // Dhan Data APIs (market feed, charts, option chain) are a separately
-      // subscribed product. A 401/403 there with a token that /v2/profile
-      // accepts means the Data API plan is not active, NOT an expired
-      // session. Re-classify so callers never mark the trading session expired.
-      if (dataApi && (error.httpStatus === 401 || error.httpStatus === 403)) {
-        error.code = 'DHAN_DATA_API_UNAVAILABLE';
-        error.statusCode = 403;
-        error.dataApiRejected = true;
-      }
-      if (error.name === 'BrokerApiError') {
-        // Never includes the access token: only endpoint and provider error fields.
-        console.warn('[DHAN_API]', JSON.stringify({
-          path, method, httpStatus: error.httpStatus ?? null,
-          errorCode: error.providerErrorCode ?? null, errorType: error.providerErrorType ?? null,
-          errorMessage: error.providerMessage ?? null, classifiedAs: error.code || null,
-        }));
-      }
       throw error;
     } finally {
       clearTimeout(timeout);
@@ -800,9 +765,7 @@ export class DhanAdapter extends BrokerAdapter {
   async getProfile() {
     const payload = await this.request('/profile');
     const data = payload?.data || payload || {};
-    // Identity comes ONLY from Dhan's response; never fall back to the submitted
-    // client ID, otherwise the identity check compares the input with itself.
-    const clientId = data.dhanClientId || data.clientId || data.client_id || null;
+    const clientId = data.dhanClientId || data.clientId || data.client_id || this.dhanClientId;
     if (clientId && !this.dhanClientId) {
       this.dhanClientId = String(clientId).trim();
     }
@@ -810,10 +773,6 @@ export class DhanAdapter extends BrokerAdapter {
       clientId: clientId ? String(clientId).trim() : null,
       name: data.dhanClientName || data.clientName || data.name || null,
       email: data.email || null,
-      tokenValidity: data.tokenValidity || null,
-      dataPlan: data.dataPlan || null,
-      dataValidity: data.dataValidity || null,
-      activeSegment: data.activeSegment || null,
       raw: data,
     };
   }
@@ -830,7 +789,6 @@ export class DhanAdapter extends BrokerAdapter {
       MCX: 'MCX_COMM',
     }[String(exchange).toUpperCase()] || String(exchange).toUpperCase();
     return this.request('/marketfeed/ltp', {
-      dataApi: true,
       method: 'POST',
       body: { [segment]: [String(symbolToken)] },
     });
@@ -847,7 +805,6 @@ export class DhanAdapter extends BrokerAdapter {
       IDX_I: 'IDX_I',
     }[String(exchange).toUpperCase()] || String(exchange).toUpperCase();
     return this.request('/marketfeed/quote', {
-      dataApi: true,
       method: 'POST',
       body: { [segment]: [String(symbolToken)] },
     });
@@ -858,7 +815,6 @@ export class DhanAdapter extends BrokerAdapter {
       throw new BrokerCapabilityError(this.name, 'historical-data parameters');
     }
     return this.request('/charts/intraday', {
-      dataApi: true,
       method: 'POST',
       body: {
         securityId: String(securityId),
@@ -873,7 +829,6 @@ export class DhanAdapter extends BrokerAdapter {
 
   async getOptionExpiryList({ underlyingScrip = '13', underlyingSeg = 'IDX_I' } = {}) {
     return this.request('/optionchain/expirylist', {
-      dataApi: true,
       method: 'POST',
       body: { UnderlyingScrip: Number(underlyingScrip), UnderlyingSeg: String(underlyingSeg).toUpperCase() },
     });
@@ -882,7 +837,6 @@ export class DhanAdapter extends BrokerAdapter {
   async getOptionChain({ underlyingScrip = '13', underlyingSeg = 'IDX_I', expiry } = {}) {
     if (!expiry) throw new BrokerCapabilityError(this.name, 'option-chain expiry');
     return this.request('/optionchain', {
-      dataApi: true,
       method: 'POST',
       body: {
         UnderlyingScrip: Number(underlyingScrip),
@@ -943,21 +897,13 @@ export class DhanAdapter extends BrokerAdapter {
     }
     assertTokenNotExpired(this.name, this.tokenExpiresAt);
     const profile = await this.getProfile();
-    const resolvedClientId = profile?.clientId || null;
-    if (!resolvedClientId) {
-      const err = new BrokerApiError(this.name, 'Dhan /v2/profile did not return dhanClientId', 502);
-      err.code = 'DHAN_PROFILE_INCOMPLETE';
-      throw err;
-    }
-    if (this.dhanClientId && String(resolvedClientId).trim() !== String(this.dhanClientId).trim()) {
+    const resolvedClientId = profile?.clientId || profile?.raw?.dhanClientId || this.dhanClientId;
+    if (this.dhanClientId && resolvedClientId && String(resolvedClientId).trim() !== String(this.dhanClientId).trim()) {
       const err = new Error('Dhan account identity does not match the provided client ID');
       err.statusCode = 409;
       err.code = 'BROKER_ACCOUNT_IDENTITY_MISMATCH';
       throw err;
     }
-    // Dhan's own tokenValidity is authoritative for the session expiry.
-    const providerExpiry = parseDhanTokenValidity(profile?.tokenValidity);
-    if (providerExpiry) this.tokenExpiresAt = providerExpiry;
     if (resolvedClientId && !this.dhanClientId) {
       this.dhanClientId = String(resolvedClientId).trim();
     }

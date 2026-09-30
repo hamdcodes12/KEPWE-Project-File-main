@@ -147,24 +147,8 @@ export async function verifyBrokerConnection(userId, broker, options = {}) {
 
     // Calculate overall status
     result.overallScore = Math.round((passedChecks / totalChecks) * 100);
-
-    // Market data is a separately subscribed Dhan product (Data API plan). A
-    // Data-API rejection with an otherwise valid trading session must not
-    // downgrade the connection; it is reported separately as marketData.
-    const marketCheck = result.checks[VERIFICATION_CHECKS.MARKET_DATA];
-    const marketDataPlanRejected = marketCheck?.status === VERIFICATION_STATUS.FAIL && marketCheck?.dataApiRejected === true;
-    const coreChecks = Object.entries(result.checks)
-      .filter(([name]) => name !== VERIFICATION_CHECKS.MARKET_DATA && name !== VERIFICATION_CHECKS.PERMISSIONS);
-    const coreAllPass = coreChecks.length > 0 && coreChecks.every(([, c]) => c.status === VERIFICATION_STATUS.PASS);
-    const profileData = result.checks[VERIFICATION_CHECKS.PROFILE]?.data || null;
-    result.marketData = {
-      available: marketCheck ? marketCheck.status === VERIFICATION_STATUS.PASS : null,
-      reason: marketCheck && marketCheck.status !== VERIFICATION_STATUS.PASS ? marketCheck.message : null,
-      dataPlan: profileData?.dataPlan ?? null,
-      dataValidity: profileData?.dataValidity ?? null,
-    };
-
-    if (passedChecks === totalChecks || (coreAllPass && (skipMarketData || marketDataPlanRejected))) {
+    
+    if (passedChecks === totalChecks) {
       result.status = CONNECTION_STATUS.CONNECTED;
     } else if (passedChecks >= Math.ceil(totalChecks * 0.7)) {
       result.status = CONNECTION_STATUS.PARTIALLY_CONNECTED;
@@ -318,18 +302,10 @@ async function verifyProfile(adapter, expectedClientId) {
       check.message = 'Broker profile identity does not match the stored account';
       return check;
     }
-    if (profile && actualClientId) {
+    if (profile && (profile.clientcode || profile.clientId || profile.name)) {
       check.status = VERIFICATION_STATUS.PASS;
       check.message = 'Profile data retrieved';
-      // Only non-secret profile fields; never the token.
-      check.data = {
-        clientId: profile.clientId || profile.clientcode || null,
-        name: profile.name || null,
-        tokenValidity: profile.tokenValidity || null,
-        dataPlan: profile.dataPlan || null,
-        dataValidity: profile.dataValidity || null,
-        activeSegment: profile.activeSegment || null,
-      };
+      check.data = profile;
     } else {
       check.message = 'Profile data unavailable';
     }
@@ -504,13 +480,8 @@ async function verifyMarketData(adapter, broker) {
       check.message = 'Market data unavailable';
     }
   } catch (error) {
-    check.message = error.dataApiRejected
-      ? `Dhan Data API rejected the request (HTTP ${error.httpStatus}${error.providerErrorCode ? `, ${error.providerErrorCode}` : ''}). The Dhan Data API plan may be inactive.`
-      : `Market data error: ${error.message}`;
+    check.message = `Market data error: ${error.message}`;
     check.status = VERIFICATION_STATUS.FAIL;
-    check.dataApiRejected = error.dataApiRejected === true;
-    check.httpStatus = error.httpStatus ?? null;
-    check.providerErrorCode = error.providerErrorCode ?? null;
   }
 
   return check;
@@ -537,7 +508,7 @@ async function verifySessionValidity(adapter) {
     }
   } catch (error) {
     check.message = `Session validity error: ${error.message}`;
-    if (error.code === 'BROKER_SESSION_EXPIRED') {
+    if (error.message.includes('expired') || error.message.includes('unauthorized')) {
       check.status = VERIFICATION_STATUS.ERROR;
     }
   }
@@ -554,6 +525,7 @@ async function verifyPermissions(adapter, broker, checks) {
     VERIFICATION_CHECKS.POSITIONS,
     VERIFICATION_CHECKS.ORDERS,
     VERIFICATION_CHECKS.TRADES,
+    VERIFICATION_CHECKS.MARKET_DATA,
   ];
   const failedChecks = requiredChecks.filter((name) => checks[name]?.status !== VERIFICATION_STATUS.PASS);
   const check = {

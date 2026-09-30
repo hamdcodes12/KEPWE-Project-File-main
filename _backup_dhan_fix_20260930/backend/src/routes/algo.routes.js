@@ -424,8 +424,6 @@ router.post('/algo/start', (req, res, next) => setAlgoStatus(req, res, next, 'AC
 router.post('/algo/stop', (req, res, next) => setAlgoStatus(req, res, next, 'STOPPED'));
 
 function isDhanSessionRejected(error) {
-  // A Dhan Data-API (market feed) rejection is a subscription issue, not a session issue.
-  if (error?.dataApiRejected || error?.code === 'DHAN_DATA_API_UNAVAILABLE') return false;
   return error?.code === 'BROKER_SESSION_EXPIRED'
     || error?.statusCode === 401
     || /expired|unauthorized|invalid token/i.test(error?.message || '');
@@ -433,7 +431,6 @@ function isDhanSessionRejected(error) {
 
 // Generic broker session rejection checker (works for DHAN, ANGEL_ONE, etc.)
 function isBrokerSessionRejected(error, broker) {
-  if (error?.dataApiRejected || error?.code === 'DHAN_DATA_API_UNAVAILABLE') return false;
   return error?.code === 'BROKER_SESSION_EXPIRED'
     || error?.code === `${broker}_SESSION_EXPIRED`
     || error?.statusCode === 401
@@ -441,22 +438,21 @@ function isBrokerSessionRejected(error, broker) {
 }
 
 async function validateStoredDhanSession(row) {
-  // Session validity is decided ONLY by Dhan /v2/profile (+ identity match).
-  // Market data is a separate Dhan Data API subscription and must never mark
-  // the trading session expired.
   try {
     const adapter = getBrokerAdapter('DHAN', 'LIVE', {
       dhanClientId: row.client_id,
       accessToken: decryptBrokerSecret(row.access_token_ciphertext),
       tokenExpiresAt: row.token_expires_at,
     });
-    const validation = await adapter.validateSession();
-    const profile = validation.profile;
+    await adapter.validateSession();
+    const profile = await adapter.getProfile();
     if (String(profile?.clientId || '') !== String(row.client_id || '')) {
-      const mismatch = new Error('Dhan profile identity does not match the stored client ID');
-      mismatch.code = 'BROKER_ACCOUNT_IDENTITY_MISMATCH';
-      throw mismatch;
+      throw new Error('Dhan profile identity does not match the stored client ID');
     }
+    const quote = await adapter.getMarketData({ exchange: 'IDX_I', symbolToken: '13' });
+    const quoteData = quote?.data || quote;
+    const ltp = Number(quoteData?.IDX_I?.['13']?.last_price || quoteData?.IDX_I?.['13']?.ltp || 0);
+    if (!Number.isFinite(ltp) || ltp <= 0) throw new Error('Dhan returned no live NIFTY 50 quote');
     if (!['CONNECTED', 'PARTIALLY_CONNECTED'].includes(row.status) || row.connection_mode !== 'LIVE') {
       await pool.query(
         `UPDATE broker_accounts
@@ -465,36 +461,15 @@ async function validateStoredDhanSession(row) {
         [row.id],
       );
     }
-    return {
-      ...row,
-      status: 'CONNECTED',
-      mode: 'LIVE',
-      tokenValidity: profile?.tokenValidity || null,
-      dataPlan: profile?.dataPlan || null,
-    };
+    return { ...row, status: 'CONNECTED', mode: 'LIVE' };
   } catch (error) {
-    const sessionRejected = isDhanSessionRejected(error);
-    const identityMismatch = error?.code === 'BROKER_ACCOUNT_IDENTITY_MISMATCH';
-    console.warn('[DHAN_SESSION_CHECK]', JSON.stringify({
-      brokerAccountId: row.id,
-      error: error?.message || String(error),
-      code: error?.code || null,
-      httpStatus: error?.httpStatus ?? null,
-      dhanErrorCode: error?.providerErrorCode ?? null,
-      outcome: sessionRejected ? 'SESSION_EXPIRED' : (identityMismatch ? 'VERIFICATION_FAILED' : 'UNCHANGED'),
-    }));
-    if (sessionRejected || identityMismatch) {
-      const nextStatus = sessionRejected ? 'SESSION_EXPIRED' : 'VERIFICATION_FAILED';
-      await pool.query(
-        `UPDATE broker_accounts
-         SET status = $2, connection_mode = 'LIVE', updated_at = NOW()
-         WHERE id = $1`,
-        [row.id, nextStatus],
-      );
-      return { ...row, status: nextStatus, mode: 'LIVE', lastError: error?.message || null };
-    }
-    // Transient/network/5xx: do not rewrite the persisted state; report it as-is.
-    return { ...row, mode: row.connection_mode || 'LIVE', lastError: error?.message || null };
+    await pool.query(
+      `UPDATE broker_accounts
+       SET status = $2, connection_mode = 'LIVE', updated_at = NOW()
+       WHERE id = $1`,
+      [row.id, isDhanSessionRejected(error) ? 'SESSION_EXPIRED' : 'VERIFICATION_FAILED'],
+    );
+    return { ...row, status: isDhanSessionRejected(error) ? 'SESSION_EXPIRED' : 'VERIFICATION_FAILED', mode: 'LIVE' };
   }
 }
 
@@ -576,9 +551,6 @@ router.get(['/algo/broker/:broker/status', '/broker/:broker/status'], async (req
       clientId: validated.client_id || null,
       sessionValid: isConnected,
       connectedAt: validated.connected_at || null,
-      tokenExpiresAt: validated.token_expires_at || null,
-      dataPlan: validated.dataPlan || null,
-      lastError: isConnected ? null : (validated.lastError || null),
     });
   } catch (err) {
     console.log('[BROKER_STATUS]', JSON.stringify({

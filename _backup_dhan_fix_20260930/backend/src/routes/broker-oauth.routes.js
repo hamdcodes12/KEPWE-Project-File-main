@@ -263,12 +263,8 @@ router.post('/broker/dhan/connect', requireAuth, requireBrokerFeatures, async (r
           lastVerified: verification.timestamp,
         },
         accountData: verification.accountData,
-        tokenExpiresAt: adapter.tokenExpiresAt ? adapter.tokenExpiresAt.toISOString() : null,
-        marketData: verification.marketData || null,
         funds: validation.funds,
-        message: verification.marketData?.available === false
-          ? 'Dhan account connected. Live market data is unavailable from Dhan for this account (Data API).'
-          : 'Dhan account connected and fully verified'
+        message: 'Dhan account connected and fully verified'
       });
     } else if (verification.status === 'PARTIALLY_CONNECTED') {
       await pool.query(
@@ -319,14 +315,7 @@ router.post('/broker/dhan/connect', requireAuth, requireBrokerFeatures, async (r
     }
 
   } catch (error) {
-    console.error('[DHAN_CONNECT]', JSON.stringify({
-      userId: req.userId,
-      error: error.message,
-      code: error.code || null,
-      httpStatus: error.httpStatus ?? null,
-      dhanErrorCode: error.providerErrorCode ?? null,
-      dhanErrorType: error.providerErrorType ?? null,
-    }));
+    console.error(`[DHAN_CONNECT] Error for user ${req.userId}:`, error.message);
     
     // Clean up failed connection
     try {
@@ -337,21 +326,9 @@ router.post('/broker/dhan/connect', requireAuth, requireBrokerFeatures, async (r
       );
     } catch (_) {}
     
-    if (error.code === 'BROKER_ACCOUNT_IDENTITY_MISMATCH') {
-      return res.status(409).json({
-        error: 'The Dhan access token belongs to a different Dhan Client ID than the one entered.',
-        code: error.code,
-        broker: DHAN,
-        status: 'FAILED',
-      });
-    }
     if (error.name === 'BrokerApiError' || error.name === 'BrokerCapabilityError') {
       return res.status(error.statusCode || 400).json({ 
         error: error.message,
-        code: error.code || null,
-        dhanErrorCode: error.providerErrorCode ?? null,
-        dhanErrorMessage: error.providerMessage ?? null,
-        dhanHttpStatus: error.httpStatus ?? null,
         broker: DHAN,
         status: 'FAILED'
       });

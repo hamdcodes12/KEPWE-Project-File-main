@@ -2360,25 +2360,13 @@ function BrokerConnectionView() {
         dhanClientId: dhanClientId.trim(),
         accessToken: accessToken.trim(),
       });
-      // Only a backend-verified CONNECTED result (Dhan /v2/profile succeeded and
-      // matched the Client ID) counts as connected. HTTP 206 (partial) is not.
-      if (result.ok && result.data?.status === 'CONNECTED') {
+      if (result.ok) {
+        setNotice({ type: 'success', text: 'Dhan account connected. Running live integration health check...' });
         setAccessToken('');
-        const marketData = result.data?.marketData;
-        setNotice(marketData?.available === false
-          ? { type: 'warning', text: `Dhan account connected (Client ID ${result.data.dhanClientId}). Dhan rejected live market data for this account${marketData.dataPlan ? ` (Dhan Data API plan: ${marketData.dataPlan})` : ''}, so the market feed stays blocked.` }
-          : { type: 'success', text: `Dhan account connected and verified (Client ID ${result.data.dhanClientId}).` });
         await refreshBrokerState({ force: true });
       } else {
-        const failedChecks = Object.values(result.data?.verification?.checks || {})
-          .filter((check) => check && check.status !== 'PASS')
-          .map((check) => `${check.name}: ${check.message}`);
-        const dhanCode = result.data?.dhanErrorCode ? ` [Dhan ${result.data.dhanErrorCode}]` : '';
-        const errorMsg = (result.data?.error || result.data?.message || (result.status === 401 ? 'Your session has expired. Please log in again.' : 'Failed to validate and connect Dhan account.'))
-          + dhanCode
-          + (failedChecks.length ? ` — ${failedChecks.join('; ')}` : '');
+        const errorMsg = result.data?.error || result.data?.message || (result.status === 401 ? 'Your session has expired. Please log in again.' : 'Failed to validate and connect Dhan account.');
         setNotice({ type: 'error', text: errorMsg });
-        await refreshBrokerState({ force: true });
       }
     } catch (err) {
       setNotice({ type: 'error', text: err.message || 'Network error while connecting Dhan account.' });

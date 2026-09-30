@@ -227,10 +227,7 @@ export async function runDhanLiveHealthCheck(pool, userId) {
     add('notifications', check(notificationSchema.rows[0]?.exists === true, 'Notification persistence table is available.'));
     add('emergencyStop', check(typeof adapter.exitAllPositions === 'function', 'Dhan exit-all-positions capability is wired; it was not invoked by this health check.'));
   } catch (error) {
-    const blocker = error?.dataApiRejected
-      ? `Dhan session is valid, but Dhan rejected the market-data request (HTTP ${error.httpStatus}${error.providerErrorCode ? `, ${error.providerErrorCode}` : ''}). Check that the Dhan Data API plan is active for this account.`
-      : error.message;
-    blockers.push({ check: 'dhanLiveHealth', blocker, status: 'FAIL', code: error?.code || null, dhanErrorCode: error?.providerErrorCode ?? null });
+    blockers.push({ check: 'dhanLiveHealth', blocker: error.message, status: 'FAIL' });
   }
 
   const ready = Object.values(checks).every((result) => result.passed === true) && blockers.length === 0;

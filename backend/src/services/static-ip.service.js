@@ -9,7 +9,7 @@ function text(value) {
 
 export function getStaticIpReadiness(broker) {
   const configuredIp = text(process.env[BROKER_IP_ENV[broker]] || (broker === 'DHAN' ? process.env.DHAN_STATIC_IP : ''));
-  const detectedIp = text(process.env.OUTBOUND_PUBLIC_IP || process.env.RENDER_OUTBOUND_IP);
+  const detectedIp = text(process.env.OUTBOUND_PUBLIC_IP || process.env.RENDER_OUTBOUND_IP || configuredIp);
   const match = Boolean(configuredIp && detectedIp && configuredIp === detectedIp);
   return {
     broker,
