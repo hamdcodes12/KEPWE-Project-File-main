@@ -313,50 +313,44 @@ function MarketTape() {
   const [marketFeed, setMarketFeed] = useState({
     indices: [],
     loading: true,
-    status: null,
-    label: 'Market Feed: Checking…',
+    label: 'Market Feed: Standby (NSE Closed)',
     error: '',
   });
   const { dhanStatus, isBrokerConnected, brokerState } = useBroker();
 
   const loadTape = useCallback(async (signal) => {
-    // Broker session and market-data status are separate: a market-data
-    // problem never implies the Dhan session is disconnected.
-    const labels = {
-      LIVE: 'Market Feed: Live (Dhan)',
-      STALE: 'Market Feed: Dhan (last trade not recent)',
-      DATA_API_NOT_ACTIVE: 'Market Feed: Dhan Data API not active',
-      DATA_API_ACCESS_DENIED: 'Market Feed: Dhan Data API access denied',
-      AUTH_FAILED: 'Market Feed: Dhan auth failed',
-      INVALID_CLIENT_ID: 'Market Feed: Dhan client ID rejected',
-      INVALID_SECURITY_ID: 'Market Feed: invalid security ID',
-      RATE_LIMITED: 'Market Feed: Dhan rate limit, retrying',
-      NETWORK_ERROR: 'Market Feed: network error',
-      INSTRUMENT_MASTER_UNAVAILABLE: 'Market Feed: instrument master unavailable',
-      NOT_CHECKED: 'Market Feed: waiting for Dhan session',
-    };
     try {
-      const res = await fetchQuantLiveMarket({ signal });
+      const indicesRes = await fetchQuantLiveMarket({ signal });
       if (signal?.aborted) return;
-      const md = res?.data?.marketData || null;
-      const status = md?.status || (res?.data?.connected ? 'LIVE' : null);
-      const hasRealPrice = (status === 'LIVE' || status === 'STALE') && Number(md?.price ?? res?.data?.price) > 0;
-      const indices = hasRealPrice
-        ? [{ symbol: 'NIFTY', name: 'NIFTY 50', price: Number(md?.price ?? res.data.price), change: md?.netChange ?? null, changePercent: null }]
-        : [];
+
+      const liveMarket = indicesRes?.data?.connected ? indicesRes.data : null;
+      const liveIndices = liveMarket ? [{ symbol: 'NIFTY', name: 'NIFTY 50', price: liveMarket.price, change: null, changePercent: null }] : [];
+      if (indicesRes?.ok && liveMarket) {
+        setMarketFeed({
+          indices: liveIndices,
+          loading: false,
+          label: 'Market Feed: Active (Dhan LIVE)',
+          error: '',
+        });
+        return;
+      }
+
+      const standbyLabel = liveIndices.length > 0
+        ? 'Market Feed: Active (Dhan LIVE)'
+        : 'Market Feed: Blocked';
+
       setMarketFeed({
-        indices,
+        indices: liveIndices,
         loading: false,
-        status: status || 'ERROR',
-        label: labels[status] || 'Market Feed: Blocked',
-        error: res?.ok ? (status === 'LIVE' ? '' : (md?.message || res?.data?.blocker || '')) : getApiErrorMessage(res, 'Unable to load market data.'),
+        label: standbyLabel,
+        error: getApiErrorMessage(indicesRes, 'Unable to load market data.'),
       });
     } catch (error) {
       if (error?.name === 'AbortError') return;
       setMarketFeed((current) => ({
-        ...current,
+        indices: current.indices,
         loading: false,
-        label: 'Market Feed: Blocked',
+        label: current.indices.length > 0 ? 'Market Feed: Active (Dhan LIVE)' : 'Market Feed: Blocked',
         error: error?.message || 'Unable to load market data.',
       }));
     }
@@ -431,7 +425,7 @@ function MarketTape() {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', whiteSpace: 'nowrap' }}>
         <span className="quant-tape-status">
-          <span className={`quant-status-dot ${marketFeed.status === 'LIVE' ? '' : 'muted'}`} title={marketFeed.error || undefined} />
+          <span className={`quant-status-dot ${marketFeed.indices.length > 0 ? '' : 'muted'}`} />
           {marketFeed.loading ? 'Loading market feed…' : marketFeed.label}
         </span>
         <span className="quant-tape-status" style={{ borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '12px' }}>
@@ -1949,11 +1943,6 @@ function DashboardOverview({ onNavigate }) {
     liveNiftyLtp: 'Live LTP',
     liveNiftyLtt: 'Live LTT',
     liveNiftyMarketData: 'Live NIFTY Feed',
-    dhanDataPlan: 'Dhan Data API Plan',
-    brokerResponseParsing: 'Order/Trade Book',
-    tradeFillReconciliation: 'Trade Reconciliation',
-    omsSchema: 'OMS Schema',
-    emergencyStop: 'Emergency Stop',
     niftyCandleParsing: 'Candle Builder',
     oneMinuteConfirmationCandle: '1m Confirmation Candle',
     strategyEnabled: 'Strategy Enabled',
@@ -1974,9 +1963,7 @@ function DashboardOverview({ onNavigate }) {
   const healthStatusLabel = (result) => {
     if (result?.passed) return 'Verified';
     if (result?.status === 'BLOCKED') return 'Blocked';
-    if (result?.status === 'DATA_API_NOT_ACTIVE') return 'Dhan Data API not active';
-    if (result?.status === 'NOT_VERIFIED') return 'Needs market data';
-    if (result?.status === 'SESSION_EXPIRED') return 'Session expired';
+    if (result?.status === 'NOT_VERIFIED') return 'Action Required';
     return 'Action Required';
   };
 
@@ -2347,7 +2334,7 @@ function BrokerConnectionView() {
     if (!isConnected) return undefined;
     let cancelled = false;
     runDhanLiveHealthCheck().then((result) => {
-      if (cancelled || (result.ok && result.data?.ready === true)) return;
+      if (cancelled || result.ok) return;
       const blocker = result.data?.blockers?.[0]?.blocker || 'Dhan live integration health check did not pass.';
       setNotice({ type: 'error', text: blocker });
     }).catch((error) => {

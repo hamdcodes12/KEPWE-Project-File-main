@@ -128,134 +128,47 @@ function requireFields(broker, fields) {
   }
 }
 
-/**
- * Dhan Data APIs report numeric 8xx codes (documented: 800, 804-814) rather
- * than errorCode/errorMessage fields. Accept either `{ errorCode: 806 }` or a
- * map keyed by the code, e.g. `{ data: { "806": "Data APIs not subscribed" } }`.
- */
-function extractNumericDataApiError(payload) {
-  for (const candidate of [payload?.data, payload]) {
-    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-    const key = Object.keys(candidate).find((name) => /^8\d\d$/.test(name));
-    if (key) return { code: key, message: typeof candidate[key] === 'string' ? candidate[key] : null };
-  }
-  return null;
-}
-
-function providerErrorFields(payload) {
-  const numeric = extractNumericDataApiError(payload);
-  const code = payload?.errorCode ?? payload?.errorcode ?? payload?.remarks?.error_code ?? numeric?.code ?? null;
-  const message = payload?.remarks?.message
-    || payload?.errorMessage
-    || payload?.message
-    || (typeof payload?.error === 'string' ? payload.error : null)
-    || numeric?.message
-    || null;
-  return { code: code === null || code === undefined ? null : String(code), message, type: payload?.errorType || null };
-}
-
 async function parseJsonResponse(broker, response) {
-  let rawText = '';
-  try {
-    rawText = await response.text();
-  } catch {
-    rawText = '';
-  }
   let payload = null;
   try {
-    payload = rawText ? JSON.parse(rawText) : null;
+    payload = await response.json();
   } catch {
     payload = null;
   }
   if (!response.ok) {
-    const provider = providerErrorFields(payload);
-    const message = [provider.code, provider.message].filter(Boolean).join(': ') || `HTTP ${response.status}`;
+    const providerErrorCode = payload?.errorCode || payload?.errorcode || payload?.remarks?.error_code || null;
+    const providerMessage = payload?.remarks?.message
+      || payload?.errorMessage
+      || payload?.message
+      || payload?.error
+      || null;
+    const message = [providerErrorCode, providerMessage].filter(Boolean).join(': ') || `HTTP ${response.status}`;
     const err = new BrokerApiError(broker, message, response.status >= 500 ? 502 : response.status);
     err.httpStatus = response.status;
-    err.providerErrorCode = provider.code;
-    err.providerErrorType = provider.type;
-    err.providerMessage = provider.message;
-    // Non-JSON bodies are kept (truncated) so the real upstream reply is visible in logs.
-    err.providerBodySnippet = payload === null && rawText ? rawText.slice(0, 200) : null;
-    if (response.status === 429) {
-      err.code = 'BROKER_RATE_LIMITED';
-      err.statusCode = 429;
-    } else if (response.status === 401 || response.status === 403 || /expired|invalid token|unauthorized/i.test(String(message))) {
+    err.providerErrorCode = providerErrorCode;
+    err.providerErrorType = payload?.errorType || null;
+    err.providerMessage = providerMessage;
+    if (response.status === 401 || response.status === 403 || /expired|invalid token|unauthorized/i.test(String(message))) {
       err.code = 'BROKER_SESSION_EXPIRED';
       err.statusCode = 401;
     }
     err.raw = payload;
     throw err;
   }
-  if (payload && (payload.status === false || payload.status === 'failure' || payload.status === 'failed')) {
-    const provider = providerErrorFields(payload);
-    const message = [provider.code, provider.message].filter(Boolean).join(': ') || 'Request rejected by broker';
+  if (payload && (payload.status === false || payload.status === 'failure')) {
+    const message = payload?.remarks?.message
+      || payload?.errorMessage
+      || payload?.message
+      || payload?.errorcode
+      || 'Request rejected by broker';
     const err = new BrokerApiError(broker, message);
-    err.httpStatus = response.status;
-    err.providerErrorCode = provider.code;
-    err.providerErrorType = provider.type;
-    err.providerMessage = provider.message;
     if (/expired|invalid token|unauthorized/i.test(String(message))) {
       err.code = 'BROKER_SESSION_EXPIRED';
       err.statusCode = 401;
     }
-    err.raw = payload;
     throw err;
   }
   return payload;
-}
-
-/**
- * Classifies a Dhan failure using the documented codes (dhanhq.co/docs/v2/annexure):
- *   DH-901 auth, DH-902 Data API not subscribed / no access, DH-903 account, DH-904 rate limit,
- *   DH-905 input, DH-906 order, DH-907 data error, DH-908 internal, DH-909 network, DH-910 other;
- *   Data API: 800 internal, 804 too many instruments, 805 too many requests, 806 Data APIs not
- *   subscribed, 807 token expired, 808 auth failed, 809 token invalid, 810 client ID invalid,
- *   811 invalid expiry, 812 invalid date format, 813 invalid SecurityId, 814 invalid request.
- */
-export function classifyDhanError(error, { dataApi = false } = {}) {
-  const code = String(error?.providerErrorCode || '').toUpperCase();
-  const http = Number(error?.httpStatus) || null;
-  if (error?.code === 'NETWORK_ERROR' || error?.code === 'BROKER_TIMEOUT' || code === 'DH-909') return 'NETWORK_ERROR';
-  if (code === 'DH-904' || code === '805' || http === 429) return 'RATE_LIMITED';
-  if (code === 'DH-902' || code === '806') return 'DATA_API_NOT_ACTIVE';
-  if (code === '810') return 'INVALID_CLIENT_ID';
-  if (code === '813') return 'INVALID_SECURITY_ID';
-  if (code === 'DH-901' || code === '807' || code === '808' || code === '809') return 'AUTH_FAILED';
-  if (code === 'DH-903') return 'ACCOUNT_ERROR';
-  if (['DH-905', 'DH-907', '804', '811', '812', '814'].includes(code)) return dataApi ? 'MARKET_DATA_ERROR' : 'REQUEST_ERROR';
-  if (code === 'DH-908' || code === 'DH-910' || code === '800' || (http && http >= 500)) return 'UPSTREAM_ERROR';
-  // 401/403 with no documented code: on a Data API this cannot be told apart
-  // from a missing subscription without the profile's dataPlan; report as such.
-  if (http === 401 || http === 403) return dataApi ? 'DATA_API_ACCESS_DENIED' : 'AUTH_FAILED';
-  return dataApi ? 'MARKET_DATA_ERROR' : 'UPSTREAM_ERROR';
-}
-
-/**
- * Parses Dhan's "DD/MM/YYYY HH:mm[:ss]" timestamps, which are IST (UTC+05:30).
- * Returns a UTC Date, or null when absent/unparseable/placeholder (01/01/1980).
- */
-export function parseDhanDateTime(value) {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(String(value || '').trim());
-  if (!match) return null;
-  const [, dd, mm, yyyy, hh, min, ss = '0'] = match;
-  if (Number(yyyy) < 2000) return null;
-  const utcMs = Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), Number(ss)) - (330 * 60 * 1000);
-  const parsed = new Date(utcMs);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-// Documented Dhan limits (dhanhq.co/docs/v2): Quote APIs 1 req/s, Data APIs 5 req/s.
-const DHAN_RATE_GATES = new Map();
-const QUOTE_API_INTERVAL_MS = 1100;
-const DATA_API_INTERVAL_MS = 250;
-
-async function acquireDhanRateSlot(key, intervalMs) {
-  const now = Date.now();
-  const nextAllowed = DHAN_RATE_GATES.get(key) || 0;
-  const slot = Math.max(now, nextAllowed);
-  DHAN_RATE_GATES.set(key, slot + intervalMs);
-  if (slot > now) await new Promise((resolve) => setTimeout(resolve, slot - now));
 }
 
 function delay(ms, signal) {
@@ -291,9 +204,17 @@ function normalizeTokenExpiry(value, fallbackMs = null) {
   return fallbackMs ? new Date(Date.now() + fallbackMs) : null;
 }
 
-/** Dhan /v2/profile tokenValidity ("DD/MM/YYYY HH:mm", IST). */
+/**
+ * Dhan /v2/profile returns tokenValidity as "DD/MM/YYYY HH:mm" in IST (UTC+05:30).
+ * Returns a UTC Date or null when the value is absent/unparseable.
+ */
 export function parseDhanTokenValidity(value) {
-  return parseDhanDateTime(value);
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(String(value || '').trim());
+  if (!match) return null;
+  const [, dd, mm, yyyy, hh, min, ss = '0'] = match;
+  const utcMs = Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), Number(ss)) - (330 * 60 * 1000);
+  const parsed = new Date(utcMs);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function assertTokenNotExpired(broker, expiresAt) {
@@ -817,11 +738,6 @@ export class DhanAdapter extends BrokerAdapter {
       ...extraHeaders,
     };
 
-    if (dataApi) {
-      const gateKey = `${this.dhanClientId || 'anon'}:${path.startsWith('/marketfeed') ? 'quote' : 'data'}`;
-      await acquireDhanRateSlot(gateKey, path.startsWith('/marketfeed') ? QUOTE_API_INTERVAL_MS : DATA_API_INTERVAL_MS);
-    }
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), requestTimeout('DHAN'));
     const abort = () => controller.abort();
@@ -834,40 +750,25 @@ export class DhanAdapter extends BrokerAdapter {
         signal: controller.signal,
       });
       return await parseJsonResponse(this.name, response);
-    } catch (caught) {
-      let error = caught;
-      if (error.name === 'AbortError') {
-        error = new BrokerApiError(this.name, 'request timed out', 504);
-        error.code = 'BROKER_TIMEOUT';
-      } else if (error.name !== 'BrokerApiError') {
-        // fetch() network failure (DNS, TLS, connection reset): never a session problem.
-        const networkError = new BrokerApiError(this.name, `network error: ${error.message}`, 503);
-        networkError.code = 'NETWORK_ERROR';
-        networkError.cause = error;
-        error = networkError;
-      }
-      if (error.providerBodySnippet && this.accessToken) {
-        error.providerBodySnippet = error.providerBodySnippet.split(this.accessToken).join('[REDACTED]');
-      }
-      error.dhanCategory = classifyDhanError(error, { dataApi });
+    } catch (error) {
+      if (error.name === 'AbortError') throw new BrokerApiError(this.name, 'request timed out', 504);
       // Dhan Data APIs (market feed, charts, option chain) are a separately
-      // subscribed product. A subscription/access rejection there, with a
-      // token that /v2/profile accepts, is NOT an expired trading session.
-      if (dataApi && ['DATA_API_NOT_ACTIVE', 'DATA_API_ACCESS_DENIED'].includes(error.dhanCategory)) {
+      // subscribed product. A 401/403 there with a token that /v2/profile
+      // accepts means the Data API plan is not active, NOT an expired
+      // session. Re-classify so callers never mark the trading session expired.
+      if (dataApi && (error.httpStatus === 401 || error.httpStatus === 403)) {
         error.code = 'DHAN_DATA_API_UNAVAILABLE';
         error.statusCode = 403;
         error.dataApiRejected = true;
-      } else if (dataApi && error.code === 'BROKER_SESSION_EXPIRED' && error.dhanCategory !== 'AUTH_FAILED') {
-        error.code = `DHAN_${error.dhanCategory}`;
-        error.statusCode = error.dhanCategory === 'RATE_LIMITED' ? 429 : 502;
       }
-      // Never includes the access token: only endpoint and provider error fields.
-      console.warn('[DHAN_API]', JSON.stringify({
-        path, method, httpStatus: error.httpStatus ?? null,
-        errorCode: error.providerErrorCode ?? null, errorType: error.providerErrorType ?? null,
-        errorMessage: error.providerMessage ?? null, body: error.providerBodySnippet ?? null,
-        category: error.dhanCategory, classifiedAs: error.code || null,
-      }));
+      if (error.name === 'BrokerApiError') {
+        // Never includes the access token: only endpoint and provider error fields.
+        console.warn('[DHAN_API]', JSON.stringify({
+          path, method, httpStatus: error.httpStatus ?? null,
+          errorCode: error.providerErrorCode ?? null, errorType: error.providerErrorType ?? null,
+          errorMessage: error.providerMessage ?? null, classifiedAs: error.code || null,
+        }));
+      }
       throw error;
     } finally {
       clearTimeout(timeout);
@@ -949,20 +850,6 @@ export class DhanAdapter extends BrokerAdapter {
       dataApi: true,
       method: 'POST',
       body: { [segment]: [String(symbolToken)] },
-    });
-  }
-
-  /**
-   * POST /v2/marketfeed/quote (Quote API, 1 req/s). Unlike /marketfeed/ltp it
-   * returns last_trade_time, which is required to prove the price is fresh.
-   */
-  async getQuote({ exchangeSegment, securityIds } = {}) {
-    const ids = (Array.isArray(securityIds) ? securityIds : [securityIds]).filter((id) => id !== undefined && id !== null && id !== '');
-    if (!exchangeSegment || ids.length === 0) throw new BrokerCapabilityError(this.name, 'quote instrument mapping');
-    return this.request('/marketfeed/quote', {
-      dataApi: true,
-      method: 'POST',
-      body: { [String(exchangeSegment).toUpperCase()]: ids.map((id) => Number(id)) },
     });
   }
 

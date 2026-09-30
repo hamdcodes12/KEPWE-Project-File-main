@@ -26,21 +26,17 @@ test('Dhan candles exclude the incomplete current candle', () => {
   assert.equal(candles[0].close, 101);
 });
 
-test('option-chain contracts resolve against real-shaped official master rows (underlying 26000, symbol NIFTY)', () => {
+test('option-chain contracts require the NIFTY official instrument master mapping', () => {
   const requestedAt = Date.parse('2026-09-21T10:00:00.000Z');
-  // Shapes match the official master: NIFTY options carry UNDERLYING_SECURITY_ID 26000 and UNDERLYING_SYMBOL NIFTY.
   const master = new Map([
-    ['NSE_FNO:501', { securityId: '501', exchangeSegment: 'NSE_FNO', instrument: 'OPTIDX', underlyingSecurityId: '26000', underlyingSymbol: 'NIFTY', optionType: 'PE', expiry: '2026-09-24', tradingSymbol: 'NIFTY-Sep2026-25000-PE', lotSize: 65, tradable: true }],
-    ['NSE_FNO:502', { securityId: '502', exchangeSegment: 'NSE_FNO', instrument: 'OPTIDX', underlyingSecurityId: '25', underlyingSymbol: 'BANKNIFTY', optionType: 'PE', expiry: '2026-09-24', tradingSymbol: 'BANKNIFTY-Sep2026-50000-PE', lotSize: 30, tradable: true }],
+    ['501', { securityId: '501', underlyingSecurityId: '13', exchangeSegment: 'NSE_FNO', optionType: 'PE', expiry: '2026-09-24', tradingSymbol: 'NIFTY26SEP25000PE', lotSize: 75, tradable: true }],
+    ['502', { securityId: '502', underlyingSecurityId: '99', exchangeSegment: 'NSE_FNO', optionType: 'PE', expiry: '2026-09-24', tradingSymbol: 'OTHER26SEP25000PE', lotSize: 75, tradable: true }],
   ]);
-  const contracts = resolveDhanOptionInstruments({ data: { oc: {
-    '25000': { pe: { security_id: '501', last_price: 100, top_bid_price: 99, top_ask_price: 101, volume: 100, greeks: { delta: -0.5 } } },
-    '50000': { pe: { security_id: '502', last_price: 100, top_bid_price: 99, top_ask_price: 101, volume: 100 } },
-  } } }, requestedAt, master, '2026-09-24');
+  const contracts = resolveDhanOptionInstruments({ data: { oc: { '25000': {
+    pe: { security_id: '501', last_price: 100, top_bid_price: 99, top_ask_price: 101, volume: 100, greeks: { delta: -0.5 } },
+  } } } }, requestedAt, master, '2026-09-24');
   assert.equal(contracts.length, 1);
   assert.equal(contracts[0].optionType, 'PE');
   assert.equal(contracts[0].delta, -0.5);
   assert.equal(contracts[0].securityId, '501');
-  assert.equal(contracts[0].tradingSymbol, 'NIFTY-Sep2026-25000-PE');
-  assert.equal(contracts[0].lotSize, 65);
 });

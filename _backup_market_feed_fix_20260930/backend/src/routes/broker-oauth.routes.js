@@ -8,7 +8,6 @@ import { storeBrokerTokens } from '../services/broker-token.service.js';
 import { assertBrokerIdentity, verifyBrokerConnection } from '../services/broker-verification.service.js';
 import { applyBrokerExecutionUpdate, verifyBrokerWebhookRequest } from '../services/broker-execution.service.js';
 import { areBrokerFeaturesEnabled } from '../config/env.js';
-import { clearDhanMarketFeedCache } from '../services/dhan-market-feed.service.js';
 
 const router = Router();
 
@@ -237,8 +236,6 @@ router.post('/broker/dhan/connect', requireAuth, requireBrokerFeatures, async (r
     } finally {
       client.release();
     }
-    // The stored token changed: drop any cached market-feed result for this user.
-    clearDhanMarketFeedCache(req.userId);
 
     console.log(`[DHAN_CONNECT] Starting comprehensive verification for user ${req.userId}`);
 

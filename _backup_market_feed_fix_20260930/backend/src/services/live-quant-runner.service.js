@@ -11,11 +11,10 @@ import {
   selectNiftyScalpingOption,
 } from './nifty-scalping-strategy.service.js';
 import { tryCreateQuantNotification } from './quant-notification.service.js';
-import { findNseFnoContract, loadDhanInstrumentMaster } from './dhan-instruments.service.js';
-import { fetchNiftyIndexQuote } from './dhan-market-feed.service.js';
 
-export { loadDhanInstrumentMaster };
-
+const NIFTY_INDEX_SECURITY_ID = '13';
+const DHAN_INSTRUMENT_MASTER_URL = 'https://images.dhan.co/api-data/api-scrip-master-detailed.csv';
+let instrumentMasterCache = { loadedAt: 0, rows: new Map() };
 let running = false;
 
 function istDate() {
@@ -33,6 +32,15 @@ function number(value) {
   return Number.isFinite(result) ? result : null;
 }
 
+function niftyQuote(payload) {
+  const data = payload?.data || payload || {};
+  const quote = data?.IDX_I?.[NIFTY_INDEX_SECURITY_ID] || {};
+  return {
+    ltp: number(quote.last_price ?? quote.ltp),
+    ltt: quote.ltt ?? quote.last_trade_time ?? quote.lastTradeTime ?? null,
+  };
+}
+
 function timestampMs(value) {
   if (value === null || value === undefined || value === '') return null;
   const numeric = Number(value);
@@ -44,6 +52,77 @@ function timestampMs(value) {
 export function isFreshMarketTimestamp(value, now = Date.now(), maxAgeMs = 90_000) {
   const timestamp = timestampMs(value);
   return timestamp !== null && timestamp <= now && now - timestamp <= maxAgeMs;
+}
+
+function parseCsvLine(line) {
+  const values = [];
+  let value = '';
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (character === '"' && line[index + 1] === '"' && quoted) {
+      value += '"';
+      index += 1;
+    } else if (character === '"') {
+      quoted = !quoted;
+    } else if (character === ',' && !quoted) {
+      values.push(value);
+      value = '';
+    } else {
+      value += character;
+    }
+  }
+  values.push(value);
+  return values;
+}
+
+export async function loadDhanInstrumentMaster() {
+  if (Date.now() - instrumentMasterCache.loadedAt < 15 * 60 * 1000 && instrumentMasterCache.rows.size > 0) {
+    return instrumentMasterCache.rows;
+  }
+  const response = await fetch(DHAN_INSTRUMENT_MASTER_URL);
+  if (!response.ok) throw new Error(`Dhan instrument master unavailable: HTTP ${response.status}`);
+  const lines = (await response.text()).split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) throw new Error('Dhan instrument master is empty');
+  const headers = parseCsvLine(lines[0]).map((header) => header.trim());
+  const aliases = (names) => names.find((name) => headers.includes(name));
+  const fields = {
+    securityId: aliases(['SECURITY_ID', 'SEM_SMST_SECURITY_ID']),
+    tradingSymbol: aliases(['SEM_TRADING_SYMBOL', 'TRADING_SYMBOL']),
+    displayName: aliases(['SEM_CUSTOM_SYMBOL', 'DISPLAY_NAME']),
+    underlyingSecurityId: aliases(['SEM_UNDERLYING_SECURITY_ID', 'UNDERLYING_SECURITY_ID']),
+    exchangeSegment: aliases(['SEM_EXM_EXCH_ID', 'EXCH_ID', 'EXCHANGE_SEGMENT']),
+    expiry: aliases(['SM_EXPIRY_DATE', 'EXPIRY_DATE']),
+    strike: aliases(['SEM_STRIKE_PRICE', 'STRIKE_PRICE']),
+    optionType: aliases(['SEM_OPTION_TYPE', 'OPTION_TYPE']),
+    lotSize: aliases(['LOT_SIZE', 'SEM_LOT_UNITS']),
+    status: aliases(['SEM_STATUS', 'STATUS', 'TRADABLE_STATUS']),
+  };
+  if (!fields.securityId || !fields.lotSize || !fields.expiry) {
+    throw new Error('Dhan instrument master lacks required security, lot-size, or expiry columns');
+  }
+  const rows = new Map();
+  for (const line of lines.slice(1)) {
+    const values = parseCsvLine(line);
+    const row = Object.fromEntries(headers.map((header, index) => [header, values[index] || '']));
+    const securityId = String(row[fields.securityId] || '').trim();
+    if (securityId) {
+      rows.set(securityId, {
+        securityId,
+        tradingSymbol: row[fields.tradingSymbol] || null,
+        displayName: row[fields.displayName] || null,
+        underlyingSecurityId: row[fields.underlyingSecurityId] || null,
+        exchangeSegment: row[fields.exchangeSegment] || null,
+        expiry: row[fields.expiry] || null,
+        strike: number(row[fields.strike]),
+        optionType: row[fields.optionType] || null,
+        lotSize: number(row[fields.lotSize]),
+        tradable: !fields.status || !['N', 'NO', 'INACTIVE', 'HALTED'].includes(String(row[fields.status]).trim().toUpperCase()),
+      });
+    }
+  }
+  instrumentMasterCache = { loadedAt: Date.now(), rows };
+  return rows;
 }
 
 export function normalizeDhanCandles(payload, intervalMinutes, now = Date.now()) {
@@ -88,12 +167,9 @@ export function resolveDhanOptionInstruments(payload, requestedAt, instrumentMas
       const bid = number(quote.top_bid_price ?? quote.bid_price ?? quote.bid);
       const ask = number(quote.top_ask_price ?? quote.ask_price ?? quote.ask);
       const securityId = quote.security_id ?? quote.securityId;
-      const master = findNseFnoContract(instrumentMaster, securityId);
+      const master = instrumentMaster.get(String(securityId));
       if (!securityId || ltp === null || bid === null || ask === null || !master) continue;
-      // The official master lists NIFTY options with UNDERLYING_SYMBOL "NIFTY" and
-      // UNDERLYING_SECURITY_ID 26000 (not the IDX_I index id 13), so match on symbol.
-      if (String(master.underlyingSymbol || '').toUpperCase() !== 'NIFTY') continue;
-      if (master.instrument && String(master.instrument).toUpperCase() !== 'OPTIDX') continue;
+      if (master.underlyingSecurityId && String(master.underlyingSecurityId) !== NIFTY_INDEX_SECURITY_ID) continue;
       if (master.exchangeSegment && !['NSE_FNO', 'NFO', 'NSE'].includes(String(master.exchangeSegment).toUpperCase())) continue;
       if (master.optionType && String(master.optionType).toUpperCase() !== optionType) continue;
       if (master.tradable === false) continue;
@@ -210,20 +286,8 @@ async function processUser(pool, userId) {
   const { adapter, row } = account;
   await adapter.validateSession();
   await logStage('DHAN_SESSION', 'PASS', 'Dhan session validated.');
-  let niftyInstrument;
-  let liveQuote;
-  try {
-    const feed = await fetchNiftyIndexQuote(adapter);
-    niftyInstrument = feed.instrument;
-    liveQuote = { ltp: feed.quote?.price ?? null, ltt: feed.quote?.ltt ?? null, fresh: feed.fresh };
-  } catch (error) {
-    await logStage('LIVE_DATA', 'FAIL', `Dhan market data unavailable: ${error.message}`, {
-      category: error?.dhanCategory || null, dhanHttpStatus: error?.httpStatus ?? null, dhanErrorCode: error?.providerErrorCode ?? null,
-    });
-    return;
-  }
-  const NIFTY_INDEX_SECURITY_ID = niftyInstrument.securityId;
-  if (!liveQuote.ltp || !liveQuote.fresh) {
+  const liveQuote = niftyQuote(await adapter.getMarketData({ exchange: 'IDX_I', symbolToken: NIFTY_INDEX_SECURITY_ID }));
+  if (!liveQuote.ltp || !isFreshMarketTimestamp(liveQuote.ltt)) {
     await logStage('LIVE_DATA', 'FAIL', 'Dhan NIFTY quote is missing LTP or has a stale/future LTT.', { securityId: NIFTY_INDEX_SECURITY_ID, ltp: liveQuote.ltp, ltt: liveQuote.ltt });
     return;
   }

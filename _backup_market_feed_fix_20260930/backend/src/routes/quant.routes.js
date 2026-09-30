@@ -4,6 +4,8 @@ import { requireAuth, validateBody } from '../middleware/auth.js';
 import { requireProductAccess } from '../middleware/product-auth.js';
 import { requireFeature, requireActiveSubscription, FEATURES } from '../middleware/feature-gate.js';
 import { pool } from '../config/db.js';
+import { getBrokerAdapter } from '../algo/broker-adapters.js';
+import { decryptBrokerSecret } from '../services/broker-token.service.js';
 import {
   NIFTY_QUANT_STRATEGY,
   enrichNiftyCandles,
@@ -18,7 +20,6 @@ import {
   validateNiftyScalpingDeploymentGate,
 } from '../services/nifty-scalping-strategy.service.js';
 import { runDhanLiveHealthCheck } from '../services/dhan-live-health.service.js';
-import { getDhanMarketFeed } from '../services/dhan-market-feed.service.js';
 
 const router = Router();
 
@@ -128,9 +129,135 @@ function computeMaxDrawdownFromPnlSeries(pnls = []) {
   return Number(maxDrawdown.toFixed(2));
 }
 
+function extractDhanLtp(payload) {
+  const visit = (value) => {
+    if (!value || typeof value !== 'object') return null;
+    for (const key of ['last_price', 'lastPrice', 'ltp', 'LTP']) {
+      const price = Number(value[key]);
+      if (Number.isFinite(price) && price > 0) return price;
+    }
+    for (const child of Object.values(value)) {
+      const price = visit(child);
+      if (price !== null) return price;
+    }
+    return null;
+  };
+  return visit(payload?.data || payload);
+}
+
+function extractDhanLtt(payload) {
+  const visit = (value) => {
+    if (!value || typeof value !== 'object') return null;
+    for (const key of ['ltt', 'last_trade_time', 'lastTradeTime', 'timestamp']) {
+      if (value[key] !== undefined && value[key] !== null) return value[key];
+    }
+    for (const child of Object.values(value)) {
+      const timestamp = visit(child);
+      if (timestamp !== null) return timestamp;
+    }
+    return null;
+  };
+  return visit(payload?.data || payload);
+}
+
+function isFreshDhanTimestamp(value, now = Date.now(), maxAgeMs = 90_000) {
+  const numeric = Number(value);
+  const timestamp = Number.isFinite(numeric)
+    ? (numeric < 1e12 ? numeric * 1000 : numeric)
+    : new Date(value || '').getTime();
+  return Number.isFinite(timestamp) && timestamp <= now && now - timestamp <= maxAgeMs;
+}
+
 async function getDhanLiveSnapshot(userId) {
-  // One verified Dhan feed shared with /live-health and the live runner.
-  return getDhanMarketFeed(pool, userId);
+  let result;
+  try {
+    result = await pool.query(
+      `SELECT ba.client_id, ba.status, ba.connection_mode,
+              bot.access_token_ciphertext, bot.token_expires_at
+       FROM broker_accounts ba
+       LEFT JOIN broker_oauth_tokens bot ON bot.broker_account_id = ba.id
+       WHERE ba.user_id = $1 AND ba.broker = 'DHAN'
+       ORDER BY bot.created_at DESC LIMIT 1`,
+      [userId],
+    );
+  } catch (error) {
+    return { connected: false, status: 'FAIL', code: 'SUPABASE_UNAVAILABLE', blocker: `Supabase connectivity failed while loading Dhan session: ${error.message}` };
+  }
+  const broker = result.rows[0];
+  if (!broker) {
+    return { connected: false, code: 'DHAN_NOT_CONNECTED', blocker: 'No Dhan account is connected for this user.' };
+  }
+  if (broker.status === 'SESSION_EXPIRED') {
+    return { connected: false, code: 'DHAN_SESSION_EXPIRED', brokerStatus: broker.status, blocker: 'Dhan rejected the stored session. Reconnect with a fresh access token.' };
+  }
+  if (!['CONNECTED', 'PARTIALLY_CONNECTED'].includes(broker.status) || broker.connection_mode !== 'LIVE') {
+    return { connected: false, code: 'DHAN_NOT_CONNECTED', brokerStatus: broker.status, blocker: 'Dhan is not connected in LIVE mode.' };
+  }
+  if (!broker.access_token_ciphertext) return { connected: false, code: 'DHAN_NOT_CONNECTED', blocker: 'Dhan access token is unavailable.' };
+
+  let adapter;
+  let profile;
+  let funds;
+  try {
+    adapter = getBrokerAdapter('DHAN', 'LIVE', {
+      dhanClientId: broker.client_id,
+      accessToken: decryptBrokerSecret(broker.access_token_ciphertext),
+      tokenExpiresAt: broker.token_expires_at,
+    });
+    // Same verified session the status endpoint uses: /v2/profile first.
+    [profile, funds] = await Promise.all([adapter.getProfile(), adapter.getMargin()]);
+  } catch (error) {
+    const expired = error?.code === 'BROKER_SESSION_EXPIRED';
+    return {
+      connected: false,
+      code: expired ? 'DHAN_SESSION_EXPIRED' : 'DHAN_SESSION_CHECK_FAILED',
+      blocker: `Dhan session check failed: ${error.message}`,
+      dhanErrorCode: error?.providerErrorCode ?? null,
+    };
+  }
+  if (String(profile?.clientId || '') !== String(broker.client_id)) {
+    return { connected: false, code: 'DHAN_IDENTITY_MISMATCH', blocker: 'Dhan account identity does not match the connected client ID.' };
+  }
+
+  const sessionInfo = {
+    sessionConnected: true,
+    clientId: broker.client_id,
+    availableMargin: Number(funds?.available),
+    dataPlan: profile?.dataPlan || null,
+    dataValidity: profile?.dataValidity || null,
+  };
+  try {
+    const quote = await adapter.getMarketData({ exchange: 'IDX_I', symbolToken: '13' });
+    const price = extractDhanLtp(quote);
+    const ltt = extractDhanLtt(quote);
+    if (!Number.isFinite(price) || price <= 0) {
+      return { connected: false, code: 'DHAN_NO_LIVE_PRICE', ...sessionInfo, blocker: 'Dhan returned no live NIFTY 50 price.' };
+    }
+    if (!isFreshDhanTimestamp(ltt)) {
+      return { connected: false, code: 'DHAN_STALE_PRICE', ...sessionInfo, blocker: 'Dhan returned a stale or invalid NIFTY 50 last-trade time.' };
+    }
+    return {
+      connected: true,
+      source: 'DHAN',
+      symbol: 'NIFTY 50',
+      price,
+      ltt,
+      ...sessionInfo,
+      lastUpdated: new Date().toISOString(),
+    };
+  } catch (error) {
+    if (error?.dataApiRejected) {
+      return {
+        connected: false,
+        code: 'DHAN_DATA_API_UNAVAILABLE',
+        ...sessionInfo,
+        dhanHttpStatus: error.httpStatus ?? null,
+        dhanErrorCode: error.providerErrorCode ?? null,
+        blocker: `Dhan session is valid, but Dhan rejected the market-data request (HTTP ${error.httpStatus}). Dhan reports Data API plan: ${sessionInfo.dataPlan || 'unknown'}.`,
+      };
+    }
+    return { connected: false, code: 'DHAN_MARKET_DATA_ERROR', ...sessionInfo, blocker: `Dhan live data unavailable: ${error.message}` };
+  }
 }
 
 /**
@@ -202,7 +329,7 @@ router.get('/dashboard', async (req, res, next) => {
       },
       algoStatus: state.status,
       capital: Number(settings.trading_capital),
-      availableMargin: liveSnapshot.sessionConnected ? liveSnapshot.availableMargin : null,
+      availableMargin: liveSnapshot.connected ? liveSnapshot.availableMargin : null,
       todayPnl,
       realizedPnl,
       unrealizedPnl,
@@ -231,12 +358,7 @@ router.get('/dashboard', async (req, res, next) => {
         clientId: liveSnapshot.clientId || null,
         lastUpdated: liveSnapshot.lastUpdated || null,
         blocker: liveSnapshot.blocker || null,
-        brokerStatus: liveSnapshot.broker?.status || null,
-        marketDataStatus: liveSnapshot.marketData?.status || null,
-        dataPlan: liveSnapshot.marketData?.dataPlan || null,
-        label: liveSnapshot.connected
-          ? 'Market Feed: Live (Dhan)'
-          : (liveSnapshot.marketData?.status === 'DATA_API_NOT_ACTIVE' ? 'Market Feed: Dhan Data API not active' : 'Market Feed: Blocked'),
+        label: liveSnapshot.connected ? 'Market Feed: Dhan LIVE' : 'Market Feed: Blocked',
       },
       strategies: userStrategies,
     });
@@ -247,9 +369,8 @@ router.get('/dashboard', async (req, res, next) => {
 
 router.get('/live-market', async (req, res, next) => {
   try {
-    // Always a structured 200: broker.status and marketData.status carry the
-    // truthful state (LIVE, DATA_API_NOT_ACTIVE, AUTH_FAILED, RATE_LIMITED, ...).
     const snapshot = await getDhanLiveSnapshot(req.userId);
+    if (!snapshot.connected) return res.status(503).json({ status: snapshot.status || 'BLOCKED', code: snapshot.code || 'DHAN_NOT_CONNECTED', ...snapshot });
     return res.json(snapshot);
   } catch (error) {
     return next(error);
@@ -259,11 +380,10 @@ router.get('/live-market', async (req, res, next) => {
 router.post('/live-health', async (req, res, next) => {
   try {
     const health = await runDhanLiveHealthCheck(pool, req.userId);
-    // Structured 200 for every determinable outcome; `ready` and `code` carry the verdict.
-    res.json({
-      ...health,
+    res.status(health.ready ? 200 : 503).json({
       status: health.ready ? 'PASS' : (health.status || 'BLOCKED'),
       code: health.code || (health.ready ? 'LIVE_EXECUTION_READY' : 'LIVE_EXECUTION_BLOCKED'),
+      ...health,
     });
   } catch (error) {
     res.status(503).json({
