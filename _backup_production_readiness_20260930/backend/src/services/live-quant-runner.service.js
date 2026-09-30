@@ -110,7 +110,7 @@ export function resolveDhanOptionInstruments(payload, requestedAt, instrumentMas
         tradingSymbol: master.tradingSymbol,
         displayName: master.displayName,
         lotSize: master.lotSize,
-        quantityFreeze: master.freezeQuantity ?? null,
+        quantityFreeze: null,
         delta: number(quote.greeks?.delta),
         isLiquid: ask >= bid && bid > 0 && Number(quote.volume || 0) > 0,
         halted: false,
@@ -355,8 +355,7 @@ async function processUser(pool, userId) {
     maxSlippage: 2,
     lotSize: selected.contract.lotSize,
     availableMargin,
-    // Exchange freeze limit from the official master; unknown => 0 (blocks the order).
-    brokerLimit: Number(selected.contract.quantityFreeze) > 1 ? Number(selected.contract.quantityFreeze) - 1 : 0,
+    brokerLimit: Number.MAX_SAFE_INTEGER,
     exposureLimit: Number.MAX_SAFE_INTEGER,
   });
   await logStage('RISK_GATE', risk.approved ? 'PASS' : 'FAIL', risk.reason || (risk.approved ? 'Risk checks passed.' : 'Risk checks rejected the order.'), { checks: risk.checks, quantity: risk.sizing?.quantity || 0 });

@@ -170,17 +170,11 @@ test('Dhan adapter covers the configured broker contract', async () => {
   await withEnvironment({
     DHAN_API_KEY: 'c0be378b',
     DHAN_API_SECRET: '29c396c8-8ca0-4df2-a360-fa914e5d780b',
-    DHAN_STATIC_IP: '203.0.113.10',
   }, async () => {
-    const { clearStaticIpVerificationCache } = await import('../src/services/static-ip.service.js');
-    clearStaticIpVerificationCache();
     const originalFetch = global.fetch;
     const calls = [];
-    global.fetch = async (url, options = {}) => {
-      // Order APIs require a broker-verified static IP: Dhan whitelist + matching egress.
-      if (String(url).includes('ipify')) return jsonResponse({ ip: '203.0.113.10' });
+    global.fetch = async (url, options) => {
       calls.push({ url: String(url), options });
-      if (String(url).endsWith('/ip/getIP')) return jsonResponse({ primaryIP: '203.0.113.10' });
       if (String(url).endsWith('/orders') && options.method === 'POST') return jsonResponse({ orderId: 'dhan-1', orderStatus: 'PENDING' });
       if (String(url).includes('/orders/dhan-1') && options.method === 'PUT') return jsonResponse({ orderId: 'dhan-1', orderStatus: 'MODIFIED' });
       if (String(url).includes('/orders/dhan-1') && options.method === 'DELETE') return jsonResponse({ orderId: 'dhan-1', orderStatus: 'CANCELLED' });

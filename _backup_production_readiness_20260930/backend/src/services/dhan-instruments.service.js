@@ -74,7 +74,6 @@ export function parseDhanInstrumentMaster(csvText) {
     strike: pick(['STRIKE_PRICE', 'SEM_STRIKE_PRICE']),
     optionType: pick(['OPTION_TYPE', 'SEM_OPTION_TYPE']),
     lotSize: pick(['LOT_SIZE', 'SEM_LOT_UNITS']),
-    freezeQuantity: pick(['SM_FREEZE_QTY']),
   };
   const missing = ['exchange', 'segment', 'securityId', 'instrument', 'lotSize', 'expiry'].filter((key) => !fields[key]);
   if (missing.length > 0) {
@@ -104,8 +103,6 @@ export function parseDhanInstrumentMaster(csvText) {
       strike: number(get(values, 'strike')),
       optionType: ['CE', 'PE'].includes(get(values, 'optionType').toUpperCase()) ? get(values, 'optionType').toUpperCase() : null,
       lotSize: number(get(values, 'lotSize')),
-      // Exchange quantity freeze: an order must be strictly below this quantity.
-      freezeQuantity: number(get(values, 'freezeQuantity')) || null,
       tradable: true,
     });
   }

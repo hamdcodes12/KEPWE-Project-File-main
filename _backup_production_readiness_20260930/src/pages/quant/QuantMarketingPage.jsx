@@ -1219,7 +1219,7 @@ export default function QuantMarketingPage() {
             </div>
             <h2 className="quant-section-title">Plans Designed For Every Quantitative Stage</h2>
             <p className="quant-section-sub">
-              Start with a free trial for research and backtesting, then upgrade when you’re ready to deploy live algorithms to your own broker account.
+              Start with paper trading for free, upgrade when you’re ready to deploy live algorithms to your broker.
             </p>
           </div>
 

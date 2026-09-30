@@ -24,12 +24,7 @@ export function sizePosition({ entryPrice, stopLoss, settings, lotSize = 1, avai
     return { quantity: 0, riskAmount: amount, distance, reason: 'Lot size must be positive' };
   }
   const rawQuantity = amount / distance;
-  // Cap by every limit first, then round down to whole lots so the result is
-  // always a valid exchange quantity (e.g. a freeze limit need not be lot-aligned).
-  const quantity = roundDownToLot(
-    Math.min(rawQuantity, Number(brokerLimit), Number(exposureLimit), Math.floor(Number(availableMargin) / entry)),
-    lotSize,
-  );
+  const quantity = Math.min(roundDownToLot(rawQuantity, lotSize), brokerLimit, exposureLimit, Math.floor(Number(availableMargin) / entry));
   if (quantity < lotSize) return { quantity: 0, riskAmount: amount, distance, reason: 'Capital or margin is insufficient for the minimum lot size' };
   return { quantity, riskAmount: amount, distance, reason: null };
 }

@@ -11,8 +11,7 @@ import {
   normalizeDhanCandles,
   resolveDhanOptionInstruments,
 } from './live-quant-runner.service.js';
-import { getNiftyIndexInstrument, loadDhanInstrumentMaster } from './dhan-instruments.service.js';
-import { verifyDhanStaticIp } from './static-ip.service.js';
+import { loadDhanInstrumentMaster } from './dhan-instruments.service.js';
 import { getDhanMarketFeed } from './dhan-market-feed.service.js';
 
 // Read-only: this health check never places, modifies or cancels an order.
@@ -191,33 +190,13 @@ export async function runDhanLiveHealthCheck(pool, userId) {
     const passed = Boolean(s && Number(s.trading_capital) > 0 && Number(s.risk_per_trade) > 0 && Number(s.max_trades_per_day) > 0 && Number(s.max_consecutive_losses) > 0 && Number(s.daily_loss_limit) > 0);
     add('riskConfiguration', check(passed, passed ? 'Authoritative algo_settings risk configuration is valid.' : 'algo_settings risk configuration is missing or invalid.'));
   });
-  await attempt('instrumentMaster', async () => {
-    // Public Dhan file: verifiable even without a Data API plan.
-    const instrument = await getNiftyIndexInstrument();
-    add('instrumentMaster', check(true, `Official Dhan instrument master resolves NIFTY 50 to ${instrument.exchangeSegment}:${instrument.securityId}.`, instrument));
-  });
   await attempt('orderApi', async () => {
-    // Broker-verified: Dhan GET /v2/ip/getIP + this server's detected outbound IP.
-    const staticIp = await verifyDhanStaticIp(adapter, { force: true });
-    add('orderApi', check(staticIp.ready === true, staticIp.reason, {
-      status: staticIp.status,
-      configuredIp: staticIp.configuredIp,
-      registeredIps: staticIp.registeredIps,
-      detectedIp: staticIp.detectedIp,
-    }, staticIp.status === 'PASS' ? null : 'STATIC_IP_NOT_READY'));
+    const readiness = adapter.readiness();
+    add('orderApi', check(readiness.orderExecutionReady === true, readiness.staticIp?.reason || readiness.reason, { staticIp: readiness.staticIp }));
   });
   await attempt('omsSchema', async () => {
     const schema = await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ANY($1)`, [['algo_orders', 'algo_positions', 'algo_trades', 'execution_events']]);
-    // Columns the live order path writes (migrations 006-008); a missing one would fail every order.
-    const requiredColumns = ['internal_order_id', 'broker_order_id', 'correlation_id', 'remaining_quantity', 'signal_key', 'broker_account_id'];
-    const columns = await pool.query(
-      `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'algo_orders' AND column_name = ANY($1)`,
-      [requiredColumns],
-    );
-    const present = new Set(columns.rows.map((row) => row.column_name));
-    const missing = requiredColumns.filter((name) => !present.has(name));
-    const ok = schema.rows.length === 4 && missing.length === 0;
-    add('omsSchema', check(ok, ok ? 'OMS tables and live-order columns are present.' : `OMS schema incomplete${missing.length ? `: algo_orders missing ${missing.join(', ')}` : ': OMS tables missing'}.`, { missingColumns: missing }));
+    add('omsSchema', check(schema.rows.length === 4, schema.rows.length === 4 ? 'OMS tables are present.' : 'OMS tables are missing.'));
   });
   await attempt('brokerResponseParsing', async () => {
     const orderBook = await adapter.getOrderBook();

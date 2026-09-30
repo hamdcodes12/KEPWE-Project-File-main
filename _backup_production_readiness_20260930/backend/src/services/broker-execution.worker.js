@@ -55,16 +55,8 @@ async function reconcileTradeBook(pool, userId, broker, adapter) {
 }
 
 async function monitorProtectiveExits(pool, userId, adapter) {
-  if (typeof adapter.assertOrderExecutionReady === 'function') {
-    try {
-      await adapter.assertOrderExecutionReady();
-    } catch {
-      return;
-    }
-  } else {
-    const readiness = adapter.readiness?.();
-    if (readiness && readiness.orderExecutionReady !== true) return;
-  }
+  const readiness = adapter.readiness?.();
+  if (readiness && readiness.orderExecutionReady !== true) return;
   const positions = await pool.query(
     `SELECT * FROM algo_positions WHERE user_id = $1 AND status = 'OPEN' AND security_id IS NOT NULL`,
     [userId],

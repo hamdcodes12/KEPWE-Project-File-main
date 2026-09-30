@@ -33,15 +33,6 @@ export class InvalidOrderStateError extends Error {
   }
 }
 
-export class MissingExecutionPriceError extends Error {
-  constructor(status) {
-    super(`Broker reported ${status} without an average traded price; refusing to record a fill at an assumed price`);
-    this.name = 'MissingExecutionPriceError';
-    this.code = 'EXECUTION_PRICE_MISSING';
-    this.statusCode = 409;
-  }
-}
-
 export function normalizeExecutionStatus(value) {
   const status = String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
   if (['COMPLETE', 'COMPLETED', 'EXECUTED', 'FILLED', 'TRADED'].includes(status)) return 'FILLED';
@@ -52,30 +43,20 @@ export function normalizeExecutionStatus(value) {
   return ORDER_STATUSES.has(status) ? status : null;
 }
 
-export function executionValues(execution = {}, order) {
+function executionValues(execution = {}, order) {
   const status = normalizeExecutionStatus(execution.status || execution.orderStatus) || 'SUBMITTED';
   const brokerOrderId = execution.brokerOrderId || execution.orderId || execution.order_id || null;
   const requestedFilled = execution.filledQuantity ?? execution.filled_quantity ?? execution.filledshares;
   const filledQuantity = status === 'FILLED'
     ? order.quantity
     : Math.max(0, Math.min(order.quantity, Number(requestedFilled || 0)));
-  // Fill prices come only from the broker. Never fall back to the order's
-  // limit/market price: that would fabricate an execution price.
-  const reportedPrice = Number(
+  const averagePrice = Number(
     execution.averagePrice
       ?? execution.average_price
       ?? execution.avgPrice
-      ?? execution.averageTradedPrice
+      ?? order.average_fill_price
+      ?? order.price
   );
-  const previousFilled = Number(order.filled_quantity || 0);
-  const previousAverage = Number(order.average_fill_price);
-  const increasesFill = Number.isFinite(filledQuantity) && filledQuantity > previousFilled;
-  let averagePrice = null;
-  if (Number.isFinite(reportedPrice) && reportedPrice > 0) averagePrice = reportedPrice;
-  else if (!increasesFill && Number.isFinite(previousAverage) && previousAverage > 0) averagePrice = previousAverage;
-  if (increasesFill && averagePrice === null) {
-    throw new MissingExecutionPriceError(status);
-  }
   if (status === 'PARTIALLY_FILLED' && (filledQuantity <= 0 || filledQuantity >= order.quantity)) {
     throw new InvalidOrderStateError(order.status, status);
   }
@@ -91,7 +72,7 @@ export function executionValues(execution = {}, order) {
     remainingQuantity: Number.isFinite(Number(execution.remainingQuantity))
       ? Math.max(0, Number(execution.remainingQuantity))
       : Math.max(0, order.quantity - (Number.isFinite(filledQuantity) ? filledQuantity : 0)),
-    averagePrice,
+    averagePrice: Number.isFinite(averagePrice) && averagePrice > 0 ? averagePrice : Number(order.price),
     charges: Number(execution.charges || execution.totalCharges || execution.brokerage || 0),
     rejectionReason: execution.rejectionReason || execution.rejection_reason || execution.error || null,
   };
@@ -294,7 +275,7 @@ export async function applyExecutionUpdate({ pool, orderId, brokerOrderId, userI
       : nextStatus === 'REJECTED'
         ? 'ORDER_REJECTED'
         : nextStatus === 'CANCELLED'
-          ? 'ORDER_CANCELLED'
+          ? 'POSITION_CLOSED'
           : null;
     if (notificationType) {
       await tryCreateQuantNotification(pool, {
@@ -343,12 +324,6 @@ export async function createAndSubmitOrder({
   // ✅ STRICT LIVE-ONLY: REJECT ANY NON-LIVE EXECUTION MODE
   if (executionMode !== 'LIVE') {
     throw new Error(`KEPWE Quant only supports LIVE execution. Received: ${executionMode}. Paper trading has been completely removed.`);
-  }
-
-  // Broker order-API prerequisites (e.g. Dhan static-IP whitelist) are checked
-  // before anything is persisted, so a blocked order never becomes a DB record.
-  if (typeof adapter?.assertOrderExecutionReady === 'function') {
-    await adapter.assertOrderExecutionReady();
   }
 
   const internalOrderId = randomUUID();

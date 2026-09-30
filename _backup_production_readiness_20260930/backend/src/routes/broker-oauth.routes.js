@@ -9,7 +9,6 @@ import { assertBrokerIdentity, verifyBrokerConnection } from '../services/broker
 import { applyBrokerExecutionUpdate, verifyBrokerWebhookRequest } from '../services/broker-execution.service.js';
 import { areBrokerFeaturesEnabled } from '../config/env.js';
 import { clearDhanMarketFeedCache } from '../services/dhan-market-feed.service.js';
-import { tryCreateQuantNotification } from '../services/quant-notification.service.js';
 
 const router = Router();
 
@@ -154,25 +153,15 @@ async function handleBrokerExecutionWebhook(req, res, next, broker) {
       brokerOrderId: payload.orderId || payload.order_id || payload.brokerOrderId,
       correlationId: payload.correlationId || payload.correlation_id,
       status,
-      // Dhan postback field is filled_qty (dhanhq.co/docs/v2/postback).
-      filledQuantity: payload.filled_qty ?? payload.filledQty ?? payload.filledQuantity ?? payload.filledshares ?? 0,
+      filledQuantity: payload.filledQty ?? payload.filledQuantity ?? payload.filledshares ?? 0,
       remainingQuantity: payload.remainingQuantity ?? payload.remainingQty ?? null,
-      // Never payload.price: that is the order price, not a traded price.
-      averagePrice: payload.averageTradedPrice ?? payload.averagePrice ?? payload.avgPrice ?? null,
+      averagePrice: payload.averagePrice ?? payload.avgPrice ?? payload.price ?? null,
       rejectionReason: payload.rejectionReason || payload.reason || payload.remarks || null,
       payload,
     });
-    if (result.deferred) return res.status(202).json({ status: 'deferred', reason: result.reason, received: true });
     if (result.ignored) return res.status(404).json({ status: 'ignored', reason: result.reason });
-    return res.status(200).json({ status: result.duplicate ? 'duplicate' : 'success', received: true, source: result.source || null });
+    return res.status(200).json({ status: result.duplicate ? 'duplicate' : 'success', received: true });
   } catch (error) {
-    // Out-of-order or repeated events are acknowledged, never re-applied.
-    if (error?.name === 'InvalidOrderStateError') {
-      return res.status(200).json({ status: 'stale_or_duplicate', received: true });
-    }
-    if (error?.code === 'EXECUTION_PRICE_MISSING') {
-      return res.status(202).json({ status: 'deferred', reason: 'broker did not report a traded price yet', received: true });
-    }
     return next(error);
   }
 }
@@ -264,13 +253,6 @@ router.post('/broker/dhan/connect', requireAuth, requireBrokerFeatures, async (r
 
     // Step 5: Update connection status based on verification
     if (verification.status === 'CONNECTED') {
-      await tryCreateQuantNotification(pool, {
-        userId: req.userId,
-        type: 'BROKER_CONNECTED',
-        title: 'Dhan connected',
-        body: `Dhan client ${dhanClientId} verified via /v2/profile.`,
-        data: { broker: DHAN, dhanClientId, marketDataAvailable: verification.marketData?.available ?? null },
-      });
       return res.json({
         success: true,
         broker: DHAN,

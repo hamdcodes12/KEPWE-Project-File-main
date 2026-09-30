@@ -325,7 +325,7 @@ function MarketTape() {
     const labels = {
       LIVE: 'Market Feed: Live (Dhan)',
       STALE: 'Market Feed: Dhan (last trade not recent)',
-      DATA_API_NOT_ACTIVE: 'Market Data Unavailable · Dhan Data API inactive',
+      DATA_API_NOT_ACTIVE: 'Market Feed: Dhan Data API not active',
       DATA_API_ACCESS_DENIED: 'Market Feed: Dhan Data API access denied',
       AUTH_FAILED: 'Market Feed: Dhan auth failed',
       INVALID_CLIENT_ID: 'Market Feed: Dhan client ID rejected',
@@ -1514,7 +1514,7 @@ function RiskManagementView({ onNavigate }) {
   const loadRisk = async () => {
     try {
       const res = await fetchRiskStatus();
-      setRiskData(res?.ok ? res.data : null);
+      setRiskData(res);
     } catch (_) {}
   };
 
@@ -1522,31 +1522,17 @@ function RiskManagementView({ onNavigate }) {
     loadRisk();
   }, []);
 
-  const [killOk, setKillOk] = useState(true);
   const handleKill = async () => {
-    if (!window.confirm('Halt live trading now? The runner stops and cannot be restarted today.')) return;
-    const flattenPositions = window.confirm('Also ask Dhan to EXIT ALL open positions? (This sends real exit orders.)\n\nOK = halt and exit all positions\nCancel = halt only');
+    if (!window.confirm('Trigger emergency kill switch?')) return;
     setKillLoading(true);
     try {
-      const res = await apiFetch('/quant/emergency-stop', { method: 'POST', body: { flattenPositions } });
-      if (!res.ok) {
-        setKillOk(false);
-        setKillMessage(res.data?.error || 'Emergency stop request failed.');
-      } else {
-        const flatten = res.data?.flatten || {};
-        const ok = !flatten.requested || flatten.accepted === true;
-        setKillOk(ok);
-        setKillMessage(!flatten.requested
-          ? 'Live trading halted. Open positions were not changed.'
-          : flatten.accepted
-            ? `Live trading halted. Dhan accepted exit-all (${flatten.positionsPendingConfirmation ?? 0} position(s) pending confirmation).`
-            : `Live trading halted, but exit-all was NOT completed: ${flatten.reason}`);
-      }
+      // TODO: Implement real Dhan kill switch endpoint
+      // const res = await triggerKillSwitch();
+      const res = { message: 'Kill switch implementation pending - endpoint not available' };
+      setKillMessage(res.message);
       loadRisk();
-    } catch (error) {
-      setKillOk(false);
-      setKillMessage(error.message || 'Emergency stop request failed.');
-    } finally {
+    } catch (_) {}
+    finally {
       setKillLoading(false);
     }
   };
@@ -1567,8 +1553,8 @@ function RiskManagementView({ onNavigate }) {
       </section>
 
       {killMessage && (
-        <div style={{ padding: '12px', background: killOk ? '#e6f8f2' : '#fdecec', color: killOk ? '#159975' : '#c53030', borderRadius: '6px', fontSize: '11px', fontWeight: 700, marginBottom: '16px' }}>
-          {killOk ? '✓ ' : '⚠ '}{killMessage}
+        <div style={{ padding: '12px', background: '#e6f8f2', color: '#159975', borderRadius: '6px', fontSize: '11px', fontWeight: 700, marginBottom: '16px' }}>
+          ✓ {killMessage}
         </div>
       )}
 
@@ -1576,25 +1562,25 @@ function RiskManagementView({ onNavigate }) {
       <div className="quant-metrics-banner">
         <div className="quant-metric-box">
           <div className="quant-metric-box-label">Trades Taken Today</div>
-          <div className="quant-metric-box-val">{riskData ? riskData.tradesToday : '—'} / {riskData?.maxTradesPerDay ?? '—'}</div>
-          <div className="quant-metric-box-sub">Remaining: {riskData?.tradesRemaining ?? '—'} trades</div>
+          <div className="quant-metric-box-val">{riskData?.tradesToday ?? 0} / {riskData?.maxTradesPerDay ?? 3}</div>
+          <div className="quant-metric-box-sub">Remaining: {riskData?.tradesRemaining ?? 3} trades</div>
         </div>
         <div className="quant-metric-box">
           <div className="quant-metric-box-label">Consecutive Losses</div>
-          <div className="quant-metric-box-val">{riskData ? riskData.consecutiveLosses : '—'} / {riskData?.maxConsecutiveLosses ?? '—'}</div>
-          <div className="quant-metric-box-sub">{riskData?.maxConsecutiveLosses ? `Limit: ${riskData.maxConsecutiveLosses} halts session` : 'Risk settings not loaded'}</div>
+          <div className="quant-metric-box-val">{riskData?.consecutiveLosses ?? 0} / {riskData?.maxConsecutiveLosses ?? 2}</div>
+          <div className="quant-metric-box-sub">Limit: 2 halts session</div>
         </div>
         <div className="quant-metric-box">
           <div className="quant-metric-box-label">Today's Realized P&L</div>
           <div className={`quant-metric-box-val ${riskData?.dayPnl >= 0 ? 'positive' : 'negative'}`}>
-            {riskData ? `₹${riskData.dayPnl}` : '—'}
+            ₹{riskData?.dayPnl ?? 0}
           </div>
-          <div className="quant-metric-box-sub">Daily Loss Limit: {riskData?.dailyDrawdownLimit ? `₹${riskData.dailyDrawdownLimit}` : '—'}</div>
+          <div className="quant-metric-box-sub">Daily Loss Limit: ₹{riskData?.dailyDrawdownLimit ?? 10000}</div>
         </div>
         <div className="quant-metric-box">
           <div className="quant-metric-box-label">Session Status</div>
           <div className="quant-metric-box-val" style={{ color: riskData?.isHalted ? '#c53030' : '#159975' }}>
-            {!riskData ? '—' : riskData.isHalted ? 'HALTED' : 'ACTIVE'}
+            {riskData?.isHalted ? 'HALTED' : 'ACTIVE'}
           </div>
           <div className="quant-metric-box-sub">
             {riskData?.isHalted ? 'Daily risk threshold triggered' : 'Normal trading permissible'}
@@ -1964,7 +1950,6 @@ function DashboardOverview({ onNavigate }) {
     liveNiftyLtt: 'Live LTT',
     liveNiftyMarketData: 'Live NIFTY Feed',
     dhanDataPlan: 'Dhan Data API Plan',
-    instrumentMaster: 'Instrument Master',
     brokerResponseParsing: 'Order/Trade Book',
     tradeFillReconciliation: 'Trade Reconciliation',
     omsSchema: 'OMS Schema',
@@ -1991,7 +1976,6 @@ function DashboardOverview({ onNavigate }) {
     if (result?.status === 'BLOCKED') return 'Blocked';
     if (result?.status === 'DATA_API_NOT_ACTIVE') return 'Dhan Data API not active';
     if (result?.status === 'NOT_VERIFIED') return 'Needs market data';
-    if (result?.status === 'STATIC_IP_NOT_READY') return 'Static IP not verified';
     if (result?.status === 'SESSION_EXPIRED') return 'Session expired';
     return 'Action Required';
   };
@@ -2101,16 +2085,6 @@ function DashboardOverview({ onNavigate }) {
               {liveHealth.ready ? 'Ready' : 'Action Required'}
             </span>
           </div>
-          {liveHealth.marketData && liveHealth.marketData.status !== 'LIVE' && (
-            <p style={{ margin: '0 0 10px', color: '#64748b', fontSize: '12px' }}>
-              <strong>Market data unavailable.</strong>{' '}
-              {liveHealth.marketData.status === 'DATA_API_NOT_ACTIVE'
-                ? 'Reason: Dhan Data API entitlement is inactive for this Dhan account.'
-                : `Reason: ${liveHealth.marketData.message || liveHealth.marketData.status}`}
-            </p>
-          )}
-          <details>
-          <summary style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 700, marginBottom: '8px' }}>View Diagnostics</summary>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
             {healthRows.map(([key, result]) => (
               <div key={key} title={result.message || ''} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
@@ -2121,7 +2095,6 @@ function DashboardOverview({ onNavigate }) {
               </div>
             ))}
           </div>
-          </details>
         </section>
       )}
 
@@ -4710,7 +4683,7 @@ function QuantDashboardContent() {
             <span className="quant-avatar">Q</span>
             <span>
               <strong>Quant Lab</strong>
-              <small>Live · Dhan</small>
+              <small>Simulation Mode</small>
             </span>
             <ChevronDown size={14} />
           </button>

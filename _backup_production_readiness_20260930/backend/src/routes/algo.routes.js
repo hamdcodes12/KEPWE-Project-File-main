@@ -72,7 +72,7 @@ const orderChangesSchema = z.object({
 const executionUpdateSchema = z.object({
   orderId: z.string().uuid().optional(),
   brokerOrderId: z.string().trim().min(1).max(120).optional(),
-  status: z.string().trim().min(1).max(60).optional(),
+  status: z.string().trim().min(1).max(60),
   filledQuantity: z.number().int().nonnegative().optional(),
   averagePrice: z.number().positive().optional(),
   rejectionReason: z.string().trim().max(500).optional(),
@@ -414,13 +414,6 @@ async function setAlgoStatus(req, res, next, status) {
     }
     await pool.query('UPDATE algo_states SET status = $2, updated_at = NOW() WHERE user_id = $1', [req.userId, status]);
     await recordActivity(req.userId, status === 'ACTIVE' ? 'ALGO_STARTED' : 'ALGO_STOPPED', `Algo ${status === 'ACTIVE' ? 'started' : 'stopped'}`);
-    await tryCreateQuantNotification(pool, {
-      userId: req.userId,
-      type: status === 'ACTIVE' ? 'STRATEGY_ACTIVATED' : 'LIVE_TRADING_STOPPED',
-      title: status === 'ACTIVE' ? 'Live strategy activated' : 'Live strategy stopped',
-      body: status === 'ACTIVE' ? 'The live strategy runner was activated after the deployment gate passed.' : 'The live strategy runner was stopped.',
-      data: { status },
-    });
     res.json({ status });
   } catch (err) {
     next(err);
@@ -445,21 +438,6 @@ function isBrokerSessionRejected(error, broker) {
     || error?.code === `${broker}_SESSION_EXPIRED`
     || error?.statusCode === 401
     || /expired|unauthorized|invalid token|session.*invalid/i.test(error?.message || '');
-}
-
-// Dhan documents DH-901 as "Client ID or user generated access token is invalid
-// or expired". When a trading API (not a Data API) returns it, the stored
-// session is genuinely unusable, so record SESSION_EXPIRED.
-async function persistExplicitDhanSessionRejection(userId, broker, error) {
-  if (broker !== 'DHAN' || error?.dataApiRejected) return;
-  if (String(error?.providerErrorCode || '').toUpperCase() !== 'DH-901') return;
-  try {
-    await pool.query(
-      `UPDATE broker_accounts SET status = 'SESSION_EXPIRED', updated_at = NOW()
-       WHERE user_id = $1 AND broker = 'DHAN' AND status IN ('CONNECTED', 'PARTIALLY_CONNECTED')`,
-      [userId],
-    );
-  } catch (_) { /* status endpoint will re-check */ }
 }
 
 async function validateStoredDhanSession(row) {
@@ -740,7 +718,6 @@ router.get(['/algo/broker/:broker/positions', '/broker/:broker/positions'], asyn
     res.json({ positions, broker });
   } catch (err) {
     if (isBrokerSessionRejected(err, broker)) {
-      await persistExplicitDhanSessionRejection(req.userId, broker, err);
       console.log('[BROKER_STATUS]', JSON.stringify({
         userId: req.userId,
         broker: broker,
@@ -775,7 +752,6 @@ router.get(['/algo/broker/:broker/holdings', '/broker/:broker/holdings'], async 
     res.json({ holdings, broker });
   } catch (err) {
     if (isBrokerSessionRejected(err, broker)) {
-      await persistExplicitDhanSessionRejection(req.userId, broker, err);
       console.log('[BROKER_STATUS]', JSON.stringify({
         userId: req.userId,
         broker: broker,
@@ -801,7 +777,6 @@ router.get(['/algo/broker/:broker/funds', '/broker/:broker/funds'], async (req, 
     res.json({ funds, broker });
   } catch (err) {
     if (isDhanSessionRejected(err)) {
-      await persistExplicitDhanSessionRejection(req.userId, String(req.params.broker || '').toUpperCase(), err);
       console.log('[BROKER_STATUS]', JSON.stringify({
         userId: req.userId,
         broker: req.params.broker?.toUpperCase(),
@@ -827,7 +802,6 @@ router.get(['/algo/broker/:broker/orderbook', '/broker/:broker/orderbook'], asyn
     res.json({ orderbook, broker });
   } catch (err) {
     if (isDhanSessionRejected(err)) {
-      await persistExplicitDhanSessionRejection(req.userId, String(req.params.broker || '').toUpperCase(), err);
       console.log('[BROKER_STATUS]', JSON.stringify({
         userId: req.userId,
         broker: req.params.broker?.toUpperCase(),
@@ -853,7 +827,6 @@ router.get(['/algo/broker/:broker/tradebook', '/broker/:broker/tradebook'], asyn
     res.json({ trades, broker });
   } catch (err) {
     if (isDhanSessionRejected(err)) {
-      await persistExplicitDhanSessionRejection(req.userId, String(req.params.broker || '').toUpperCase(), err);
       console.log('[BROKER_STATUS]', JSON.stringify({
         userId: req.userId,
         broker: req.params.broker?.toUpperCase(),
@@ -1036,15 +1009,9 @@ router.post('/broker/orders', validateBody(liveOrderSchema), async (req, res, ne
       return res.status(409).json({ error: reason });
     }
     const adapter = await getLiveBroker(req, order.broker);
-    if (typeof adapter.assertOrderExecutionReady === 'function') {
-      try {
-        await adapter.assertOrderExecutionReady();
-      } catch (error) {
-        return res.status(412).json({ error: error.message, code: 'STATIC_IP_NOT_READY', staticIp: error.staticIp || null });
-      }
-    } else if (!getBrokerReadiness(order.broker, 'LIVE').orderExecutionReady) {
-      return res.status(412).json({
-        error: 'Live order execution is blocked until static IP readiness is confirmed.',
+    if (!getBrokerReadiness(order.broker, 'LIVE').orderExecutionReady) {
+      return res.status(503).json({
+        error: 'Live order execution is blocked until production outbound IP readiness is confirmed.',
         code: 'STATIC_IP_NOT_READY',
       });
     }
@@ -1117,20 +1084,13 @@ router.post('/broker/orders', validateBody(liveOrderSchema), async (req, res, ne
       return res.status(409).json({ error: submitted.rejection_reason || 'Broker rejected the order', order: serializeOrder(submitted) });
     }
     let execution = null;
-    if (submitted.status === 'FILLED' && submitted.broker_order_id) {
-      // Fill price/quantity come from the broker's order record, never the request.
-      try {
-        const brokerState = await adapter.getOrderStatus({ brokerOrderId: submitted.broker_order_id });
-        execution = await applyExecutionUpdate({
-          pool,
-          orderId: submitted.id,
-          brokerOrderId: submitted.broker_order_id,
-          userId: req.userId,
-          execution: brokerState,
-        });
-      } catch (syncError) {
-        console.warn('[LIVE_ORDER] Fill sync deferred to reconciliation:', syncError.message);
-      }
+    if (submitted.status === 'FILLED') {
+      execution = await applyExecutionUpdate({
+        pool,
+        orderId: submitted.id,
+        userId: req.userId,
+        execution: { status: 'FILLED', brokerOrderId: submitted.broker_order_id, filledQuantity: submitted.quantity, averagePrice: submitted.price },
+      });
     }
     await recordActivity(req.userId, 'LIVE_ORDER_SUBMITTED', `Live ${order.side} order submitted through ${order.broker}`, { orderId: submitted.id });
     return res.status(submitted.status === 'FILLED' ? 201 : 202).json({
@@ -1139,9 +1099,6 @@ router.post('/broker/orders', validateBody(liveOrderSchema), async (req, res, ne
       message: submitted.status === 'FILLED' ? 'Broker execution confirmed.' : 'Order submitted; awaiting broker execution updates.',
     });
   } catch (err) {
-    if (err?.code === 'STATIC_IP_NOT_READY') {
-      return res.status(412).json({ error: err.message, code: 'STATIC_IP_NOT_READY', staticIp: err.staticIp || null });
-    }
     if (err.statusCode >= 500 || err.name === 'BrokerApiError') {
       await stopForBrokerDisconnect(req.userId, req.validatedBody?.broker, 'Broker API error; live orders stopped');
     }
@@ -1251,13 +1208,6 @@ router.post('/broker/:broker/reconcile', async (req, res, next) => {
     if (!result.matched) {
       await pool.query(`UPDATE algo_states SET status = 'STOPPED', updated_at = NOW() WHERE user_id = $1`, [req.userId]);
       await recordRiskEvent(req.userId, 'POSITION_MISMATCH', 'Broker and internal positions do not reconcile; new orders stopped', { broker, ...result });
-      await tryCreateQuantNotification(pool, {
-        userId: req.userId,
-        type: 'RECONCILIATION_MISMATCH',
-        title: 'Broker positions do not match KEPWE',
-        body: 'Broker and internal positions do not reconcile; new orders were stopped until this is resolved.',
-        data: { broker },
-      });
     }
     res.json({ broker, ...result });
   } catch (err) {
@@ -1271,7 +1221,7 @@ router.post('/algo/orders/:id/cancel', async (req, res, next) => {
     if (!found.rows[0]) return res.status(404).json({ error: 'Order not found' });
     const result = await cancelOrder({ pool, adapter: await adapterForOrder(req, found.rows[0]), orderId: req.params.id, userId: req.userId });
     if (!result) return res.status(404).json({ error: 'Cancellable order not found' });
-    await recordActivity(req.userId, 'ORDER_CANCELLED', 'Order cancellation sent to broker', { orderId: req.params.id });
+    await recordActivity(req.userId, 'ORDER_CANCELLED', 'Paper order cancelled', { orderId: req.params.id });
     res.json({ order: serializeOrder(result.order), broker: result.broker });
   } catch (err) {
     next(err);
@@ -1290,62 +1240,100 @@ router.patch('/algo/orders/:id', validateBody(orderChangesSchema), async (req, r
       changes: req.validatedBody,
     });
     if (!result) return res.status(404).json({ error: 'Modifiable order not found' });
-    await recordActivity(req.userId, 'ORDER_MODIFIED', 'Order modification sent to broker', { orderId: req.params.id });
+    await recordActivity(req.userId, 'ORDER_MODIFIED', 'Paper order modified', { orderId: req.params.id });
     res.json({ order: serializeOrder(result.order), broker: result.broker });
   } catch (err) {
     next(err);
   }
 });
 
-// KEPWE Quant is LIVE-only. Manual/simulated fills and rejects are not
-// supported: order state changes only come from the broker (see /broker/execution).
-router.post(['/algo/orders/:id/reject', '/algo/orders/:id/fill'], (req, res) => {
-  res.status(410).json({
-    error: 'Manual order fills/rejects are not supported. Order state is synchronized from the broker only.',
-    code: 'LIVE_ONLY_BROKER_STATE',
-  });
-});
-
-/**
- * POST /api/broker/execution
- * Re-synchronizes one of the caller's orders from the broker. Client-supplied
- * status/quantity/price fields are ignored: the broker's own order record
- * (e.g. Dhan GET /v2/orders/{orderId}) is the only source of execution state.
- */
-router.post('/broker/execution', validateBody(executionUpdateSchema), async (req, res, next) => {
+router.post('/algo/orders/:id/reject', async (req, res, next) => {
   try {
     const found = await pool.query(
       `SELECT * FROM algo_orders
-       WHERE user_id = $1 AND (($2::uuid IS NOT NULL AND id = $2) OR ($3::text IS NOT NULL AND broker_order_id = $3))
-       LIMIT 1`,
-      [req.userId, req.validatedBody.orderId || null, req.validatedBody.brokerOrderId || null],
+       WHERE id = $1 AND user_id = $2 AND status IN ('CREATED', 'SUBMITTED', 'PARTIALLY_FILLED')`,
+      [req.params.id, req.userId],
     );
-    const order = found.rows[0];
-    if (!order) return res.status(404).json({ error: 'Order not found for execution update' });
-    if (!order.broker_order_id) {
-      return res.status(409).json({ error: 'Order has no broker order id yet; nothing to synchronize.', code: 'BROKER_ORDER_ID_UNKNOWN' });
+    if (!found.rows[0]) return res.status(404).json({ error: 'Rejectable order not found' });
+    if (found.rows[0].execution_mode !== 'PAPER') {
+      return res.status(409).json({ error: 'Manual rejects are only available for paper orders.' });
     }
-    const adapter = await adapterForOrder(req, order);
-    const brokerState = await adapter.getOrderStatus({ brokerOrderId: order.broker_order_id });
+    const reason = typeof req.body?.reason === 'string' && req.body.reason.trim()
+      ? req.body.reason.trim().slice(0, 500)
+      : 'Paper order rejected by simulated execution venue';
+    const updated = await pool.query(
+      `UPDATE algo_orders
+       SET status = 'REJECTED', rejection_reason = $3, updated_at = NOW()
+       WHERE id = $1 AND user_id = $2 AND status IN ('CREATED', 'SUBMITTED', 'PARTIALLY_FILLED')
+       RETURNING *`,
+      [req.params.id, req.userId, reason]
+    );
+    await recordActivity(req.userId, 'ORDER_REJECTED', 'Paper order rejected', { orderId: req.params.id, reason });
+    res.json({ order: serializeOrder(updated.rows[0]) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+ router.post('/algo/orders/:id/fill', validateBody(z.object({
+   fillPrice: z.number().positive().optional(),
+   filledQuantity: z.number().int().positive().optional(),
+ })), async (req, res, next) => {
+  try {
+    const found = await pool.query(
+      `SELECT * FROM algo_orders
+       WHERE id = $1 AND user_id = $2 AND status IN ('CREATED', 'SUBMITTED', 'PARTIALLY_FILLED')`,
+      [req.params.id, req.userId]
+    );
+     const order = found.rows[0];
+    if (!order) return res.status(404).json({ error: 'Fillable order not found' });
+     if (order.execution_mode !== 'PAPER') {
+       return res.status(409).json({ error: 'Manual fills are only available for paper orders.' });
+     }
+     const filledQuantity = req.validatedBody.filledQuantity || order.quantity;
+     if (filledQuantity > order.quantity) {
+       return res.status(400).json({ error: 'Filled quantity cannot exceed the order quantity.' });
+     }
+     const execution = await applyExecutionUpdate({
+       pool,
+       orderId: order.id,
+        userId: req.userId,
+       execution: {
+         status: filledQuantity === order.quantity ? 'FILLED' : 'PARTIALLY_FILLED',
+         filledQuantity,
+         averagePrice: req.validatedBody.fillPrice || Number(order.price),
+       },
+     });
+     if (!execution) return res.status(409).json({ error: 'Order was already transitioned' });
+     await recordActivity(req.userId, 'ORDER_EXECUTION_UPDATED', `Order execution updated`, { orderId: order.id, filledQuantity });
+     return res.status(filledQuantity === order.quantity ? 201 : 202).json({
+       order: serializeOrder(execution.order),
+     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/broker/execution', validateBody(executionUpdateSchema), async (req, res, next) => {
+  try {
     const execution = await applyExecutionUpdate({
       pool,
-      orderId: order.id,
-      brokerOrderId: order.broker_order_id,
+      orderId: req.validatedBody.orderId,
+      brokerOrderId: req.validatedBody.brokerOrderId,
       userId: req.userId,
-      execution: brokerState,
+      execution: req.validatedBody,
     });
     if (!execution) return res.status(404).json({ error: 'Order not found for execution update' });
     await recordActivity(
       req.userId,
       'BROKER_EXECUTION_UPDATE',
-      `Broker execution status synchronized: ${execution.order.status}`,
-      { orderId: execution.order.id, brokerOrderId: execution.order.broker_order_id, source: 'BROKER_ORDER_API' }
+      `Broker execution status updated to ${execution.order.status}`,
+      { orderId: execution.order.id, brokerOrderId: execution.order.broker_order_id }
     );
-    return res.json({ order: serializeOrder(execution.order), source: 'BROKER_ORDER_API' });
+    return res.json({
+      order: serializeOrder(execution.order),
+    });
   } catch (err) {
-    if (err?.name === 'InvalidOrderStateError' || err?.code === 'EXECUTION_PRICE_MISSING') {
-      return res.status(409).json({ error: err.message, code: err.code || 'INVALID_ORDER_TRANSITION' });
-    }
     next(err);
   }
 });
@@ -1415,3 +1403,4 @@ router.get('/algo/stream', async (req, res, next) => {
 });
 
 export default router; 
+

@@ -1,5 +1,5 @@
 import { createHmac } from 'crypto';
-import { getStaticIpReadiness, verifyDhanStaticIp } from '../services/static-ip.service.js';
+import { getStaticIpReadiness } from '../services/static-ip.service.js';
 
 const ANGEL_ONE_BASE_URL = 'https://apiconnect.angelone.in';
 const DHAN_BASE_URL = 'https://api.dhan.co/v2';
@@ -156,24 +156,16 @@ function providerErrorFields(payload) {
 
 async function parseJsonResponse(broker, response) {
   let rawText = '';
+  try {
+    rawText = await response.text();
+  } catch {
+    rawText = '';
+  }
   let payload = null;
-  if (typeof response.text === 'function') {
-    try {
-      rawText = await response.text();
-    } catch {
-      rawText = '';
-    }
-    try {
-      payload = rawText ? JSON.parse(rawText) : null;
-    } catch {
-      payload = null;
-    }
-  } else {
-    try {
-      payload = await response.json();
-    } catch {
-      payload = null;
-    }
+  try {
+    payload = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    payload = null;
   }
   if (!response.ok) {
     const provider = providerErrorFields(payload);
@@ -335,19 +327,17 @@ function numberOrNull(value) {
 }
 
 export function normalizeBrokerExecution(payload = {}, fallback = {}) {
-  const unwrapped = payload?.data || payload?.order || payload;
-  // Dhan order-by-id may return a single-element array.
-  const data = Array.isArray(unwrapped) ? (unwrapped[0] || {}) : unwrapped;
+  const data = payload?.data || payload?.order || payload;
   return {
     brokerOrderId: data?.brokerOrderId || data?.orderId || data?.orderID || data?.order_id || data?.orderid || data?.OrderNo || fallback.brokerOrderId || null,
     exchangeOrderId: data?.exchangeOrderId || data?.exchange_order_id || data?.ExchOrderNo || data?.exchangeOrderNo || fallback.exchangeOrderId || null,
     correlationId: data?.correlationId || data?.correlation_id || data?.CorrelationId || fallback.correlationId || null,
     status: data?.status || data?.orderStatus || data?.orderstatus || data?.order_status || data?.Status || fallback.status || 'SUBMITTED',
     averagePrice: numberOrNull(data?.averagePrice ?? data?.average_price ?? data?.avgPrice ?? data?.averageprice ?? data?.avgTradedPrice ?? data?.AvgTradedPrice ?? data?.averageTradedPrice),
-    filledQuantity: numberOrNull(data?.filledQuantity ?? data?.filled_quantity ?? data?.filledshares ?? data?.tradedQuantity ?? data?.TradedQty ?? data?.filledQty ?? data?.filled_qty),
+    filledQuantity: numberOrNull(data?.filledQuantity ?? data?.filled_quantity ?? data?.filledshares ?? data?.tradedQuantity ?? data?.TradedQty ?? data?.filledQty),
     remainingQuantity: numberOrNull(data?.remainingQuantity ?? data?.remaining_quantity ?? data?.remainingQty ?? data?.RemainingQty),
     charges: numberOrNull(data?.charges ?? data?.totalCharges ?? data?.brokerage),
-    rejectionReason: data?.rejectionReason || data?.rejection_reason || data?.rejectReason || data?.omsErrorDescription || data?.error || data?.ReasonDescription || data?.reasonDescription || null,
+    rejectionReason: data?.rejectionReason || data?.rejection_reason || data?.rejectReason || data?.error || data?.ReasonDescription || data?.reasonDescription || null,
     raw: data,
   };
 }
@@ -1065,18 +1055,7 @@ export class DhanAdapter extends BrokerAdapter {
       throw new BrokerCapabilityError(this.name, 'access token is required for validation');
     }
     assertTokenNotExpired(this.name, this.tokenExpiresAt);
-    // Query profile and funds first; an explicit auth rejection from either
-    // trading API takes precedence over any other outcome.
-    let profile = null;
-    let profileError = null;
-    let funds = null;
-    let fundsError = null;
-    try { profile = await this.getProfile(); } catch (error) { profileError = error; }
-    try { funds = await this.getMargin(); } catch (error) { fundsError = error; }
-    const authRejection = [profileError, fundsError].find((error) => error?.code === 'BROKER_SESSION_EXPIRED');
-    if (authRejection) throw authRejection;
-    if (profileError) throw profileError;
-
+    const profile = await this.getProfile();
     const resolvedClientId = profile?.clientId || null;
     if (!resolvedClientId) {
       const err = new BrokerApiError(this.name, 'Dhan /v2/profile did not return dhanClientId', 502);
@@ -1095,7 +1074,12 @@ export class DhanAdapter extends BrokerAdapter {
     if (resolvedClientId && !this.dhanClientId) {
       this.dhanClientId = String(resolvedClientId).trim();
     }
-    // fundsError (non-auth) stays informational here.
+    let funds = null;
+    try {
+      funds = await this.getMargin();
+    } catch {
+      // funds check is optional/non-fatal during session validation
+    }
     return { valid: true, broker: this.name, dhanClientId: this.dhanClientId, profile, funds };
   }
 
@@ -1140,42 +1124,12 @@ export class DhanAdapter extends BrokerAdapter {
       price: orderType === 'MARKET' ? 0 : Number(order.price || 0),
       triggerPrice: Number(metadata.triggerPrice || order.triggerPrice || 0),
       afterMarketOrder: Boolean(metadata.afterMarketOrder || order.afterMarketOrder),
-      // Dhan: amoTime applies only to after-market orders.
-      ...(metadata.afterMarketOrder || order.afterMarketOrder ? { amoTime: metadata.amoTime || 'OPEN' } : {}),
+      amoTime: metadata.amoTime || 'OPEN',
     };
-  }
-
-  /** GET /v2/ip/getIP: Dhan's own record of whitelisted static IPs (no whitelisting needed to read). */
-  async getRegisteredStaticIps() {
-    const payload = await this.request('/ip/getIP');
-    const data = payload?.data || payload || {};
-    return {
-      primaryIP: data.primaryIP || data.primaryIp || null,
-      secondaryIP: data.secondaryIP || data.secondaryIp || null,
-      modifyDatePrimary: data.modifyDatePrimary || null,
-      modifyDateSecondary: data.modifyDateSecondary || null,
-    };
-  }
-
-  /**
-   * Hard gate for every order-mutating Dhan call (place/modify/cancel/exit-all).
-   * Dhan requires static-IP whitelisting for these APIs; we refuse locally
-   * unless Dhan confirms the whitelist AND our real egress IP matches.
-   */
-  async assertOrderExecutionReady() {
-    const staticIp = await verifyDhanStaticIp(this);
-    if (!staticIp.ready) {
-      const error = new BrokerApiError(this.name, `order API blocked: ${staticIp.reason}`, 412);
-      error.code = 'STATIC_IP_NOT_READY';
-      error.staticIp = staticIp;
-      throw error;
-    }
-    return staticIp;
   }
 
   async placeOrder(order = {}) {
     const body = this.buildOrderPayload(order);
-    await this.assertOrderExecutionReady();
 
     const payload = await this.request('/orders', {
       method: 'POST',
@@ -1200,7 +1154,6 @@ export class DhanAdapter extends BrokerAdapter {
     if (!brokerOrderId) throw new BrokerCapabilityError(this.name, 'broker order id');
 
     const clientId = this.dhanClientId || order.metadata?.dhanClientId;
-    await this.assertOrderExecutionReady();
     const body = {
       dhanClientId: clientId,
       orderId: String(brokerOrderId),
@@ -1227,7 +1180,6 @@ export class DhanAdapter extends BrokerAdapter {
   async cancelOrder(order = {}) {
     const brokerOrderId = order.brokerOrderId || order.orderId;
     if (!brokerOrderId) throw new BrokerCapabilityError(this.name, 'broker order id');
-    await this.assertOrderExecutionReady();
 
     const payload = await this.request(`/orders/${encodeURIComponent(brokerOrderId)}`, {
       method: 'DELETE',
@@ -1327,7 +1279,6 @@ export class DhanAdapter extends BrokerAdapter {
   }
 
   async exitAllPositions() {
-    await this.assertOrderExecutionReady();
     const payload = await this.request('/positions', { method: 'DELETE' });
     const data = payload?.data || payload || {};
     if (String(data.status || payload?.status || '').toUpperCase() !== 'SUCCESS') {

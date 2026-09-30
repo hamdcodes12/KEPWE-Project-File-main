@@ -11,7 +11,6 @@
 import { getBrokerAdapter, parseDhanDateTime } from '../algo/broker-adapters.js';
 import { decryptBrokerSecret } from './broker-token.service.js';
 import { getNiftyIndexInstrument } from './dhan-instruments.service.js';
-import { tryCreateQuantNotificationOnce } from './quant-notification.service.js';
 
 export const MARKET_FRESHNESS_MS = 90_000;
 
@@ -138,25 +137,11 @@ function legacyFields(result) {
   };
 }
 
-function notifyMarketDataState(pool, userId, full) {
-  const status = full.marketData.status;
-  if (full.broker.status !== 'CONNECTED' || status === 'LIVE' || status === 'STALE' || status === 'NOT_CHECKED') return;
-  const type = status === 'DATA_API_NOT_ACTIVE' ? 'DATA_API_NOT_ACTIVE' : 'MARKET_DATA_UNAVAILABLE';
-  tryCreateQuantNotificationOnce(pool, {
-    userId,
-    type,
-    title: type === 'DATA_API_NOT_ACTIVE' ? 'Dhan Data API not active' : 'Dhan market data unavailable',
-    body: full.marketData.message,
-    data: { marketDataStatus: status, dataPlan: full.marketData.dataPlan ?? null, dhanErrorCode: full.marketData.dhanErrorCode ?? null },
-  }).catch(() => {});
-}
-
-function finalize(pool, userId, result) {
+function finalize(userId, result) {
   const full = { ...legacyFields(result), broker: result.broker, marketData: result.marketData };
   const key = `${full.broker.status}:${full.marketData.status}`;
   if (lastLoggedStatus.get(userId) !== key) {
     lastLoggedStatus.set(userId, key);
-    notifyMarketDataState(pool, userId, full);
     console.info('[DHAN_MARKET_FEED]', JSON.stringify({
       userId,
       broker: full.broker.status,
@@ -295,7 +280,7 @@ export async function getDhanMarketFeed(pool, userId, { maxAgeMs } = {}) {
   if (inFlight.has(userId)) return inFlight.get(userId);
   const promise = (async () => {
     try {
-      const value = finalize(pool, userId, await computeFeed(pool, userId));
+      const value = finalize(userId, await computeFeed(pool, userId));
       resultCache.set(userId, { at: Date.now(), value });
       return value;
     } finally {

@@ -19,9 +19,6 @@ import {
 } from '../services/nifty-scalping-strategy.service.js';
 import { runDhanLiveHealthCheck } from '../services/dhan-live-health.service.js';
 import { getDhanMarketFeed } from '../services/dhan-market-feed.service.js';
-import { getBrokerAdapter } from '../algo/broker-adapters.js';
-import { decryptBrokerSecret } from '../services/broker-token.service.js';
-import { tryCreateQuantNotification } from '../services/quant-notification.service.js';
 
 const router = Router();
 
@@ -745,10 +742,9 @@ router.post('/backtest', requireFeature(FEATURES.BACKTESTING), validateBody(back
  */
 router.post('/deployment/validate', requireFeature(FEATURES.LIVE_EXECUTION), async (req, res, next) => {
   try {
-    // Gate inputs are derived server-side only; the request body is ignored so
-    // clients cannot assert their own validation evidence.
-    const brokerGate = await validateLiveDeploymentGate(req.userId);
-    const strategyGate = validateNiftyScalpingDeploymentGate({});
+    const config = req.body || { riskPerTradePct: 1.0, maxTradesPerDay: 3, maxConsecutiveLosses: 2 };
+    const brokerGate = await validateLiveDeploymentGate(req.userId, config);
+    const strategyGate = validateNiftyScalpingDeploymentGate(config.validation || config);
     const gateResult = {
         ...brokerGate,
         isDeployable: brokerGate.isDeployable && strategyGate.isDeployable,
@@ -770,93 +766,7 @@ router.post('/deployment/validate', requireFeature(FEATURES.LIVE_EXECUTION), asy
       ]
     );
 
-    if (!gateResult.isDeployable) {
-      await tryCreateQuantNotification(pool, {
-        userId: req.userId,
-        type: 'DEPLOYMENT_BLOCKED',
-        title: 'Live deployment blocked',
-        body: brokerGate.firstFailedPrerequisite
-          ? `${brokerGate.firstFailedPrerequisite.label}: ${brokerGate.firstFailedPrerequisite.reason}`
-          : 'One or more live prerequisites failed.',
-        data: { firstFailedPrerequisite: brokerGate.firstFailedPrerequisite || null },
-      });
-    }
-    res.json({ ...gateResult, firstFailedPrerequisite: brokerGate.firstFailedPrerequisite || null });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * POST /api/quant/emergency-stop   body: { flattenPositions?: boolean }
- * Halts the live runner immediately (always) and records a KILL_SWITCH for the
- * IST day, which blocks restarting. Only when flattenPositions === true does it
- * ask Dhan to exit all positions; that call is subject to Dhan's order-API
- * prerequisites (static IP) and its real outcome is returned.
- */
-router.post('/emergency-stop', async (req, res, next) => {
-  try {
-    const userId = req.userId;
-    const flatten = req.body?.flattenPositions === true;
-    await pool.query(`UPDATE algo_states SET status = 'STOPPED', updated_at = NOW() WHERE user_id = $1`, [userId]);
-    await pool.query(
-      `INSERT INTO risk_events (user_id, event_type, reason, severity, metadata)
-       VALUES ($1, 'KILL_SWITCH', 'Emergency stop triggered by user', 'CRITICAL', $2::jsonb)`,
-      [userId, JSON.stringify({ flattenPositions: flatten })],
-    );
-    try {
-      await pool.query(
-        `INSERT INTO quant_deployment_events (user_id, event_type, reason) VALUES ($1, 'KILL_SWITCH_TRIGGERED', $2)`,
-        [userId, flatten ? 'Emergency stop with exit-all-positions request' : 'Emergency stop (halt only)'],
-      );
-    } catch (_) { /* audit row is best-effort; the halt above is authoritative */ }
-
-    let flattenResult = { requested: false };
-    if (flatten) {
-      const brokerRes = await pool.query(
-        `SELECT ba.client_id, ba.status, ba.connection_mode, bot.access_token_ciphertext, bot.token_expires_at
-         FROM broker_accounts ba JOIN broker_oauth_tokens bot ON bot.broker_account_id = ba.id
-         WHERE ba.user_id = $1 AND ba.broker = 'DHAN' LIMIT 1`,
-        [userId],
-      );
-      const broker = brokerRes.rows[0];
-      if (!broker || broker.status !== 'CONNECTED' || broker.connection_mode !== 'LIVE') {
-        flattenResult = { requested: true, accepted: false, code: 'BROKER_UNAVAILABLE', reason: 'No verified LIVE Dhan session; positions were not exited.' };
-      } else {
-        try {
-          const adapter = getBrokerAdapter('DHAN', 'LIVE', {
-            dhanClientId: broker.client_id,
-            accessToken: decryptBrokerSecret(broker.access_token_ciphertext),
-            tokenExpiresAt: broker.token_expires_at,
-          });
-          await adapter.exitAllPositions();
-          const pending = await pool.query(
-            `UPDATE algo_positions SET status = 'EMERGENCY_PENDING', updated_at = NOW()
-             WHERE user_id = $1 AND status = 'OPEN' RETURNING id`,
-            [userId],
-          );
-          flattenResult = { requested: true, accepted: true, positionsPendingConfirmation: pending.rows.length };
-        } catch (error) {
-          flattenResult = {
-            requested: true,
-            accepted: false,
-            code: error?.code === 'STATIC_IP_NOT_READY' ? 'STATIC_IP_NOT_READY' : 'BROKER_REJECTED',
-            reason: error.message,
-            dhanErrorCode: error?.providerErrorCode ?? null,
-          };
-        }
-      }
-    }
-    await tryCreateQuantNotification(pool, {
-      userId,
-      type: 'EMERGENCY_STOP',
-      title: 'Emergency stop activated',
-      body: flattenResult.requested
-        ? (flattenResult.accepted ? 'Live trading halted and Dhan accepted the exit-all-positions request.' : `Live trading halted. Exit-all was NOT completed: ${flattenResult.reason}`)
-        : 'Live trading halted. Open positions were not changed.',
-      data: flattenResult,
-    });
-    res.json({ halted: true, status: 'STOPPED', killSwitchForToday: true, flatten: flattenResult, timestamp: new Date().toISOString() });
+    res.json(gateResult);
   } catch (err) {
     next(err);
   }
@@ -869,48 +779,30 @@ router.post('/emergency-stop', async (req, res, next) => {
  */
 router.get('/risk/status', requireFeature(FEATURES.RISK_MANAGEMENT), async (req, res, next) => {
   try {
-    // Limits come from the user's stored algo_settings; counts from executed LIVE trades (IST trading day).
-    const [settingsRes, tradesRes, haltRes] = await Promise.all([
-      pool.query('SELECT max_trades_per_day, max_consecutive_losses, daily_loss_limit, trading_capital FROM algo_settings WHERE user_id = $1', [req.userId]),
-      pool.query(
-        `SELECT pnl, traded_at FROM algo_trades
-         WHERE user_id = $1 AND status = 'LIVE'
-           AND (traded_at AT TIME ZONE 'Asia/Kolkata')::date = (NOW() AT TIME ZONE 'Asia/Kolkata')::date
-         ORDER BY traded_at DESC`,
-        [req.userId],
-      ),
-      pool.query(
-        `SELECT 1 FROM risk_events WHERE user_id = $1 AND event_type = 'KILL_SWITCH'
-           AND (created_at AT TIME ZONE 'Asia/Kolkata')::date = (NOW() AT TIME ZONE 'Asia/Kolkata')::date LIMIT 1`,
-        [req.userId],
-      ),
-    ]);
-    const settings = settingsRes.rows[0] || null;
-    const trades = tradesRes.rows;
-    let consecutiveLosses = 0;
-    for (const trade of trades) {
-      if (Number(trade.pnl) < 0) consecutiveLosses += 1;
-      else if (Number(trade.pnl) > 0) break;
-    }
-    const dayPnl = Number(trades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0).toFixed(2));
-    const maxTradesPerDay = settings ? Number(settings.max_trades_per_day) : null;
-    const maxConsecutiveLosses = settings ? Number(settings.max_consecutive_losses) : null;
-    const dailyLossLimit = settings ? Number(settings.daily_loss_limit) : null;
-    const halted = haltRes.rows.length > 0
-      || (maxTradesPerDay !== null && trades.length >= maxTradesPerDay)
-      || (maxConsecutiveLosses !== null && consecutiveLosses >= maxConsecutiveLosses)
-      || (dailyLossLimit !== null && dailyLossLimit > 0 && -dayPnl >= dailyLossLimit);
+    const todayRes = await pool.query(
+      `SELECT
+         COUNT(*)::int AS trades_today,
+         COUNT(*) FILTER (WHERE pnl < 0)::int AS losses_today,
+         COALESCE(SUM(pnl), 0)::numeric AS day_pnl
+       FROM algo_orders
+       WHERE user_id = $1 AND execution_mode = 'LIVE' AND created_at::date = CURRENT_DATE`,
+      [req.userId]
+    );
+
+    const tradesToday = todayRes.rows[0]?.trades_today || 0;
+    const lossesToday = todayRes.rows[0]?.losses_today || 0;
+    const dayPnl = Number(todayRes.rows[0]?.day_pnl || 0);
+
     res.json({
-      configured: Boolean(settings),
-      tradesToday: trades.length,
-      maxTradesPerDay,
-      tradesRemaining: maxTradesPerDay === null ? null : Math.max(0, maxTradesPerDay - trades.length),
-      consecutiveLosses,
-      maxConsecutiveLosses,
+      tradesToday,
+      maxTradesPerDay: 3,
+      tradesRemaining: Math.max(0, 3 - tradesToday),
+      consecutiveLosses: Math.min(2, lossesToday),
+      maxConsecutiveLosses: 2,
       dayPnl,
-      dailyDrawdownLimit: dailyLossLimit,
-      isHalted: halted,
-      killSwitchToday: haltRes.rows.length > 0,
+      dailyDrawdownLimit: 10000,
+      dailyHardDrawdownPct: 10.0,
+      isHalted: tradesToday >= 3 || lossesToday >= 2,
     });
   } catch (err) {
     next(err);

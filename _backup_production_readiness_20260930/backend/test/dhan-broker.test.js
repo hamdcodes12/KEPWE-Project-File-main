@@ -267,17 +267,6 @@ async function run() {
     );
     const orderId = orderRes.rows[0].id;
 
-    // Dhan postbacks are triggers only: the applied execution is Dhan's own
-    // order record (GET /v2/orders/{id}), which carries averageTradedPrice.
-    let dhanOrderState = { orderId: 'dhan-live-order-101', orderStatus: 'TRADED', filledQty: 50, averageTradedPrice: 1502.5, price: 1500 };
-    const previousFetch = global.fetch;
-    global.fetch = async (url, options = {}) => {
-      if (String(url).endsWith('/v2/orders/dhan-live-order-101')) {
-        return new Response(JSON.stringify(dhanOrderState), { status: 200, headers: { 'content-type': 'application/json' } });
-      }
-      return previousFetch(url, options);
-    };
-
     // Send Dhan postback webhook payload to /api/lemonn/callback (configured URL)
     const postbackRes1 = await request(server, {
       method: 'POST',
@@ -286,8 +275,8 @@ async function run() {
       body: {
         orderId: 'dhan-live-order-101',
         orderStatus: 'TRADED',
-        filled_qty: 50,
-        price: 0,
+        filledQty: 50,
+        averagePrice: 1502.50,
       },
     });
     assert.equal(postbackRes1.statusCode, 200);
@@ -299,8 +288,7 @@ async function run() {
     assert.equal(Number(orderCheck1.rows[0].filled_quantity), 50);
     assert.equal(Number(orderCheck1.rows[0].average_fill_price), 1502.5);
 
-    // Also send postback to /api/dhan/callback (out-of-order CANCELLED after TRADED)
-    dhanOrderState = { orderId: 'dhan-live-order-101', orderStatus: 'CANCELLED', filledQty: 50, averageTradedPrice: 1502.5 };
+    // Also send postback to /api/dhan/callback
     const postbackRes2 = await request(server, {
       method: 'POST',
       path: '/api/dhan/callback',
@@ -310,9 +298,7 @@ async function run() {
         orderStatus: 'CANCELLED',
       },
     });
-    // Invalid transitions are acknowledged (so Dhan does not retry) and never applied.
-    assert.equal(postbackRes2.statusCode, 200);
-    assert.equal(postbackRes2.json().status, 'stale_or_duplicate');
+    assert.equal(postbackRes2.statusCode, 409);
     const orderCheck2 = await pool.query('SELECT status FROM algo_orders WHERE id = $1', [orderId]);
     assert.equal(orderCheck2.rows[0].status, 'FILLED');
 
