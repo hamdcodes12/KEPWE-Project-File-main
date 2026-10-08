@@ -19,10 +19,9 @@ import SalesCRMPage from './pages/business/SalesCRMPage';
 import { NewCompanyPage, GSTLandingPage, VirtualCFOPage } from './pages/business/BusinessLandingPages';
 import AccountingPage from './pages/solutions/AccountingPage';
 import LoansPage from './pages/solutions/LoansPage';
-import CreditEligibilityPage from './pages/credit/CreditEligibilityPage';
-import CreditApplicationPage from './pages/credit/CreditApplicationPage';
 import CreditStatusPage from './pages/credit/CreditStatusPage';
 import CreditHealthPage from './pages/credit/CreditHealthPage';
+import CreditHealthConsentPage, { CreditHealthConsentGate } from './pages/credit/CreditHealthConsentPage';
 import IndustryPages from './pages/business/IndustryPages';
 import BusinessOnboardingPage from './pages/business/BusinessOnboardingPage';
 import ComplianceCalendarPage from './pages/resources/ComplianceCalendarPage';
@@ -146,7 +145,7 @@ function CreditAuthRedirect({ signup = false }) {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   params.set('product', 'credit');
-  if (!params.get('returnTo')) params.set('returnTo', '/credit/workspace');
+  if (!params.get('returnTo')) params.set('returnTo', '/credit/consent');
   return <Navigate to={`${signup ? '/signup' : '/login'}?${params.toString()}`} replace />;
 }
 
@@ -339,13 +338,14 @@ function App() {
             <Route path="/portal/compliance-portal" element={<Navigate to="/customer-portal" replace />} />
             <Route path="/portal/onboarding-checklist" element={<ProtectedCustomerPortalRoute><CustomerOnboardingChecklistPage /></ProtectedCustomerPortalRoute>} />
             <Route path="/credit" element={<LoansPage />} />
+            <Route path="/credit/consent" element={<ProtectedCreditRoute><CreditHealthConsentPage /></ProtectedCreditRoute>} />
             <Route path="/credit/workspace" element={<ProtectedCreditRoute><CreditStatusPage /></ProtectedCreditRoute>} />
-            <Route path="/credit/health" element={<ProtectedCreditRoute><CreditHealthPage /></ProtectedCreditRoute>} />
-            <Route path="/credit/eligibility" element={<CreditEligibilityPage />} />
-            <Route path="/credit/results" element={<CreditEligibilityPage />} />
-            <Route path="/credit/apply" element={<CreditApplicationPage />} />
-            <Route path="/credit/status" element={<CreditStatusPage />} />
-            <Route path="/credit/application/status" element={<CreditStatusPage />} />
+            <Route path="/credit/health" element={<ProtectedCreditRoute><CreditHealthConsentGate><CreditHealthPage /></CreditHealthConsentGate></ProtectedCreditRoute>} />
+            <Route path="/credit/eligibility" element={<Navigate to="/credit#loan-integration-pending" replace />} />
+            <Route path="/credit/results" element={<Navigate to="/credit#loan-integration-pending" replace />} />
+            <Route path="/credit/apply" element={<Navigate to="/credit#loan-integration-pending" replace />} />
+            <Route path="/credit/status" element={<Navigate to="/credit#loan-integration-pending" replace />} />
+            <Route path="/credit/application/status" element={<Navigate to="/credit#loan-integration-pending" replace />} />
             <Route path="/solutions/loans" element={<LoansPage />} />
             <Route path="/solutions/:type" element={<HomePage />} />
             <Route path="/industries/:type" element={<IndustryPages />} />

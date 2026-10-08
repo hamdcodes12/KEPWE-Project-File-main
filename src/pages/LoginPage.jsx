@@ -50,9 +50,9 @@ export const PRODUCT_CONFIG = {
   credit: {
     title: 'Kepwe Credit Login',
     brand: 'Kepwe Credit',
-    sub: 'WORKING CAPITAL & CREDIT ENGINE',
-    tagline: 'Fast business credit lines, automated underwriting, and flexible repayment terms.',
-    defaultPath: '/credit/workspace',
+    sub: 'CREDIT HEALTH WORKSPACE',
+    tagline: 'Understand your credit report with a private, factor-by-factor health analysis.',
+    defaultPath: '/credit/consent',
     loginPath: '/credit/login',
     signupPath: '/credit/signup',
     productKey: 'credit',
