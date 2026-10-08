@@ -536,11 +536,12 @@ const CreditProductPage = () => {
                 <span className="eyebrow-blue-dot" />
                 <span>INTEGRATION PENDING</span>
               </div>
-              <h2 className="section-title">Loan eligibility and lending are future capabilities.</h2>
+              <h2 className="section-title">Automated loan eligibility and offers — integration pending.</h2>
               <p className="section-sub" style={{ maxWidth: '680px' }}>
-                Loan eligibility checks, applications, and offers are unavailable while provider
-                integrations are pending. This capability will be introduced only after direct
-                connections with verified RBI-regulated banks and NBFCs are configured.
+                Automated eligibility checks and lender offers require verified RBI-regulated bank
+                and NBFC integrations, which are pending. KEPWE accepts application requests for
+                internal review from the Credit workspace; an internal review is not a lender
+                decision, sanction, or offer.
               </p>
             </div>
 

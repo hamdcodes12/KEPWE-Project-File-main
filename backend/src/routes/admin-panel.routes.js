@@ -52,6 +52,54 @@ const sendCsv = (res, filename, columns, rows) => {
   return res.send(csv);
 };
 
+async function withCreditAdminContext(adminId, fn) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT set_config('app.current_admin_id', $1, true)", [adminId]);
+    const value = await fn(client);
+    await client.query('COMMIT');
+    return value;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+const creditApplicationFields = `
+  a.id, a.application_number, a.user_id, a.applicant_name, a.applicant_email,
+  a.applicant_mobile, a.loan_type, a.requested_amount, a.purpose, a.business_name,
+  a.annual_turnover, a.status, a.submitted_at, a.reviewed_at, a.reviewed_by,
+  a.decision_remarks, a.updated_at`;
+const creditApplicationReturningFields = `
+  id, application_number, user_id, applicant_name, applicant_email, applicant_mobile,
+  loan_type, requested_amount, purpose, business_name, annual_turnover, status,
+  submitted_at, reviewed_at, reviewed_by, decision_remarks, updated_at`;
+
+function mapCreditAdminApplication(row) {
+  return {
+    id: row.id,
+    applicationId: row.application_number,
+    userId: row.user_id,
+    applicantName: row.applicant_name,
+    applicantEmail: row.applicant_email,
+    applicantMobile: row.applicant_mobile,
+    loanType: row.loan_type,
+    requestedAmount: row.requested_amount,
+    purpose: row.purpose,
+    businessName: row.business_name,
+    annualTurnover: row.annual_turnover,
+    status: row.status,
+    submittedAt: row.submitted_at,
+    reviewedAt: row.reviewed_at,
+    reviewedBy: row.reviewed_by,
+    decisionRemarks: row.decision_remarks,
+    updatedAt: row.updated_at,
+  };
+}
+
 // ── Admin Auth ──────────────────────────────────────────────────────────────
 router.post('/admin/auth/login', async (req, res, next) => {
   try {
@@ -682,6 +730,147 @@ router.delete('/admin/announcements/:id', requireAdminAuth, async (req, res, nex
   } catch (err) {
     next(err);
   }
+});
+
+// ── Credit loan application review ─────────────────────────────────────────
+router.get('/admin/credit-applications', requireAdminAuth, async (req, res, next) => {
+  try {
+    const { page, pageSize, offset } = parsePagination(req.query);
+    const conditions = [];
+    const params = [];
+    const status = String(req.query.status || '').trim().toLowerCase();
+    if (status && ['pending', 'approved', 'rejected'].includes(status)) {
+      params.push(status);
+      conditions.push(`a.status = $${params.length}`);
+    }
+    const search = String(req.query.search || '').trim();
+    if (search) {
+      params.push(`%${search.replaceAll('%', '\\%').replaceAll('_', '\\_')}%`);
+      conditions.push(`(a.application_number ILIKE $${params.length} OR a.applicant_name ILIKE $${params.length} OR a.applicant_email ILIKE $${params.length})`);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const result = await withCreditAdminContext(req.adminId, async (client) => {
+      const applications = await client.query(
+        `SELECT ${creditApplicationFields},
+                (SELECT COUNT(*) FROM credit_loan_application_documents d WHERE d.application_id = a.id)::int AS document_count
+         FROM credit_loan_applications a ${where}
+         ORDER BY a.submitted_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, pageSize, offset]
+      );
+      const count = await client.query(`SELECT COUNT(*) AS total FROM credit_loan_applications a ${where}`, params);
+      return { applications: applications.rows, total: count.rows[0]?.total || 0 };
+    });
+    return res.json({ applications: result.applications.map((row) => ({
+      ...mapCreditAdminApplication(row), documentCount: row.document_count,
+    })), pagination: paginationPayload(page, pageSize, result.total) });
+  } catch (err) { next(err); }
+});
+
+router.get('/admin/credit-applications/:id', requireAdminAuth, async (req, res, next) => {
+  try {
+    const parsedId = z.string().uuid().safeParse(req.params.id);
+    if (!parsedId.success) return res.status(404).json({ error: 'Credit application not found.' });
+    const detail = await withCreditAdminContext(req.adminId, async (client) => {
+      const result = await client.query(
+        `SELECT ${creditApplicationFields}, au.display_name AS reviewer_name
+         FROM credit_loan_applications a LEFT JOIN admin_users au ON au.id = a.reviewed_by
+         WHERE a.id = $1`, [parsedId.data]
+      );
+      if (!result.rows.length) return null;
+      const [documents, events] = await Promise.all([
+        client.query(
+          `SELECT id, original_filename, mime_type, file_size_bytes, uploaded_at
+           FROM credit_loan_application_documents WHERE application_id = $1 ORDER BY uploaded_at, id`, [parsedId.data]
+        ),
+        client.query(
+          `SELECT e.from_status, e.to_status, e.remarks, e.created_at,
+                  u.full_name AS user_actor, au.display_name AS admin_actor
+           FROM credit_loan_application_events e
+           LEFT JOIN users u ON u.id = e.actor_user_id
+           LEFT JOIN admin_users au ON au.id = e.actor_admin_id
+           WHERE e.application_id = $1 ORDER BY e.created_at, e.id`, [parsedId.data]
+        ),
+      ]);
+      return { application: result.rows[0], documents: documents.rows, events: events.rows };
+    });
+    if (!detail) return res.status(404).json({ error: 'Credit application not found.' });
+    return res.json({
+      application: { ...mapCreditAdminApplication(detail.application), reviewerName: detail.application.reviewer_name },
+      documents: detail.documents,
+      events: detail.events,
+    });
+  } catch (err) { next(err); }
+});
+
+router.get('/admin/credit-applications/:id/documents/:documentId', requireAdminAuth, async (req, res, next) => {
+  try {
+    const ids = [req.params.id, req.params.documentId].map((value) => z.string().uuid().safeParse(value));
+    if (ids.some((item) => !item.success)) return res.status(404).json({ error: 'Document not found.' });
+    const document = await withCreditAdminContext(req.adminId, async (client) => {
+      const result = await client.query(
+        `SELECT d.original_filename, d.mime_type, d.file_size_bytes, d.file_content
+         FROM credit_loan_application_documents d
+         WHERE d.application_id = $1 AND d.id = $2`, ids.map((item) => item.data)
+      );
+      return result.rows[0] || null;
+    });
+    if (!document) return res.status(404).json({ error: 'Document not found.' });
+    const filename = String(document.original_filename || 'application-document').replace(/[\\"\r\n]/g, '_');
+    res.set({
+      'Content-Type': document.mime_type,
+      'Content-Length': String(document.file_size_bytes),
+      'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    return res.send(Buffer.from(document.file_content));
+  } catch (err) { next(err); }
+});
+
+router.patch('/admin/credit-applications/:id/status', requireAdminAuth, async (req, res, next) => {
+  try {
+    const id = z.string().uuid().safeParse(req.params.id);
+    const body = z.object({
+      status: z.enum(['approved', 'rejected']),
+      remarks: z.string().trim().max(2000).optional().default(''),
+    }).safeParse(req.body);
+    if (!id.success) return res.status(404).json({ error: 'Credit application not found.' });
+    if (!body.success) return res.status(400).json({ error: 'Choose Approve or Reject and check the remarks.' });
+
+    const result = await withCreditAdminContext(req.adminId, async (client) => {
+      const locked = await client.query(
+        'SELECT id, status FROM credit_loan_applications WHERE id = $1 FOR UPDATE', [id.data]
+      );
+      const current = locked.rows[0];
+      if (!current) return { missing: true };
+      if (current.status !== 'pending') return { conflict: true, status: current.status };
+      const updated = await client.query(
+        `UPDATE credit_loan_applications
+         SET status = $1, reviewed_at = NOW(), reviewed_by = $2, decision_remarks = $3, updated_at = NOW()
+         WHERE id = $4
+         RETURNING ${creditApplicationReturningFields}`,
+        [body.data.status, req.adminId, body.data.remarks || null, id.data]
+      );
+      await client.query(
+        `INSERT INTO credit_loan_application_events
+           (application_id, from_status, to_status, actor_admin_id, remarks)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [id.data, current.status, body.data.status, req.adminId, body.data.remarks || null]
+      );
+      await logAdminAudit(client, {
+        adminId: req.adminId,
+        action: `credit.application.${body.data.status}`,
+        entityType: 'credit_application',
+        entityId: id.data,
+        metadata: { fromStatus: current.status, toStatus: body.data.status, remarksProvided: Boolean(body.data.remarks) },
+        req,
+      });
+      return { application: updated.rows[0] };
+    });
+    if (result.missing) return res.status(404).json({ error: 'Credit application not found.' });
+    if (result.conflict) return res.status(409).json({ error: `This application has already been ${result.status}.` });
+    return res.json({ application: mapCreditAdminApplication(result.application) });
+  } catch (err) { next(err); }
 });
 
 // ── Admin subscriptions, plans, payments, CRM, reporting and audit ─────────

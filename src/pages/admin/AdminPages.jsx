@@ -209,7 +209,7 @@ export const AdminLoginPage = () => {
 // ────────────────────────────────────────────────────────────────
 const ADMIN_NAV_GROUPS = [
   { label: 'Overview', items: [{ to: '/admin', label: 'Dashboard', icon: <LayoutDashboard size={18} />, end: true }, { to: '/admin/reports', label: 'Reports', icon: <BarChart3 size={18} /> }, { to: '/admin/revenue', label: 'Revenue analytics', icon: <TrendingUp size={18} /> }] },
-  { label: 'Customers & revenue', items: [{ to: '/admin/users', label: 'Users', icon: <Users size={18} /> }, { to: '/admin/subscriptions', label: 'Subscriptions', icon: <CreditCard size={18} /> }, { to: '/admin/plans', label: 'Plans', icon: <FileText size={18} /> }, { to: '/admin/payments', label: 'Payments', icon: <Banknote size={18} /> }] },
+  { label: 'Customers & revenue', items: [{ to: '/admin/users', label: 'Users', icon: <Users size={18} /> }, { to: '/admin/credit-applications', label: 'Credit applications', icon: <FileText size={18} /> }, { to: '/admin/subscriptions', label: 'Subscriptions', icon: <CreditCard size={18} /> }, { to: '/admin/plans', label: 'Plans', icon: <FileText size={18} /> }, { to: '/admin/payments', label: 'Payments', icon: <Banknote size={18} /> }] },
   { label: 'Operations', items: [{ to: '/admin/crm', label: 'CRM', icon: <ClipboardList size={18} /> }, { to: '/admin/website', label: 'Website', icon: <Globe size={18} /> }, { to: '/admin/announcements', label: 'Announcements', icon: <Megaphone size={18} /> }] },
   { label: 'Security', items: [{ to: '/admin/audit-logs', label: 'Audit logs', icon: <ShieldCheck size={18} /> }] },
   { label: 'System', items: [{ to: '/admin/notifications', label: 'Notifications', icon: <Bell size={18} /> }] },

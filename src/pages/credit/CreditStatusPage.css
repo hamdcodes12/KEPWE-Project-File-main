@@ -612,10 +612,32 @@
 .credit-workspace-secondary-action { border: 1px solid #CBD5E1; color: #475569; background: #F8FAFC; }
 .credit-workspace-secondary-action:hover { border-color: #94A3B8; background: #F1F5F9; }
 
+.credit-workspace-pending-link { margin-top: 13px; color: #64748B; font-size: .8rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.credit-workspace-applications { margin-top: 34px; }
+.credit-workspace-applications-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 14px; }
+.credit-workspace-applications-heading h2 { margin: 6px 0 0; color: #0F172A; font-size: 1.45rem; }
+.credit-workspace-applications-heading > a { display: inline-flex; align-items: center; gap: 7px; color: #214ECF; font-size: .86rem; font-weight: 800; text-decoration: none; }
+.credit-workspace-application-list { overflow: hidden; border: 1px solid #E2E8F0; border-radius: 13px; background: #fff; }
+.credit-workspace-application-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 18px; padding: 16px 18px; color: inherit; text-decoration: none; }
+.credit-workspace-application-row + .credit-workspace-application-row { border-top: 1px solid #E2E8F0; }
+.credit-workspace-application-row:hover { background: #F8FAFC; }
+.credit-workspace-application-row > span:first-child { display: grid; gap: 5px; }
+.credit-workspace-application-row strong { color: #0F172A; font-size: .9rem; }
+.credit-workspace-application-row small { color: #64748B; font-size: .76rem; }
+.credit-workspace-application-status { color: #B45309; font-size: .82rem; font-weight: 800; }
+.credit-workspace-application-status.status-approved { color: #047857; }
+.credit-workspace-application-status.status-rejected { color: #B91C1C; }
+.credit-workspace-no-applications, .credit-workspace-applications-error { padding: 18px; border: 1px solid #E2E8F0; border-radius: 12px; background: #fff; color: #64748B; font-size: .86rem; }
+.credit-workspace-applications-error { color: #B91C1C; }
+
 @media (max-width: 700px) {
   .credit-workspace-nav { padding: 0 20px; }
   .credit-workspace-nav span { font-size: 0; }
   .credit-workspace-content { width: calc(100% - 32px); }
   .credit-workspace-heading { margin-top: 42px; }
   .credit-workspace-cards { grid-template-columns: 1fr; }
+  .credit-workspace-application-row { grid-template-columns: 1fr auto; gap: 10px; }
+  .credit-workspace-application-row > svg { display: none; }
+  .credit-workspace-application-status { grid-column: 1 / -1; }
+  .credit-workspace-applications-heading { align-items: flex-start; flex-direction: column; }
 }

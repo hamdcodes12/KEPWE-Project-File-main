@@ -89,7 +89,8 @@ export async function runAutoMigrations(client) {
       'ledger_prd_dashboard.sql',
       'ledger_prd_phase6_upload.sql',
       'ledger_prd_phase8_goals.sql',
-      'credit_report_analysis.sql'
+      'credit_report_analysis.sql',
+      'credit_loan_applications.sql'
     ];
 
     for (const file of files) {
@@ -366,6 +367,20 @@ export async function runAutoMigrations(client) {
       const creditReportPath = resolve(__dirname, '../../db/credit_report_analysis.sql');
       if (fs.existsSync(creditReportPath)) {
         const sql = fs.readFileSync(creditReportPath, 'utf-8');
+        if (client.exec) await client.exec(sql); else await client.query(sql);
+      }
+    }
+
+    const creditApplicationsCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'credit_loan_applications'
+      ) AS exists;
+    `);
+    if (!creditApplicationsCheck.rows[0]?.exists) {
+      const applicationsPath = resolve(__dirname, '../../db/credit_loan_applications.sql');
+      if (fs.existsSync(applicationsPath)) {
+        const sql = fs.readFileSync(applicationsPath, 'utf-8');
         if (client.exec) await client.exec(sql); else await client.query(sql);
       }
     }
