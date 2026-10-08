@@ -73,25 +73,21 @@ services:
         value: "60000"
       - key: BROKER_TOKEN_ENCRYPTION_KEY
         sync: false
-      - key: DHAN_API_KEY
-        sync: false
-      - key: DHAN_API_SECRET
-        sync: false
-      - key: DHAN_REDIRECT_URL
-        value: https://kepwe.in/api/lemonn/callback
-      - key: DHAN_STATIC_IP
-        value: "103.117.180.146"
-      - key: DHAN_TIMEOUT_MS
-        value: "10000"
       - key: ANGEL_ONE_API_KEY
+        sync: false
+      - key: ANGEL_ONE_STATIC_IP
+        sync: false
+      - key: ANGEL_ONE_NIFTY_FREEZE_QTY
+        sync: false
+      - key: ANGEL_ONE_REDIRECT_URL
+        value: https://kepwe.in/api/angel-one/callback
+      - key: ANGEL_ONE_WEBHOOK_TOKEN
         sync: false
       - key: ANGEL_ONE_CLIENT_CODE
         sync: false
-      - key: ANGEL_ONE_TOTP_SECRET
-        sync: false
-      - key: ANGEL_ONE_PASSWORD
-        sync: false
       - key: ANGEL_ONE_MPIN
+        sync: false
+      - key: ANGEL_ONE_TOTP_SECRET
         sync: false
       - key: ANGEL_ONE_CLIENT_LOCAL_IP
         sync: false
@@ -99,12 +95,8 @@ services:
         sync: false
       - key: ANGEL_ONE_MAC_ADDRESS
         sync: false
-      - key: ANGEL_ONE_STATIC_IP
-        sync: false
-      - key: DHAN_WEBHOOK_TOKEN
-        sync: false
-      - key: ANGEL_ONE_WEBHOOK_TOKEN
-        sync: false
+      - key: ANGEL_ONE_TIMEOUT_MS
+        value: "10000"
       - key: OUTBOUND_PUBLIC_IP
         sync: false
       - key: RESEND_API_KEY

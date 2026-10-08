@@ -9,12 +9,12 @@ async function testBrokerStatusFix() {
     FROM users u
     JOIN broker_accounts ba ON u.id = ba.user_id 
     WHERE ba.status = 'PARTIALLY_CONNECTED' 
-    AND ba.broker = 'DHAN'
+    AND ba.broker = 'ANGEL_ONE'
     LIMIT 1
   `);
 
   if (result.rows.length === 0) {
-    console.log('❌ No PARTIALLY_CONNECTED Dhan accounts found for testing');
+    console.log('❌ No PARTIALLY_CONNECTED Angel One accounts found for testing');
     await pool.end();
     return;
   }
@@ -33,7 +33,7 @@ async function testBrokerStatusFix() {
     FROM broker_accounts a
     LEFT JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
     WHERE a.user_id = $1 AND a.broker = $2
-  `, [user.user_id, 'DHAN']);
+  `, [user.user_id, 'ANGEL_ONE']);
 
   const account = statusQuery.rows[0];
   
@@ -59,7 +59,7 @@ async function testBrokerStatusFix() {
   if (!isValidForConnection) {
     console.log('  connected: true');
     console.log('  status: CONNECTED (after validation)');
-    console.log('  broker: DHAN');
+    console.log('  broker: ANGEL_ONE');
     console.log('  sessionValid: true');
   } else {
     console.log('  connected: false');  

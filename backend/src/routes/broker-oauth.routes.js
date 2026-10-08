@@ -1,59 +1,61 @@
+// Angel One SmartAPI account connection, session and postback routes.
+// Angel One is the only supported broker.
+
 import { Router } from 'express';
 import { createHash, randomBytes } from 'crypto';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { pool } from '../config/db.js';
-import { DhanAdapter, AngelOneAdapter } from '../algo/broker-adapters.js';
+import { ANGEL_ONE, ANGEL_ONE_PUBLISHER_LOGIN_URL, AngelOneAdapter } from '../algo/broker-adapters.js';
 import { storeBrokerTokens } from '../services/broker-token.service.js';
-import { assertBrokerIdentity, verifyBrokerConnection } from '../services/broker-verification.service.js';
+import { verifyBrokerConnection } from '../services/broker-verification.service.js';
 import { applyBrokerExecutionUpdate, verifyBrokerWebhookRequest } from '../services/broker-execution.service.js';
 import { areBrokerFeaturesEnabled } from '../config/env.js';
-import { clearDhanMarketFeedCache } from '../services/dhan-market-feed.service.js';
+import { clearAngelOneMarketFeedCache } from '../services/angel-one-market-feed.service.js';
 import { tryCreateQuantNotification } from '../services/quant-notification.service.js';
+import {
+  adapterFromAngelOneAccount,
+  isAngelOneSessionError,
+  loadAngelOneAccount,
+  markAngelOneSessionExpired,
+} from '../services/angel-one-session.service.js';
 
 const router = Router();
 
-// Middleware to check if broker features are enabled
 function requireBrokerFeatures(req, res, next) {
   if (!areBrokerFeaturesEnabled()) {
     return res.status(503).json({
       error: 'Broker features are not configured on this server',
       message: 'Live broker connectivity is currently unavailable. Please contact support.',
+      code: 'BROKER_FEATURES_DISABLED',
     });
   }
   next();
 }
 
-const DHAN = 'DHAN';
-const ANGEL_ONE = 'ANGEL_ONE';
-const DHAN_CALLBACK_URI = String(process.env.DHAN_REDIRECT_URL || 'https://kepwe.in/api/lemonn/callback').trim();
 const ANGEL_ONE_CALLBACK_URI = String(process.env.ANGEL_ONE_REDIRECT_URL || 'https://kepwe.in/api/angel-one/callback').trim();
 const OAUTH_STATE_TTL_MINUTES = 15;
-const MAX_AUTH_CODE_LENGTH = 4096;
-const OAUTH_COOKIE_NAME = 'dhan_oauth_state';
-const ANGEL_ONE_OAUTH_COOKIE_NAME = 'angel_one_oauth_state';
+const MAX_TOKEN_LENGTH = 4096;
+const OAUTH_COOKIE_NAME = 'angel_one_oauth_state';
 const MAX_PENDING_OAUTH_STATES = 8;
-const OAUTH_COOKIE_SECURE = /^https:/i.test(DHAN_CALLBACK_URI) && process.env.NODE_ENV === 'production';
-const ANGEL_ONE_OAUTH_COOKIE_SECURE = /^https:/i.test(ANGEL_ONE_CALLBACK_URI) && process.env.NODE_ENV === 'production';
+const OAUTH_COOKIE_SECURE = /^https:/i.test(ANGEL_ONE_CALLBACK_URI) && process.env.NODE_ENV === 'production';
 const OAUTH_COOKIE_SAMESITE = OAUTH_COOKIE_SECURE ? 'None' : 'Lax';
-const ANGEL_ONE_OAUTH_COOKIE_SAMESITE = ANGEL_ONE_OAUTH_COOKIE_SECURE ? 'None' : 'Lax';
 const OAUTH_COOKIE_ATTRIBUTES = `Max-Age=${OAUTH_STATE_TTL_MINUTES * 60}; Path=/; HttpOnly; SameSite=${OAUTH_COOKIE_SAMESITE}${OAUTH_COOKIE_SECURE ? '; Secure' : ''}`;
-const ANGEL_ONE_OAUTH_COOKIE_ATTRIBUTES = `Max-Age=${OAUTH_STATE_TTL_MINUTES * 60}; Path=/; HttpOnly; SameSite=${ANGEL_ONE_OAUTH_COOKIE_SAMESITE}${ANGEL_ONE_OAUTH_COOKIE_SECURE ? '; Secure' : ''}`;
 
+// `angelOneClientCode` / `password` are accepted as aliases of `clientCode` / `mpin`.
 const connectSchema = z.object({
-  dhanClientId: z.string().trim().min(1, 'Dhan Client ID is required').max(60),
-  accessToken: z.string().trim().min(1, 'Dhan Access Token is required').max(MAX_AUTH_CODE_LENGTH),
-}).strict();
-
-const angelOneConnectSchema = z.object({
-  angelOneClientCode: z.string().trim().min(1, 'Angel One Client Code is required').max(60),
-  password: z.string().trim().min(1, 'Password or MPIN is required').max(256),
+  clientCode: z.string().trim().min(1).max(60).optional(),
+  angelOneClientCode: z.string().trim().min(1).max(60).optional(),
+  mpin: z.string().trim().min(1).max(64).optional(),
+  password: z.string().trim().min(1).max(64).optional(),
+  totp: z.string().trim().min(6, 'Enter the 6-digit TOTP from your authenticator app').max(128),
+  apiKey: z.string().trim().max(128).optional(),
 }).strict();
 
 const callbackQuerySchema = z.object({
-  tokenId: z.string().trim().min(1).max(MAX_AUTH_CODE_LENGTH).optional(),
-  tokenid: z.string().trim().min(1).max(MAX_AUTH_CODE_LENGTH).optional(),
-  consentAppId: z.string().trim().min(1).max(256).optional(),
+  auth_token: z.string().trim().min(1).max(MAX_TOKEN_LENGTH).optional(),
+  refresh_token: z.string().trim().min(1).max(MAX_TOKEN_LENGTH).optional(),
+  feed_token: z.string().trim().min(1).max(MAX_TOKEN_LENGTH).optional(),
   state: z.string().trim().min(1).max(512).optional(),
   error: z.string().trim().min(1).max(256).optional(),
 }).passthrough();
@@ -70,18 +72,10 @@ function readCookie(req, name) {
   return value ? decodeURIComponent(value.slice(name.length + 1)) : null;
 }
 
-function readOAuthStates(req, cookieName = OAUTH_COOKIE_NAME) {
-  const encoded = readCookie(req, cookieName);
+function readOAuthStates(req) {
+  const encoded = readCookie(req, OAUTH_COOKIE_NAME);
   if (!encoded) return [];
-  return encoded
-    .split(',')
-    .map((state) => state.trim())
-    .filter(Boolean)
-    .slice(-MAX_PENDING_OAUTH_STATES);
-}
-
-function serializeOAuthStates(states) {
-  return states.slice(-MAX_PENDING_OAUTH_STATES).join(',');
+  return encoded.split(',').map((state) => state.trim()).filter(Boolean).slice(-MAX_PENDING_OAUTH_STATES);
 }
 
 async function failOAuthSession(sessionId, failureCode) {
@@ -89,16 +83,15 @@ async function failOAuthSession(sessionId, failureCode) {
     `UPDATE broker_oauth_sessions
      SET status = 'FAILED', failure_code = $2, updated_at = NOW()
      WHERE id = $1 AND status = 'PROCESSING'`,
-    [sessionId, failureCode]
+    [sessionId, failureCode],
   );
 }
 
-async function claimOAuthSession(states = [], broker = DHAN) {
+async function claimOAuthSession(states = []) {
   if (!Array.isArray(states) || states.length === 0) return null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const stateHashes = states.map(hashState);
     const result = await client.query(
       `SELECT id, user_id, broker, redirect_uri, expires_at
        FROM broker_oauth_sessions
@@ -106,7 +99,7 @@ async function claimOAuthSession(states = [], broker = DHAN) {
        ORDER BY created_at DESC
        LIMIT 1
        FOR UPDATE`,
-      [broker, stateHashes]
+      [ANGEL_ONE, states.map(hashState)],
     );
     const session = result.rows[0];
     if (!session) {
@@ -117,7 +110,7 @@ async function claimOAuthSession(states = [], broker = DHAN) {
       `UPDATE broker_oauth_sessions
        SET status = 'PROCESSING', consumed_at = NOW(), updated_at = NOW()
        WHERE id = $1`,
-      [session.id]
+      [session.id],
     );
     await client.query('COMMIT');
     return session;
@@ -129,37 +122,342 @@ async function claimOAuthSession(states = [], broker = DHAN) {
   }
 }
 
-async function createOAuthState(userId, broker = DHAN) {
+async function createOAuthState(userId) {
   const state = randomBytes(32).toString('base64url');
-  const redirectUri = broker === ANGEL_ONE ? ANGEL_ONE_CALLBACK_URI : DHAN_CALLBACK_URI;
   await pool.query(
     `INSERT INTO broker_oauth_sessions
        (user_id, broker, state_hash, redirect_uri, status, expires_at)
      VALUES ($1, $2, $3, $4, 'PENDING', NOW() + ($5::int * INTERVAL '1 minute'))`,
-    [userId, broker, hashState(state), redirectUri, OAUTH_STATE_TTL_MINUTES]
+    [userId, ANGEL_ONE, hashState(state), ANGEL_ONE_CALLBACK_URI, OAUTH_STATE_TTL_MINUTES],
   );
   return state;
 }
 
-async function handleBrokerExecutionWebhook(req, res, next, broker) {
-  if (!verifyBrokerWebhookRequest(req, broker)) {
-    return res.status(401).json({ error: 'Broker webhook authentication failed', code: 'BROKER_WEBHOOK_UNAUTHORIZED' });
+/** Public, non-secret fields of a SmartAPI failure for API responses. */
+function brokerErrorBody(error, fallbackMessage) {
+  return {
+    success: false,
+    broker: ANGEL_ONE,
+    status: 'FAILED',
+    error: error.message || fallbackMessage,
+    code: error.code || 'BROKER_ERROR',
+    category: error.angelCategory || null,
+    brokerErrorCode: error.providerErrorCode ?? null,
+    brokerErrorMessage: error.providerMessage ?? null,
+    brokerHttpStatus: error.httpStatus ?? null,
+  };
+}
+
+const CONNECT_ERROR_MESSAGES = {
+  INVALID_CREDENTIALS: 'Angel One rejected the client code, MPIN or TOTP. Check them and try again with a fresh TOTP.',
+  INVALID_API_KEY: 'Angel One rejected the SmartAPI key. Check the API key from your SmartAPI app (and that this server\'s static IP is registered for it).',
+  ACCOUNT_BLOCKED: 'Angel One reports this account is blocked for trading or API access.',
+  RATE_LIMITED: 'Angel One rate limit reached. Wait a few seconds and try again.',
+  NETWORK_ERROR: 'Could not reach Angel One SmartAPI. Try again shortly.',
+  TIMEOUT: 'Angel One SmartAPI did not respond in time. Try again shortly.',
+};
+
+/**
+ * Stores a freshly authenticated session (inside one transaction), then runs
+ * the full live verification. Shared by direct login and publisher login.
+ */
+async function persistAndVerifyConnection({ userId, adapter, clientCode, userApiKey, loginMethod }) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO broker_accounts (user_id, broker, client_id, status, connection_mode, connected_at, updated_at)
+       VALUES ($1, $2, $3, 'CONNECTED', 'LIVE', NOW(), NOW())
+       ON CONFLICT (user_id, broker) DO UPDATE
+       SET client_id = EXCLUDED.client_id, status = 'CONNECTED', connection_mode = 'LIVE',
+           connected_at = NOW(), updated_at = NOW()`,
+      [userId, ANGEL_ONE, clientCode],
+    );
+    await storeBrokerTokens({
+      client,
+      userId,
+      broker: ANGEL_ONE,
+      accessToken: adapter.session.jwtToken,
+      refreshToken: adapter.session.refreshToken || null,
+      feedToken: adapter.session.feedToken || null,
+      apiKey: userApiKey || null,
+      expiresAt: adapter.session.tokenExpiresAt,
+    });
+    await client.query(
+      `INSERT INTO algo_activity_logs (user_id, event_type, message, metadata)
+       VALUES ($1, 'BROKER_CONNECTED', $2, $3::jsonb)`,
+      [
+        userId,
+        `Angel One trading account (${clientCode}) authenticated - starting verification`,
+        JSON.stringify({ broker: ANGEL_ONE, clientCode, mode: 'LIVE', loginMethod }),
+      ],
+    );
+    await client.query('COMMIT');
+  } catch (dbError) {
+    await client.query('ROLLBACK');
+    throw dbError;
+  } finally {
+    client.release();
+  }
+  // The stored session changed: drop any cached market-feed result for this user.
+  clearAngelOneMarketFeedCache(userId);
+
+  const verification = await verifyBrokerConnection(userId, ANGEL_ONE, {
+    skipMarketData: false,
+    timeout: 45000,
+    logResults: true,
+  });
+  const nextStatus = verification.status === 'CONNECTED'
+    ? 'CONNECTED'
+    : (verification.status === 'PARTIALLY_CONNECTED' ? 'PARTIALLY_CONNECTED' : 'VERIFICATION_FAILED');
+  await pool.query(
+    `UPDATE broker_accounts
+     SET status = $3, last_verified_at = NOW(), verification_score = $4, updated_at = NOW()
+     WHERE user_id = $1 AND broker = $2`,
+    [userId, ANGEL_ONE, nextStatus, verification.overallScore],
+  );
+  if (nextStatus === 'CONNECTED') {
+    await tryCreateQuantNotification(pool, {
+      userId,
+      type: 'BROKER_CONNECTED',
+      title: 'Angel One connected',
+      body: `Angel One client ${clientCode} verified with SmartAPI.`,
+      data: { broker: ANGEL_ONE, clientCode, marketDataAvailable: verification.marketData?.available ?? null },
+    });
+  }
+  return { verification, status: nextStatus };
+}
+
+/**
+ * Direct connection: the user supplies their Angel One client code, MPIN and
+ * current TOTP (and their SmartAPI key when the server has none). The login is
+ * performed against SmartAPI immediately; the MPIN and TOTP are never stored.
+ */
+router.post('/broker/angel-one/connect', requireAuth, requireBrokerFeatures, async (req, res, next) => {
+  const parsed = connectSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid parameters', code: 'INVALID_PARAMETERS' });
+  }
+  const clientCode = String(parsed.data.clientCode || parsed.data.angelOneClientCode || '').trim().toUpperCase();
+  const mpin = String(parsed.data.mpin || parsed.data.password || '').trim();
+  const { totp } = parsed.data;
+  const userApiKey = String(parsed.data.apiKey || '').trim();
+  if (!clientCode) return res.status(400).json({ error: 'Angel One Client Code is required', code: 'INVALID_PARAMETERS' });
+  if (!mpin) return res.status(400).json({ error: 'Angel One MPIN is required', code: 'INVALID_PARAMETERS' });
+
+  const adapter = new AngelOneAdapter({ clientCode, apiKey: userApiKey || null });
+  if (!adapter.isConfigured()) {
+    return res.status(400).json({
+      error: 'A SmartAPI key is required. Create an app at smartapi.angelone.in and enter its API key.',
+      code: 'BROKER_API_KEY_MISSING',
+      broker: ANGEL_ONE,
+    });
+  }
+
+  try {
+    await adapter.login({ clientCode, mpin, totp });
+    // Identity comes only from Angel One's own profile response.
+    const profile = await adapter.getProfile();
+    if (!profile.clientCode || profile.clientCode !== clientCode) {
+      await adapter.logout().catch(() => {});
+      return res.status(409).json({
+        error: 'The Angel One session belongs to a different client code than the one entered.',
+        code: 'BROKER_ACCOUNT_IDENTITY_MISMATCH',
+        broker: ANGEL_ONE,
+        status: 'FAILED',
+      });
+    }
+
+    const { verification, status } = await persistAndVerifyConnection({
+      userId: req.userId,
+      adapter,
+      clientCode,
+      userApiKey: adapter.apiKeySource === 'USER' ? userApiKey : null,
+      loginMethod: 'MPIN_TOTP',
+    });
+    const body = {
+      broker: ANGEL_ONE,
+      clientCode,
+      clientName: profile.name || null,
+      status,
+      mode: 'LIVE',
+      tokenExpiresAt: adapter.tokenExpiresAt ? adapter.tokenExpiresAt.toISOString() : null,
+      marketData: verification.marketData || null,
+      verification: {
+        status: verification.status,
+        score: verification.overallScore,
+        checks: Object.fromEntries(Object.entries(verification.checks).map(([name, check]) => [name, { status: check.status, message: check.message }])),
+        errors: verification.errors,
+        warnings: verification.warnings,
+        lastVerified: verification.timestamp,
+      },
+    };
+    if (status === 'CONNECTED') {
+      return res.json({
+        success: true,
+        ...body,
+        message: verification.marketData?.available === false
+          ? `Angel One account connected. Live market data check did not pass: ${verification.marketData.reason}`
+          : 'Angel One account connected and fully verified',
+      });
+    }
+    if (status === 'PARTIALLY_CONNECTED') {
+      return res.status(206).json({
+        success: false,
+        ...body,
+        error: 'Some Angel One functionality is not available',
+        message: 'Connection partially successful - some features may be limited',
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      ...body,
+      status: 'FAILED',
+      error: 'Angel One connection verification failed',
+      details: verification.errors[0] || 'Required broker functionality is not available',
+    });
+  } catch (error) {
+    console.error('[ANGEL_ONE_CONNECT]', JSON.stringify({
+      userId: req.userId,
+      clientCode,
+      error: error.message,
+      code: error.code || null,
+      category: error.angelCategory || null,
+      httpStatus: error.httpStatus ?? null,
+      brokerErrorCode: error.providerErrorCode ?? null,
+    }));
+    if (error.name === 'BrokerApiError' || error.name === 'BrokerCapabilityError') {
+      // A rejected login changes nothing at Angel One, so any existing stored
+      // connection is left exactly as it was.
+      const status = error.statusCode === 401 ? 422 : (error.statusCode || 400);
+      return res.status(status).json({
+        ...brokerErrorBody(error),
+        error: CONNECT_ERROR_MESSAGES[error.angelCategory] || error.message,
+      });
+    }
+    return next(error);
+  }
+});
+
+/**
+ * SmartAPI publisher login (redirect flow): the user signs in on Angel One's
+ * own page and Angel One redirects back with session tokens. Requires the
+ * server SmartAPI key and its registered redirect URL.
+ */
+router.post('/broker/angel-one/oauth/start', requireAuth, requireBrokerFeatures, async (req, res, next) => {
+  try {
+    const apiKey = String(process.env.ANGEL_ONE_API_KEY || '').trim();
+    if (!apiKey) {
+      return res.status(409).json({
+        error: 'Angel One redirect login is not available: no server SmartAPI key is configured. Connect with client code, MPIN and TOTP instead.',
+        code: 'BROKER_API_KEY_MISSING',
+        broker: ANGEL_ONE,
+      });
+    }
+    const state = await createOAuthState(req.userId);
+    const states = [...readOAuthStates(req), state].slice(-MAX_PENDING_OAUTH_STATES);
+    res.setHeader('Set-Cookie', `${OAUTH_COOKIE_NAME}=${encodeURIComponent(states.join(','))}; ${OAUTH_COOKIE_ATTRIBUTES}`);
+    const url = new URL(ANGEL_ONE_PUBLISHER_LOGIN_URL);
+    url.searchParams.set('api_key', apiKey);
+    url.searchParams.set('state', state);
+    return res.json({ authorizationUrl: url.toString(), redirectUri: ANGEL_ONE_CALLBACK_URI });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
+ * Publisher-login redirect target. Public by design: the caller is identified
+ * by the single-use state created in /oauth/start, never by the query tokens.
+ */
+router.get(['/broker/angel-one/callback', '/angel-one/callback'], async (req, res, next) => {
+  const parsed = callbackQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid Angel One callback parameters' });
+  }
+  const { auth_token: authToken, refresh_token: refreshToken, feed_token: feedToken, error } = parsed.data;
+  if (!authToken && !error) {
+    return res.json({ status: 'ok', service: 'angel-one-callback-endpoint', timestamp: new Date().toISOString() });
+  }
+  const callbackStates = parsed.data.state ? [parsed.data.state] : readOAuthStates(req);
+
+  let session = null;
+  try {
+    session = await claimOAuthSession(callbackStates);
+    if (!session) {
+      return res.status(400).json({ error: 'Invalid or expired Angel One login session. Start the connection again from KEPWE Quant.' });
+    }
+    if (error || !authToken) {
+      await failOAuthSession(session.id, 'PROVIDER_AUTHORIZATION_DENIED');
+      return res.status(400).json({ error: 'Angel One authorization was not completed' });
+    }
+
+    const adapter = new AngelOneAdapter();
+    await adapter.adoptSession({ jwtToken: authToken, refreshToken: refreshToken || null, feedToken: feedToken || null });
+    // The tokens are only trusted once Angel One's own profile API accepts them.
+    const profile = await adapter.getProfile();
+    if (!profile.clientCode) {
+      await failOAuthSession(session.id, 'PROFILE_INCOMPLETE');
+      return res.status(502).json({ error: 'Angel One did not return a client code for this session' });
+    }
+    adapter.clientCode = profile.clientCode;
+
+    const { verification, status } = await persistAndVerifyConnection({
+      userId: session.user_id,
+      adapter,
+      clientCode: profile.clientCode,
+      userApiKey: null,
+      loginMethod: 'PUBLISHER_LOGIN',
+    });
+    if (status === 'VERIFICATION_FAILED') {
+      await failOAuthSession(session.id, `VERIFICATION_${verification.status}`);
+      return res.status(503).json({
+        error: 'Angel One login succeeded but live verification did not pass',
+        status: verification.status,
+        blockers: verification.errors,
+      });
+    }
+    await pool.query(`UPDATE broker_oauth_sessions SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1`, [session.id]);
+    res.setHeader('Set-Cookie', `${OAUTH_COOKIE_NAME}=; Max-Age=0; Path=/; HttpOnly; SameSite=${OAUTH_COOKIE_SAMESITE}${OAUTH_COOKIE_SECURE ? '; Secure' : ''}`);
+    return res.redirect(303, '/quant/dashboard/broker?angelone=connected');
+  } catch (caught) {
+    if (session?.id) await failOAuthSession(session.id, 'CALLBACK_PROCESSING_FAILED').catch(() => {});
+    console.error('[ANGEL_ONE_CALLBACK]', JSON.stringify({
+      userId: session?.user_id || null,
+      oauthSessionId: session?.id || null,
+      error: caught.message,
+      code: caught.code || null,
+      brokerErrorCode: caught.providerErrorCode ?? null,
+    }));
+    if (caught.name === 'BrokerApiError') {
+      return res.status(caught.statusCode === 401 ? 422 : (caught.statusCode || 502)).json(brokerErrorBody(caught));
+    }
+    return next(caught);
+  }
+});
+
+/**
+ * Angel One order postback (webhook). Register this URL in the SmartAPI app as
+ *   https://<host>/api/angel-one/postback?token=<ANGEL_ONE_WEBHOOK_TOKEN>
+ * The payload is unsigned, so it is used only as a trigger: the order's state
+ * is read back from SmartAPI before anything is applied.
+ */
+router.post(['/broker/angel-one/callback', '/angel-one/callback', '/angel-one/postback'], async (req, res, next) => {
+  if (!verifyBrokerWebhookRequest(req, ANGEL_ONE)) {
+    return res.status(401).json({ error: 'Broker webhook authentication failed', code: 'BROKER_WEBHOOK_UNAUTHORIZED', broker: ANGEL_ONE });
   }
   try {
     const payload = req.body || {};
-    const status = String(payload.orderStatus || payload.order_status || payload.status || '').trim();
     const result = await applyBrokerExecutionUpdate({
       pool,
-      broker,
-      brokerOrderId: payload.orderId || payload.order_id || payload.brokerOrderId,
-      correlationId: payload.correlationId || payload.correlation_id,
-      status,
-      // Dhan postback field is filled_qty (dhanhq.co/docs/v2/postback).
-      filledQuantity: payload.filled_qty ?? payload.filledQty ?? payload.filledQuantity ?? payload.filledshares ?? 0,
-      remainingQuantity: payload.remainingQuantity ?? payload.remainingQty ?? null,
-      // Never payload.price: that is the order price, not a traded price.
-      averagePrice: payload.averageTradedPrice ?? payload.averagePrice ?? payload.avgPrice ?? null,
-      rejectionReason: payload.rejectionReason || payload.reason || payload.remarks || null,
+      broker: ANGEL_ONE,
+      brokerOrderId: payload.orderid || payload.orderId || payload.brokerOrderId,
+      correlationId: payload.ordertag || payload.correlationId,
+      status: String(payload.orderstatus || payload.status || '').trim(),
+      filledQuantity: payload.filledshares ?? payload.filledQuantity ?? 0,
+      remainingQuantity: payload.unfilledshares ?? payload.remainingQuantity ?? null,
+      averagePrice: payload.averageprice ?? payload.averagePrice ?? null,
+      rejectionReason: payload.text || payload.rejectionReason || null,
       payload,
     });
     if (result.deferred) return res.status(202).json({ status: 'deferred', reason: result.reason, received: true });
@@ -175,622 +473,49 @@ async function handleBrokerExecutionWebhook(req, res, next, broker) {
     }
     return next(error);
   }
-}
+});
 
 /**
- * Direct Connection: A KEPWE user connects their personal Dhan trading account
- * by providing their Dhan Client ID and 24-hour Access Token.
- * The connection is validated immediately against Dhan's live API before storing.
+ * Renews the stored session through SmartAPI generateTokens and reports the
+ * outcome. Sessions are also renewed automatically whenever SmartAPI reports
+ * an expired token.
  */
-router.post('/broker/dhan/connect', requireAuth, requireBrokerFeatures, async (req, res, next) => {
-  const parsed = connectSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid parameters' });
-  }
-
-  const { dhanClientId, accessToken } = parsed.data;
-
+router.post('/broker/angel-one/refresh', requireAuth, requireBrokerFeatures, async (req, res, next) => {
   try {
-    // Create adapter with user's credentials 
-    const adapter = new DhanAdapter({ dhanClientId, accessToken });
-    
-    // Step 1: Validate session and basic connectivity
-    console.log(`[DHAN_CONNECT] Starting session validation for user ${req.userId} with client ID ${dhanClientId}`);
-    const validation = await adapter.validateSession();
-    
-    if (!validation.valid) {
-      console.log(`[DHAN_CONNECT] Session validation failed for user ${req.userId}`);
-      return res.status(401).json({ 
-        error: 'Dhan session validation failed. Please check your client ID and access token.',
-        details: 'Invalid credentials or expired access token'
-      });
+    const row = await loadAngelOneAccount(pool, req.userId);
+    if (!row?.access_token_ciphertext) {
+      return res.status(409).json({ error: 'Angel One is not connected for this account.', code: 'ANGEL_ONE_NOT_CONNECTED', broker: ANGEL_ONE });
     }
-    await assertBrokerIdentity(adapter, DHAN, dhanClientId);
-
-    console.log(`[DHAN_CONNECT] Session validation successful for user ${req.userId}`);
-
-    // Step 2: Store connection in database
-    const client = await pool.connect();
+    const adapter = adapterFromAngelOneAccount(pool, row);
     try {
-      await client.query('BEGIN');
-      const accountRes = await client.query(
-        `INSERT INTO broker_accounts (user_id, broker, client_id, status, connection_mode, connected_at, updated_at)
-         VALUES ($1, $2, $3, 'CONNECTED', 'LIVE', NOW(), NOW())
-         ON CONFLICT (user_id, broker) DO UPDATE
-         SET client_id = EXCLUDED.client_id, status = 'CONNECTED', connection_mode = 'LIVE', connected_at = NOW(), updated_at = NOW()
-         RETURNING id`,
-        [req.userId, DHAN, dhanClientId]
+      await adapter.renewSession();
+      const profile = await adapter.getProfile();
+      await pool.query(
+        `UPDATE broker_accounts SET status = 'CONNECTED', connection_mode = 'LIVE', updated_at = NOW()
+         WHERE id = $1 AND status IN ('CONNECTED', 'PARTIALLY_CONNECTED', 'SESSION_EXPIRED')`,
+        [row.id],
       );
-
-      // Step 3: Store encrypted access token (user-specific)
-      await storeBrokerTokens({
-        client,
-        userId: req.userId,
-        broker: DHAN,
-        accessToken,
-        expiresAt: adapter.tokenExpiresAt,
-      });
-
-      await client.query(
-        `INSERT INTO algo_activity_logs (user_id, event_type, message, metadata)
-         VALUES ($1, 'BROKER_CONNECTED', $2, $3::jsonb)`,
-        [
-          req.userId,
-          `Dhan trading account (${dhanClientId}) connected - starting verification`,
-          JSON.stringify({ broker: DHAN, dhanClientId, mode: 'LIVE' }),
-        ]
-      );
-
-      await client.query('COMMIT');
-    } catch (dbError) {
-      await client.query('ROLLBACK');
-      throw dbError;
-    } finally {
-      client.release();
-    }
-    // The stored token changed: drop any cached market-feed result for this user.
-    clearDhanMarketFeedCache(req.userId);
-
-    console.log(`[DHAN_CONNECT] Starting comprehensive verification for user ${req.userId}`);
-
-    // Step 4: Comprehensive verification (this is the critical part)
-    const verification = await verifyBrokerConnection(req.userId, DHAN, {
-      skipMarketData: false, // Verify all functionality
-      timeout: 45000,
-      logResults: true,
-    });
-
-    console.log(`[DHAN_CONNECT] Verification complete for user ${req.userId}: ${verification.status} (${verification.overallScore}%)`);
-
-    // Step 5: Update connection status based on verification
-    if (verification.status === 'CONNECTED') {
-      await tryCreateQuantNotification(pool, {
-        userId: req.userId,
-        type: 'BROKER_CONNECTED',
-        title: 'Dhan connected',
-        body: `Dhan client ${dhanClientId} verified via /v2/profile.`,
-        data: { broker: DHAN, dhanClientId, marketDataAvailable: verification.marketData?.available ?? null },
-      });
+      clearAngelOneMarketFeedCache(req.userId);
       return res.json({
         success: true,
-        broker: DHAN,
-        dhanClientId,
+        broker: ANGEL_ONE,
         status: 'CONNECTED',
-        mode: 'LIVE',
-        verification: {
-          status: verification.status,
-          score: verification.overallScore,
-          checks: Object.keys(verification.checks).length,
-          lastVerified: verification.timestamp,
-        },
-        accountData: verification.accountData,
+        clientId: profile.clientCode,
         tokenExpiresAt: adapter.tokenExpiresAt ? adapter.tokenExpiresAt.toISOString() : null,
-        marketData: verification.marketData || null,
-        funds: validation.funds,
-        message: verification.marketData?.available === false
-          ? 'Dhan account connected. Live market data is unavailable from Dhan for this account (Data API).'
-          : 'Dhan account connected and fully verified'
       });
-    } else if (verification.status === 'PARTIALLY_CONNECTED') {
-      await pool.query(
-        `UPDATE broker_accounts SET status = 'PARTIALLY_CONNECTED', updated_at = NOW()
-         WHERE user_id = $1 AND broker = $2`,
-        [req.userId, DHAN],
-      );
-      return res.status(206).json({
-        success: false,
-        broker: DHAN,
-        dhanClientId,
-        status: 'PARTIALLY_CONNECTED',
-        mode: 'LIVE',
-        verification: {
-          status: verification.status,
-          score: verification.overallScore,
-          checks: verification.checks,
-          errors: verification.errors,
-          warnings: verification.warnings,
-          lastVerified: verification.timestamp,
-        },
-        funds: validation.funds,
-        error: 'Some Dhan functionality is not available',
-        message: 'Connection partially successful - some features may be limited'
-      });
-    } else {
-      // Mark as failed in database
-      await pool.query(
-        `UPDATE broker_accounts SET status = 'VERIFICATION_FAILED', updated_at = NOW()
-         WHERE user_id = $1 AND broker = $2`,
-        [req.userId, DHAN]
-      );
-
-      return res.status(400).json({
-        success: false,
-        broker: DHAN,
-        status: 'FAILED',
-        verification: {
-          status: verification.status,
-          score: verification.overallScore,
-          checks: verification.checks,
-          errors: verification.errors,
-          lastVerified: verification.timestamp,
-        },
-        error: 'Dhan connection verification failed',
-        details: verification.errors[0] || 'Required broker functionality is not available'
-      });
-    }
-
-  } catch (error) {
-    console.error('[DHAN_CONNECT]', JSON.stringify({
-      userId: req.userId,
-      error: error.message,
-      code: error.code || null,
-      httpStatus: error.httpStatus ?? null,
-      dhanErrorCode: error.providerErrorCode ?? null,
-      dhanErrorType: error.providerErrorType ?? null,
-    }));
-    
-    // Clean up failed connection
-    try {
-      await pool.query(
-        `UPDATE broker_accounts SET status = 'CONNECTION_FAILED', updated_at = NOW()
-         WHERE user_id = $1 AND broker = $2`,
-        [req.userId, DHAN]
-      );
-    } catch (_) {}
-    
-    if (error.code === 'BROKER_ACCOUNT_IDENTITY_MISMATCH') {
-      return res.status(409).json({
-        error: 'The Dhan access token belongs to a different Dhan Client ID than the one entered.',
-        code: error.code,
-        broker: DHAN,
-        status: 'FAILED',
-      });
-    }
-    if (error.name === 'BrokerApiError' || error.name === 'BrokerCapabilityError') {
-      return res.status(error.statusCode || 400).json({ 
-        error: error.message,
-        code: error.code || null,
-        dhanErrorCode: error.providerErrorCode ?? null,
-        dhanErrorMessage: error.providerMessage ?? null,
-        dhanHttpStatus: error.httpStatus ?? null,
-        broker: DHAN,
-        status: 'FAILED'
-      });
-    }
-    return next(error);
-  }
-});
-
-/**
- * Direct Connection: A KEPWE user connects their personal Angel One trading account
- * by providing their Angel One Client Code and Password/MPIN.
- * The connection is validated immediately against Angel One's live API before storing.
- */
-router.post('/broker/angel-one/connect', requireAuth, requireBrokerFeatures, async (req, res, next) => {
-  const parsed = angelOneConnectSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid parameters' });
-  }
-
-  const { angelOneClientCode, password } = parsed.data;
-
-  try {
-    // Create adapter with user's credentials (NOT environment variables)
-    const adapter = new AngelOneAdapter({
-      angelOneClientCode,
-      password,
-      // Use configured TOTP secret and API key from environment
-      apiKey: process.env.ANGEL_ONE_API_KEY,
-      totpSecret: process.env.ANGEL_ONE_TOTP_SECRET,
-    });
-
-    // Step 1: Authenticate with user's credentials
-    console.log(`[ANGEL_ONE_CONNECT] Starting authentication for user ${req.userId} with client code ${angelOneClientCode}`);
-    const authResult = await adapter.authenticate();
-    
-    if (!authResult.authenticated) {
-      console.log(`[ANGEL_ONE_CONNECT] Authentication failed for user ${req.userId}`);
-      return res.status(401).json({ 
-        error: 'Angel One authentication failed. Please check your client code and password.',
-        details: 'Invalid credentials or TOTP error'
-      });
-    }
-    await assertBrokerIdentity(adapter, ANGEL_ONE, angelOneClientCode);
-
-    console.log(`[ANGEL_ONE_CONNECT] Authentication successful for user ${req.userId}`);
-
-    // Step 2: Store connection in database
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      
-      const accountRes = await client.query(
-        `INSERT INTO broker_accounts (user_id, broker, client_id, status, connection_mode, connected_at, updated_at)
-         VALUES ($1, $2, $3, 'CONNECTED', 'LIVE', NOW(), NOW())
-         ON CONFLICT (user_id, broker) DO UPDATE
-         SET client_id = EXCLUDED.client_id, status = 'CONNECTED', connection_mode = 'LIVE', 
-             connected_at = NOW(), updated_at = NOW()
-         RETURNING id`,
-        [req.userId, ANGEL_ONE, angelOneClientCode]
-      );
-
-      // Step 3: Store encrypted session tokens (user-specific)
-      await storeBrokerTokens({
-        client,
-        userId: req.userId,
-        broker: ANGEL_ONE,
-        accessToken: adapter.session.jwtToken,
-        refreshToken: adapter.session.refreshToken || null,
-        feedToken: adapter.session.feedToken || null,
-        expiresAt: adapter.session.tokenExpiresAt,
-      });
-
-      await client.query(
-        `INSERT INTO algo_activity_logs (user_id, event_type, message, metadata)
-         VALUES ($1, 'BROKER_CONNECTED', $2, $3::jsonb)`,
-        [
-          req.userId,
-          `Angel One trading account (${angelOneClientCode}) connected - starting verification`,
-          JSON.stringify({ broker: ANGEL_ONE, clientCode: angelOneClientCode, mode: 'LIVE' }),
-        ]
-      );
-
-      await client.query('COMMIT');
-    } catch (dbError) {
-      await client.query('ROLLBACK');
-      throw dbError;
-    } finally {
-      client.release();
-    }
-
-    console.log(`[ANGEL_ONE_CONNECT] Starting comprehensive verification for user ${req.userId}`);
-
-    // Step 4: Comprehensive verification (this is the critical part)
-    const verification = await verifyBrokerConnection(req.userId, ANGEL_ONE, {
-      skipMarketData: false, // Verify all functionality
-      timeout: 45000,
-      logResults: true,
-    });
-
-    console.log(`[ANGEL_ONE_CONNECT] Verification complete for user ${req.userId}: ${verification.status} (${verification.overallScore}%)`);
-
-    // Step 5: Update connection status based on verification
-    if (verification.status === 'CONNECTED') {
-      return res.json({
-        success: true,
-        broker: ANGEL_ONE,
-        clientCode: angelOneClientCode,
-        status: 'CONNECTED',
-        mode: 'LIVE',
-        verification: {
-          status: verification.status,
-          score: verification.overallScore,
-          checks: Object.keys(verification.checks).length,
-          lastVerified: verification.timestamp,
-        },
-        accountData: verification.accountData,
-        message: 'Angel One account connected and fully verified'
-      });
-    } else if (verification.status === 'PARTIALLY_CONNECTED') {
-      return res.status(206).json({
-        success: false,
-        broker: ANGEL_ONE,
-        clientCode: angelOneClientCode,
-        status: 'PARTIALLY_CONNECTED',
-        mode: 'LIVE',
-        verification: {
-          status: verification.status,
-          score: verification.overallScore,
-          checks: verification.checks,
-          errors: verification.errors,
-          warnings: verification.warnings,
-          lastVerified: verification.timestamp,
-        },
-        error: 'Some Angel One functionality is not available',
-        message: 'Connection partially successful - some features may be limited'
-      });
-    } else {
-      // Mark as failed in database
-      await pool.query(
-        `UPDATE broker_accounts SET status = 'VERIFICATION_FAILED', updated_at = NOW()
-         WHERE user_id = $1 AND broker = $2`,
-        [req.userId, ANGEL_ONE]
-      );
-
-      return res.status(400).json({
-        success: false,
-        broker: ANGEL_ONE,
-        status: 'FAILED',
-        verification: {
-          status: verification.status,
-          score: verification.overallScore,
-          checks: verification.checks,
-          errors: verification.errors,
-          lastVerified: verification.timestamp,
-        },
-        error: 'Angel One connection verification failed',
-        details: verification.errors[0] || 'Required broker functionality is not available'
-      });
-    }
-
-  } catch (error) {
-    console.error(`[ANGEL_ONE_CONNECT] Error for user ${req.userId}:`, error.message);
-    
-    // Clean up failed connection
-    try {
-      await pool.query(
-        `UPDATE broker_accounts SET status = 'CONNECTION_FAILED', updated_at = NOW()
-         WHERE user_id = $1 AND broker = $2`,
-        [req.userId, ANGEL_ONE]
-      );
-    } catch (_) {}
-    
-    if (error.name === 'BrokerApiError' || error.name === 'BrokerCapabilityError') {
-      return res.status(error.statusCode || 400).json({ 
-        error: error.message,
-        broker: ANGEL_ONE,
-        status: 'FAILED'
-      });
-    }
-    return next(error);
-  }
-});
-
-/**
- * Consent OAuth: Initiates a Dhan consent login session.
- */
-router.post('/broker/dhan/oauth/start', requireAuth, requireBrokerFeatures, async (req, res, next) => {
-  try {
-    const state = await createOAuthState(req.userId);
-    const states = [...readOAuthStates(req), state];
-    res.setHeader('Set-Cookie', `${OAUTH_COOKIE_NAME}=${encodeURIComponent(serializeOAuthStates(states))}; ${OAUTH_COOKIE_ATTRIBUTES}`);
-
-    const adapter = new DhanAdapter();
-    const consent = await adapter.generateConsentSession();
-    return res.json({ authorizationUrl: consent.authorizationUrl, consentAppId: consent.consentAppId });
-  } catch (error) {
-    return next(error);
-  }
-});
-
-/**
- * Public Callback / Redirect Handler:
- * Preserves the confirmed Dhan postback / callback URL: https://kepwe.in/api/lemonn/callback
- * Also handles canonical /api/dhan/callback.
- */
-router.get(
-  ['/broker/dhan/callback', '/dhan/callback', '/broker/lemonn/callback', '/lemonn/callback'],
-  async (req, res, next) => {
-    const parsed = callbackQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      return res.status(400).json({ error: 'Invalid OAuth callback parameters' });
-    }
-
-    const { error } = parsed.data;
-    const tokenId = parsed.data.tokenId || parsed.data.tokenid;
-    const callbackStates = parsed.data.state ? [parsed.data.state] : readOAuthStates(req);
-
-    if (!tokenId && !error) {
-      return res.json({ status: 'ok', service: 'dhan-postback-endpoint', timestamp: new Date().toISOString() });
-    }
-
-    let claimedSession = null;
-    try {
-      const session = await claimOAuthSession(callbackStates);
-      claimedSession = session;
-      if (!session) {
-        console.warn('[DHAN_OAUTH_CALLBACK]', JSON.stringify({
-          broker: DHAN,
-          timestamp: new Date().toISOString(),
-          status: 'FAILED',
-          reason: 'Invalid or expired OAuth state',
-        }));
-        return res.status(400).json({ error: 'Invalid or expired Dhan OAuth session' });
-      }
-      console.log('[DHAN_OAUTH_CALLBACK]', JSON.stringify({
-        userId: session.user_id,
-        broker: DHAN,
-        oauthSessionId: session.id,
-        timestamp: new Date().toISOString(),
-        status: 'CLAIMED',
-        sessionExpiry: session.expires_at || null,
-        callbackResult: error ? 'PROVIDER_ERROR' : 'TOKEN_RECEIVED',
-      }));
-
-      if (error) {
-        await failOAuthSession(session.id, 'PROVIDER_AUTHORIZATION_DENIED');
-        return res.status(400).json({ error: 'Dhan authorization was not completed' });
-      }
-
-      if (!tokenId) {
-        await failOAuthSession(session.id, 'INVALID_TOKEN_ID');
-        return res.status(400).json({ error: 'Dhan tokenId is missing' });
-      }
-
-      const adapter = new DhanAdapter();
-      const tokenResult = await adapter.consumeConsent({ tokenId });
-      await assertBrokerIdentity(adapter, DHAN, tokenResult.dhanClientId);
-
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        await client.query(
-          `INSERT INTO broker_accounts (user_id, broker, client_id, status, connection_mode, connected_at, updated_at)
-           VALUES ($1, $2, $3, 'CONNECTED', 'LIVE', NOW(), NOW())
-           ON CONFLICT (user_id, broker) DO UPDATE
-           SET client_id = COALESCE(EXCLUDED.client_id, broker_accounts.client_id), status = 'CONNECTED', connection_mode = 'LIVE', connected_at = NOW(), updated_at = NOW()`,
-          [session.user_id, DHAN, tokenResult.dhanClientId || null]
-        );
-
-        await storeBrokerTokens({
-          client,
-          userId: session.user_id,
-          broker: DHAN,
-          accessToken: tokenResult.accessToken,
-          expiresAt: tokenResult.tokenExpiresAt,
-        });
-
-        await client.query(
-          `UPDATE broker_oauth_sessions SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1`,
-          [session.id]
-        );
-        await client.query('COMMIT');
-        console.log('[DHAN_OAUTH_PERSISTENCE]', JSON.stringify({
-          userId: session.user_id,
-          broker: DHAN,
-          oauthSessionId: session.id,
-          timestamp: new Date().toISOString(),
-          status: 'CONNECTED_PERSISTED',
-          databasePersistence: 'PASS',
-          sessionExpiry: tokenResult.tokenExpiresAt || null,
-        }));
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
-      }
-
-      const verification = await verifyBrokerConnection(session.user_id, DHAN, {
-        skipMarketData: false,
-        timeout: 45000,
-        logResults: true,
-      });
-      if (verification.status !== 'CONNECTED') {
-        await pool.query(
-          `UPDATE broker_accounts SET status = $3, updated_at = NOW()
-           WHERE user_id = $1 AND broker = $2`,
-          [session.user_id, DHAN, verification.status === 'PARTIALLY_CONNECTED' ? 'PARTIALLY_CONNECTED' : 'VERIFICATION_FAILED'],
-        );
-        await failOAuthSession(session.id, `VERIFICATION_${verification.status}`);
-        console.warn('[DHAN_OAUTH_CALLBACK]', JSON.stringify({
-          userId: session.user_id,
-          broker: DHAN,
-          oauthSessionId: session.id,
-          timestamp: new Date().toISOString(),
-          status: verification.status,
-          callbackResult: 'VERIFICATION_FAILED',
-          databasePersistence: 'STATUS_REVERTED',
-          failureReason: verification.errors[0] || 'Live broker verification failed',
-        }));
-        return res.status(503).json({
-          error: 'Dhan OAuth succeeded but live verification did not pass',
-          status: verification.status,
-          blockers: verification.errors,
-        });
-      }
-
-      res.setHeader('Set-Cookie', `${OAUTH_COOKIE_NAME}=; Max-Age=0; Path=/; HttpOnly; SameSite=${OAUTH_COOKIE_SAMESITE}${OAUTH_COOKIE_SECURE ? '; Secure' : ''}`);
-      console.log('[DHAN_OAUTH_CALLBACK]', JSON.stringify({
-        userId: session.user_id,
-        broker: DHAN,
-        oauthSessionId: session.id,
-        timestamp: new Date().toISOString(),
-        status: 'CONNECTED',
-        callbackResult: 'SUCCESS',
-        databasePersistence: 'PASS',
-        verification: 'CONNECTED',
-      }));
-      return res.redirect(303, '/quant?dhan=connected');
     } catch (error) {
-      if (claimedSession?.id) {
-        await failOAuthSession(claimedSession.id, 'CALLBACK_PROCESSING_FAILED').catch(() => {});
+      if (isAngelOneSessionError(error)) {
+        await markAngelOneSessionExpired(pool, row.id);
+        clearAngelOneMarketFeedCache(req.userId);
+        return res.status(401).json({
+          ...brokerErrorBody(error),
+          status: 'ANGEL_ONE_SESSION_EXPIRED',
+          code: 'ANGEL_ONE_SESSION_EXPIRED',
+          error: 'Angel One session has expired and could not be renewed. Please reconnect your Angel One account.',
+        });
       }
-      console.error('[DHAN_OAUTH_CALLBACK]', JSON.stringify({
-        userId: claimedSession?.user_id || null,
-        broker: DHAN,
-        oauthSessionId: claimedSession?.id || null,
-        timestamp: new Date().toISOString(),
-        status: 'FAILED',
-        callbackResult: 'PROCESSING_ERROR',
-        failureReason: error.message || 'OAuth callback processing failed',
-      }));
-      return next(error);
-    }
-  }
-);
-
-/**
- * Dhan Postback (Webhook) endpoint:
- * Receives real-time order lifecycle updates pushed by Dhan servers.
- * Confirmed production URL: https://kepwe.in/api/lemonn/callback
- * Also accepts /api/dhan/callback and /api/dhan/postback.
- */
-router.post(
-  ['/broker/dhan/callback', '/dhan/callback', '/dhan/postback', '/broker/lemonn/callback', '/lemonn/callback'],
-  (req, res, next) => handleBrokerExecutionWebhook(req, res, next, DHAN)
-);
-
-/**
- * Disconnect Dhan Account for authenticated user
- */
-router.post('/broker/dhan/disconnect', requireAuth, requireBrokerFeatures, async (req, res, next) => {
-  try {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      const accountRes = await client.query(
-        `UPDATE broker_accounts
-         SET status = 'NOT_CONNECTED', connection_mode = 'LIVE', updated_at = NOW()
-         WHERE user_id = $1 AND broker = 'DHAN'
-         RETURNING id, broker, status, connection_mode`,
-        [req.userId]
-      );
-
-      if (accountRes.rows.length > 0) {
-        await client.query(
-          `DELETE FROM broker_oauth_tokens WHERE broker_account_id = $1`,
-          [accountRes.rows[0].id]
-        );
-      }
-
-      // Stop any active algo state
-      await client.query(
-        `UPDATE algo_states SET status = 'STOPPED', updated_at = NOW()
-         WHERE user_id = $1 AND status = 'ACTIVE'`,
-        [req.userId]
-      );
-
-      await client.query(
-        `INSERT INTO algo_activity_logs (user_id, event_type, message, metadata)
-         VALUES ($1, 'BROKER_DISCONNECTED', 'Dhan trading account disconnected', '{"broker":"DHAN"}'::jsonb)`,
-        [req.userId]
-      );
-
-      await client.query('COMMIT');
-
-      return res.json({
-        success: true,
-        broker: DHAN,
-        status: 'NOT_CONNECTED',
-        mode: 'LIVE',
-      });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
+      if (error.name === 'BrokerApiError') return res.status(error.statusCode || 502).json(brokerErrorBody(error));
+      throw error;
     }
   } catch (error) {
     return next(error);
@@ -798,151 +523,65 @@ router.post('/broker/dhan/disconnect', requireAuth, requireBrokerFeatures, async
 });
 
 /**
- * Angel One Callback / Redirect Handler:
- * Handles Angel One SmartAPI OAuth callback
- */
-router.get(
-  ['/broker/angel-one/callback', '/angel-one/callback'],
-  async (req, res, next) => {
-    const parsed = callbackQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      return res.status(400).json({ error: 'Invalid Angel One OAuth callback parameters' });
-    }
-
-    const { error } = parsed.data;
-    const tokenId = parsed.data.tokenId || parsed.data.tokenid;
-    const callbackStates = parsed.data.state ? [parsed.data.state] : readOAuthStates(req, ANGEL_ONE_OAUTH_COOKIE_NAME);
-
-    if (!tokenId && !error) {
-      return res.json({ status: 'ok', service: 'angel-one-callback-endpoint', timestamp: new Date().toISOString() });
-    }
-
-    try {
-      const session = await claimOAuthSession(callbackStates, ANGEL_ONE);
-      if (!session) {
-        return res.status(400).json({ error: 'Invalid or expired Angel One OAuth session' });
-      }
-
-      if (error) {
-        await failOAuthSession(session.id, 'PROVIDER_AUTHORIZATION_DENIED');
-        return res.status(400).json({ error: 'Angel One authorization was not completed' });
-      }
-
-      if (!tokenId) {
-        await failOAuthSession(session.id, 'INVALID_TOKEN_ID');
-        return res.status(400).json({ error: 'Angel One tokenId is missing' });
-      }
-
-      const adapter = new AngelOneAdapter();
-      const tokenResult = await adapter.consumeConsent({ tokenId });
-      await assertBrokerIdentity(adapter, ANGEL_ONE, tokenResult.clientCode);
-
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        await client.query(
-          `INSERT INTO broker_accounts (user_id, broker, client_id, status, connection_mode, connected_at, updated_at)
-           VALUES ($1, $2, $3, 'CONNECTED', 'LIVE', NOW(), NOW())
-           ON CONFLICT (user_id, broker) DO UPDATE
-           SET client_id = COALESCE(EXCLUDED.client_id, broker_accounts.client_id), status = 'CONNECTED', connection_mode = 'LIVE', connected_at = NOW(), updated_at = NOW()`,
-          [session.user_id, ANGEL_ONE, tokenResult.clientCode || null]
-        );
-
-        await storeBrokerTokens({
-          client,
-          userId: session.user_id,
-          broker: ANGEL_ONE,
-          accessToken: tokenResult.jwtToken,
-          refreshToken: tokenResult.refreshToken || null,
-          feedToken: tokenResult.feedToken || null,
-          expiresAt: tokenResult.tokenExpiresAt,
-        });
-
-        await client.query(
-          `UPDATE broker_oauth_sessions SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1`,
-          [session.id]
-        );
-        await client.query('COMMIT');
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
-      }
-
-      res.setHeader('Set-Cookie', `${ANGEL_ONE_OAUTH_COOKIE_NAME}=; Max-Age=0; Path=/; HttpOnly; SameSite=${ANGEL_ONE_OAUTH_COOKIE_SAMESITE}${ANGEL_ONE_OAUTH_COOKIE_SECURE ? '; Secure' : ''}`);
-      return res.redirect(303, '/quant?angelone=connected');
-    } catch (error) {
-      return next(error);
-    }
-  }
-);
-
-/**
- * Angel One Postback (Webhook) endpoint:
- * Receives real-time order lifecycle updates pushed by Angel One servers.
- * Production URL: https://kepwe.in/api/angel-one/postback
- */
-router.post(
-  ['/broker/angel-one/callback', '/angel-one/callback', '/angel-one/postback'],
-  (req, res, next) => handleBrokerExecutionWebhook(req, res, next, ANGEL_ONE)
-);
-
-/**
- * Disconnect Angel One Account for authenticated user
+ * Disconnect: ends the SmartAPI session at Angel One (logout), deletes the
+ * stored tokens and stops any running algo.
  */
 router.post('/broker/angel-one/disconnect', requireAuth, requireBrokerFeatures, async (req, res, next) => {
   try {
+    const row = await loadAngelOneAccount(pool, req.userId);
+    let brokerLogout = { attempted: false, loggedOut: false, reason: 'no stored session' };
+    if (row?.access_token_ciphertext) {
+      try {
+        const result = await adapterFromAngelOneAccount(pool, row).logout();
+        brokerLogout = { attempted: true, loggedOut: result.loggedOut === true, reason: result.reason || null };
+      } catch (error) {
+        // An already expired session cannot be logged out; local removal still proceeds.
+        brokerLogout = { attempted: true, loggedOut: false, reason: error.message, brokerErrorCode: error.providerErrorCode ?? null };
+      }
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-
       const accountRes = await client.query(
         `UPDATE broker_accounts
-         SET status = 'NOT_CONNECTED', connection_mode = 'LIVE', updated_at = NOW()
-         WHERE user_id = $1 AND broker = 'ANGEL_ONE'
-         RETURNING id, broker, status, connection_mode`,
-        [req.userId]
+         SET status = 'NOT_CONNECTED', connection_mode = 'LIVE', is_active_broker = FALSE, updated_at = NOW()
+         WHERE user_id = $1 AND broker = $2
+         RETURNING id`,
+        [req.userId, ANGEL_ONE],
       );
-
       if (accountRes.rows.length > 0) {
-        await client.query(
-          `DELETE FROM broker_oauth_tokens WHERE broker_account_id = $1`,
-          [accountRes.rows[0].id]
-        );
+        await client.query('DELETE FROM broker_oauth_tokens WHERE broker_account_id = $1', [accountRes.rows[0].id]);
       }
-
-      // Stop any active algo state
       await client.query(
         `UPDATE algo_states SET status = 'STOPPED', updated_at = NOW()
          WHERE user_id = $1 AND status = 'ACTIVE'`,
-        [req.userId]
+        [req.userId],
       );
-
       await client.query(
         `INSERT INTO algo_activity_logs (user_id, event_type, message, metadata)
-         VALUES ($1, 'BROKER_DISCONNECTED', 'Angel One trading account disconnected', '{"broker":"ANGEL_ONE"}'::jsonb)`,
-        [req.userId]
+         VALUES ($1, 'BROKER_DISCONNECTED', 'Angel One trading account disconnected', $2::jsonb)`,
+        [req.userId, JSON.stringify({ broker: ANGEL_ONE, brokerLogout: { attempted: brokerLogout.attempted, loggedOut: brokerLogout.loggedOut } })],
       );
-
       await client.query('COMMIT');
-
-      return res.json({
-        success: true,
-        broker: ANGEL_ONE,
-        status: 'NOT_CONNECTED',
-        mode: 'LIVE',
-      });
-    } catch (err) {
+    } catch (error) {
       await client.query('ROLLBACK');
-      throw err;
+      throw error;
     } finally {
       client.release();
     }
+    clearAngelOneMarketFeedCache(req.userId);
+    return res.json({
+      success: true,
+      broker: ANGEL_ONE,
+      status: 'NOT_CONNECTED',
+      mode: 'LIVE',
+      brokerLogout,
+    });
   } catch (error) {
     return next(error);
   }
 });
 
-export { DHAN_CALLBACK_URI, ANGEL_ONE_CALLBACK_URI, createOAuthState, hashState };
+export { ANGEL_ONE_CALLBACK_URI, createOAuthState, hashState };
 export default router;

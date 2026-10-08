@@ -276,10 +276,10 @@ Result: ✓ PASS
 **Exposed Credentials** (15+ items):
 1. Database passwords (SOURCE_DB_CONNECTION, SUPABASE_DB_URL)
 2. Payment gateway (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)
-3. Broker APIs (UPSTOX_ACCESS_TOKEN, DHAN_API_KEY, DHAN_API_SECRET, ANGEL_ONE credentials)
+3. Broker APIs (UPSTOX_ACCESS_TOKEN, ANGEL_ONE credentials)
 4. Encryption keys (BROKER_TOKEN_ENCRYPTION_KEY)
 5. Email API (RESEND_API_KEY)
-6. Webhook tokens (DHAN_WEBHOOK_TOKEN, ANGEL_ONE_WEBHOOK_TOKEN)
+6. Webhook tokens (ANGEL_ONE_WEBHOOK_TOKEN)
 
 **Documentation**: Complete rotation checklist created in `SECRETS_ROTATION_REQUIRED.md`
 

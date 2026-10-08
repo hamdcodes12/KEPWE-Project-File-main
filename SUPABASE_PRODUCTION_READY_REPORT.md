@@ -29,7 +29,7 @@
 - Settings storage verified
 - All algo trading tables ready
 
-### ✅ **DHAN INTEGRATION: PASS**
+### ✅ **BROKER ACCOUNT STORAGE: PASS**
 - Broker account connection storage works
 - Foreign key relationships verified
 
@@ -110,7 +110,7 @@
 - ✅ Store Quant settings (algo_settings table)
 
 #### Broker Integration Tests ✅
-- ✅ Store Dhan account connection (broker_accounts)
+- ✅ Store broker account connection (broker_accounts)
 
 #### Notifications Tests ✅
 - ✅ Create and store notifications
@@ -277,7 +277,7 @@ VITE_APP_NAME: "KEPWE - Everything Your Business Needs"
 3. **Email Verification** → Optional email confirmation
 4. **Onboarding** → Guided setup process
 5. **Dashboard** → Redirected to Quant Dashboard
-6. **Broker Connection** → Links Dhan/Angel One/Upstox account
+6. **Broker Connection** → Links the user's Angel One account
 7. **Strategy Setup** → Configures algo trading parameters
 8. **Live Trading** → Executes strategies with real broker
 
@@ -397,7 +397,7 @@ chart_of_accounts, gst_rules, compliance_rules
 **Supabase Schema**: ✅ PASS (112 tables)  
 **Authentication**: ✅ PASS (signup/login/sessions)  
 **Quant**: ✅ PASS (dashboard/settings/access)  
-**Dhan Integration**: ✅ PASS (account storage)  
+**Broker Account Storage**: ✅ PASS  
 **Frontend Build**: ✅ PASS (1962 modules)  
 **Backend**: ✅ PASS (health checks)  
 

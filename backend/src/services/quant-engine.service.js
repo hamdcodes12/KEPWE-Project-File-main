@@ -1,6 +1,4 @@
 import { pool } from '../config/db.js';
-import { getBrokerAdapter } from '../algo/broker-adapters.js';
-import { decryptBrokerSecret } from './broker-token.service.js';
 
 export const NIFTY_QUANT_STRATEGY = {
   name: 'Kepwe NIFTY Pulse 5M',
@@ -676,20 +674,20 @@ export function generateNiftyBenchmarkCandles(count = 150) {
  * 5. Minimum paper tests completed
  */
 // Prerequisites derived only from server-side, broker-backed checks
-// (runDhanLiveHealthCheck). Nothing here is accepted from the client.
+// (runAngelOneLiveHealthCheck). Nothing here is accepted from the client.
 const REQUIRED_LIVE_PREREQUISITES = [
-  ['dhanSession', 'Dhan session (/v2/profile)'],
-  ['clientIdentity', 'Dhan account identity'],
-  ['dhanDataPlan', 'Dhan Data API entitlement'],
+  ['brokerSession', 'Angel One session (getProfile)'],
+  ['clientIdentity', 'Angel One account identity'],
   ['liveNiftyMarketData', 'Live NIFTY 50 market data'],
   ['liveNiftyLtt', 'Market data freshness'],
-  ['instrumentMaster', 'Official Dhan instrument master'],
+  ['instrumentMaster', 'Official Angel One instrument master'],
+  ['freezeQuantity', 'NSE quantity freeze configured'],
   ['strategySignalPipeline', 'Strategy readiness on real candles'],
   ['optionChainContractResolution', 'Option contract resolution'],
   ['riskConfiguration', 'Risk configuration'],
   ['fundsMargin', 'Funds/margin readable'],
   ['omsSchema', 'OMS database'],
-  ['orderApi', 'Dhan order API static IP (broker-verified)'],
+  ['orderApi', 'Angel One order API static IP'],
   ['positionSynchronization', 'Position synchronization'],
   ['tradeFillReconciliation', 'Trade synchronization'],
   ['realizedPnl', 'P&L synchronization'],
@@ -727,8 +725,8 @@ export async function validateLiveDeploymentGate(userId) {
   // Every live prerequisite from the broker-backed health check.
   let health = null;
   try {
-    const { runDhanLiveHealthCheck } = await import('./dhan-live-health.service.js');
-    health = await runDhanLiveHealthCheck(pool, userId);
+    const { runAngelOneLiveHealthCheck } = await import('./angel-one-live-health.service.js');
+    health = await runAngelOneLiveHealthCheck(pool, userId);
   } catch (error) {
     checks.push({ key: 'LIVE_HEALTH_CHECK', label: 'Live prerequisites check', passed: false, reason: `Live prerequisite check could not run: ${error.message}` });
   }

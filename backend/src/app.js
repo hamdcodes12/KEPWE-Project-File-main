@@ -245,7 +245,7 @@ app.use('/api', marketDataRoutes);
 app.use('/api', adminPanelRoutes);
 app.use('/api', supportRoutes);
 app.use('/api', chatbotRoutes);
-// Must precede algoRoutes: the Dhan OAuth/Postback callback is public by design,
+// Must precede algoRoutes: the Angel One login callback and order postback are public by design,
 // while all user-facing /broker and /algo routes remain protected there.
 app.use('/api', brokerOAuthRoutes);
 app.use('/api', brokerManagementRoutes);
@@ -298,26 +298,28 @@ app.use((err, req, res, next) => {
     return res.status(403).json({ error: 'CORS origin not allowed' });
   }
   logServerError('request.failed', err, req);
-  // Handle broker session expiry (can come from getLiveBroker or BrokerApiError)
-  if ((err.code === 'BROKER_SESSION_EXPIRED' || err.code === 'DHAN_SESSION_EXPIRED' || err.code === 'ANGEL_ONE_SESSION_EXPIRED') && err.statusCode === 401) {
-    const brokerName = err.broker || (err.code === 'ANGEL_ONE_SESSION_EXPIRED' ? 'Angel One' : 'Broker');
-    return res.status(401).json({ 
-      error: err.message || `${brokerName} session expired. Please reconnect.`, 
-      code: err.code,
-      broker: err.broker 
+  // Angel One session expiry (from getLiveBroker or a SmartAPI rejection). The
+  // `broker` field tells the client this is NOT a KEPWE login failure.
+  if (err.code === 'BROKER_SESSION_EXPIRED' || err.code === 'ANGEL_ONE_SESSION_EXPIRED' || (err.name === 'BrokerApiError' && err.statusCode === 401)) {
+    return res.status(401).json({
+      error: 'Angel One session has expired. Please reconnect your Angel One account.',
+      code: 'ANGEL_ONE_SESSION_EXPIRED',
+      broker: 'ANGEL_ONE',
     });
   }
-  if (err.name === 'BrokerApiError' && err.statusCode === 401) {
-    return res.status(401).json({ error: 'Broker session expired or invalid', code: 'BROKER_SESSION_EXPIRED' });
-  }
   if (err.name === 'BrokerApiError' && err.statusCode === 429) {
-    return res.status(429).json({ error: 'Dhan rate limit reached. Retry shortly.', code: 'DHAN_RATE_LIMITED' });
+    return res.status(429).json({ error: 'Angel One rate limit reached. Retry shortly.', code: 'ANGEL_ONE_RATE_LIMITED', broker: 'ANGEL_ONE' });
   }
   if (err.name === 'BrokerApiError' && err.statusCode >= 500) {
-    return res.status(503).json({ error: 'Dhan provider is unavailable.', code: 'DHAN_PROVIDER_UNAVAILABLE' });
+    return res.status(503).json({ error: 'Angel One SmartAPI is unavailable.', code: 'ANGEL_ONE_PROVIDER_UNAVAILABLE', broker: 'ANGEL_ONE', detail: err.message });
   }
   if (err.name === 'BrokerApiError' || err.name === 'BrokerCapabilityError') {
-    return res.status(err.statusCode || 502).json({ error: err.message, code: err.code || 'BROKER_ERROR' });
+    return res.status(err.statusCode || 502).json({
+      error: err.message,
+      code: err.code || 'BROKER_ERROR',
+      broker: 'ANGEL_ONE',
+      brokerErrorCode: err.providerErrorCode ?? null,
+    });
   }
   res.status(err.statusCode || 500).json({ error: err.statusCode && err.statusCode < 500 ? err.message : 'Internal server error', requestId: req.requestId });
 });

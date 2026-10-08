@@ -2,18 +2,26 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { pool } from '../config/db.js';
-import { setActiveBroker, getActiveBroker, getBrokerCredentials, revokeBrokerCredentials } from '../services/broker-token.service.js';
+import { setActiveBroker, getActiveBroker, revokeBrokerCredentials } from '../services/broker-token.service.js';
 import { verifyBrokerConnection, getLatestVerification } from '../services/broker-verification.service.js';
-import { getBrokerAdapter } from '../algo/broker-adapters.js';
+import { ANGEL_ONE } from '../algo/broker-adapters.js';
+import {
+  adapterFromAngelOneAccount,
+  getAngelOneSession,
+  isAngelOneSessionError,
+  loadAngelOneAccount,
+  markAngelOneSessionExpired,
+} from '../services/angel-one-session.service.js';
+import { clearAngelOneMarketFeedCache } from '../services/angel-one-market-feed.service.js';
 
 const router = Router();
 
 const setActiveBrokerSchema = z.object({
-  broker: z.enum(['DHAN', 'ANGEL_ONE']),
+  broker: z.enum(['ANGEL_ONE']),
 }).strict();
 
 const refreshBrokerDataSchema = z.object({
-  broker: z.enum(['DHAN', 'ANGEL_ONE']),
+  broker: z.enum(['ANGEL_ONE']),
   dataTypes: z.array(z.enum(['funds', 'positions', 'holdings', 'orders', 'trades'])).optional(),
 }).strict();
 
@@ -38,7 +46,7 @@ router.get('/broker/connections', requireAuth, async (req, res, next) => {
          t.token_expires_at
        FROM broker_accounts a
        LEFT JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
-       WHERE a.user_id = $1
+       WHERE a.user_id = $1 AND a.broker = 'ANGEL_ONE'
        ORDER BY a.is_active_broker DESC, a.broker`,
       [req.userId]
     );
@@ -63,6 +71,7 @@ router.get('/broker/connections', requireAuth, async (req, res, next) => {
       brokers,
       activeBroker: activeBroker ? activeBroker.broker : null,
       totalConnected: brokers.filter(b => ['CONNECTED', 'PARTIALLY_CONNECTED'].includes(b.status)).length,
+      supportedBrokers: [ANGEL_ONE],
     });
   } catch (error) {
     next(error);
@@ -146,8 +155,8 @@ router.get('/broker/active', requireAuth, async (req, res, next) => {
 router.post('/broker/:broker/verify', requireAuth, async (req, res, next) => {
   const broker = req.params.broker.toUpperCase();
   
-  if (broker !== 'DHAN' && broker !== 'ANGEL_ONE') {
-    return res.status(400).json({ error: `Unsupported broker: ${broker}` });
+  if (broker !== ANGEL_ONE) {
+    return res.status(400).json({ error: `Unsupported broker: ${broker}. Angel One SmartAPI is the only supported broker.`, code: 'UNSUPPORTED_BROKER' });
   }
 
   try {
@@ -187,8 +196,8 @@ router.post('/broker/:broker/verify', requireAuth, async (req, res, next) => {
 router.get('/broker/:broker/verification/latest', requireAuth, async (req, res, next) => {
   const broker = req.params.broker.toUpperCase();
   
-  if (broker !== 'DHAN' && broker !== 'ANGEL_ONE') {
-    return res.status(400).json({ error: `Unsupported broker: ${broker}` });
+  if (broker !== ANGEL_ONE) {
+    return res.status(400).json({ error: `Unsupported broker: ${broker}. Angel One SmartAPI is the only supported broker.`, code: 'UNSUPPORTED_BROKER' });
   }
 
   try {
@@ -219,8 +228,8 @@ router.get('/broker/:broker/verification/history', requireAuth, async (req, res,
   const broker = req.params.broker.toUpperCase();
   const limit = Math.min(parseInt(req.query.limit) || 10, 50);
   
-  if (broker !== 'DHAN' && broker !== 'ANGEL_ONE') {
-    return res.status(400).json({ error: `Unsupported broker: ${broker}` });
+  if (broker !== ANGEL_ONE) {
+    return res.status(400).json({ error: `Unsupported broker: ${broker}. Angel One SmartAPI is the only supported broker.`, code: 'UNSUPPORTED_BROKER' });
   }
 
   try {
@@ -277,29 +286,21 @@ router.post('/broker/refresh', requireAuth, async (req, res, next) => {
   const { broker, dataTypes = ['funds', 'positions', 'holdings', 'orders', 'trades'] } = parsed.data;
 
   try {
-    const credentials = await getBrokerCredentials(req.userId, broker);
-    
-    if (!credentials || !['CONNECTED', 'PARTIALLY_CONNECTED'].includes(credentials.status)) {
-      return res.status(409).json({
-        error: `${broker} is not connected`,
+    const session = await getAngelOneSession(pool, req.userId);
+    if (session.reason === 'SESSION_EXPIRED') {
+      return res.status(401).json({
+        error: 'Angel One session has expired. Please reconnect your Angel One account.',
+        code: 'ANGEL_ONE_SESSION_EXPIRED',
         broker,
       });
     }
-
-    // Get broker adapter
-    const adapter = await getBrokerAdapter(broker, 'LIVE', 
-      broker === 'DHAN' 
-        ? { dhanClientId: credentials.clientId, accessToken: credentials.accessToken }
-        : { 
-            angelOneClientCode: credentials.clientId, 
-            jwtToken: credentials.accessToken,
-            refreshToken: credentials.refreshToken,
-            feedToken: credentials.feedToken,
-            tokenExpiresAt: credentials.tokenExpiresAt,
-            apiKey: process.env.ANGEL_ONE_API_KEY,
-            totpSecret: process.env.ANGEL_ONE_TOTP_SECRET,
-          }
-    );
+    if (!session.adapter) {
+      return res.status(409).json({
+        error: 'Angel One is not connected',
+        broker,
+      });
+    }
+    const { adapter } = session;
 
     const refreshedData = {};
     const errors = {};
@@ -325,6 +326,15 @@ router.post('/broker/refresh', requireAuth, async (req, res, next) => {
             break;
         }
       } catch (error) {
+        if (isAngelOneSessionError(error)) {
+          await markAngelOneSessionExpired(pool, session.row.id);
+          clearAngelOneMarketFeedCache(req.userId);
+          return res.status(401).json({
+            error: 'Angel One session has expired. Please reconnect your Angel One account.',
+            code: 'ANGEL_ONE_SESSION_EXPIRED',
+            broker,
+          });
+        }
         errors[dataType] = error.message;
       }
     }
@@ -347,12 +357,18 @@ router.post('/broker/refresh', requireAuth, async (req, res, next) => {
 router.post('/broker/:broker/disconnect', requireAuth, async (req, res, next) => {
   const broker = req.params.broker.toUpperCase();
   
-  if (broker !== 'DHAN' && broker !== 'ANGEL_ONE') {
-    return res.status(400).json({ error: `Unsupported broker: ${broker}` });
+  if (broker !== ANGEL_ONE) {
+    return res.status(400).json({ error: `Unsupported broker: ${broker}. Angel One SmartAPI is the only supported broker.`, code: 'UNSUPPORTED_BROKER' });
   }
 
   try {
+    // End the SmartAPI session at Angel One before removing the stored tokens.
+    const row = await loadAngelOneAccount(pool, req.userId);
+    if (row?.access_token_ciphertext) {
+      await adapterFromAngelOneAccount(pool, row).logout().catch(() => {});
+    }
     await revokeBrokerCredentials(req.userId, broker);
+    clearAngelOneMarketFeedCache(req.userId);
 
     // Stop any active algo state
     await pool.query(
@@ -375,7 +391,7 @@ router.post('/broker/:broker/disconnect', requireAuth, async (req, res, next) =>
       success: true,
       broker,
       status: 'DISCONNECTED',
-      message: `${broker} has been disconnected`,
+      message: 'Angel One has been disconnected',
     });
   } catch (error) {
     next(error);

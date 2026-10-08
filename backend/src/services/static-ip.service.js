@@ -1,65 +1,68 @@
-// Static IP readiness for broker order APIs.
+// Static IP readiness for Angel One SmartAPI order APIs.
 //
-// Dhan: "Order Placement, Modification and Cancellation APIs require Static IP
-// whitelisting" (dhanhq.co/docs/v2/orders). Readiness is only PASS when BOTH:
-//   1. Dhan itself reports the configured IP as whitelisted (GET /v2/ip/getIP), and
-//   2. this server's real outbound IP (detected, not declared) equals that IP.
-// A configured value is never compared with itself.
+// Angel One (SEBI retail-algo framework): order placement, modification,
+// cancellation and GTT APIs are only executed when the request originates from
+// a static IP registered against the SmartAPI key (SmartAPI portal > My Profile
+// > My APIs; up to five IPs per key). SmartAPI exposes no endpoint to read the
+// registered IPs back, so the registration itself cannot be confirmed by API.
+//
+// What CAN be verified, and is verified here:
+//   1. ANGEL_ONE_STATIC_IP is configured, and
+//   2. this server's real outbound IP (detected, never declared) equals it.
+// A configured value is never compared with itself. If the IP is not registered
+// with Angel One, Angel One itself rejects the order and that rejection is
+// surfaced unchanged.
 
-const BROKER_IP_ENV = {
-  DHAN: 'DHAN_STATIC_IP',
-  ANGEL_ONE: 'ANGEL_ONE_STATIC_IP',
-};
+export const STATIC_IP_ENV = 'ANGEL_ONE_STATIC_IP';
+const BROKER = 'ANGEL_ONE';
 const VERIFY_TTL_MS = 10 * 60 * 1000;
 const EGRESS_ENDPOINTS = [
   { url: 'https://api.ipify.org?format=json', read: (body) => JSON.parse(body).ip },
   { url: 'https://checkip.amazonaws.com', read: (body) => body.trim() },
 ];
 
-const verified = new Map(); // key: `${broker}:${clientId}` -> { at, result }
-let lastVerifiedByBroker = new Map(); // broker -> result (for sync readiness display)
+let cached = null; // { at, result }
 
 function text(value) {
   return String(value || '').trim();
 }
 
-function configuredIpFor(broker) {
-  return text(process.env[BROKER_IP_ENV[broker]]) || null;
+function configuredIp() {
+  return text(process.env[STATIC_IP_ENV]) || null;
 }
 
 /**
- * Synchronous readiness snapshot. Returns the most recent broker-verified
- * result when one exists; otherwise NOT ready (never assumed).
+ * Synchronous readiness snapshot. Returns the most recent verified result when
+ * one exists; otherwise NOT ready (never assumed).
  */
-export function getStaticIpReadiness(broker) {
-  const configuredIp = configuredIpFor(broker);
-  const last = lastVerifiedByBroker.get(broker);
-  if (last && last.configuredIp === configuredIp && Date.now() - last.verifiedAtMs < VERIFY_TTL_MS) {
-    return last;
+export function getStaticIpReadiness() {
+  const configured = configuredIp();
+  if (cached && cached.result.configuredIp === configured && Date.now() - cached.at < VERIFY_TTL_MS) {
+    return cached.result;
   }
   return {
-    broker,
-    configuredIp,
-    registeredIps: null,
+    broker: BROKER,
+    configuredIp: configured,
     detectedIp: null,
     match: false,
     ready: false,
     verified: false,
-    status: 'PENDING_EXTERNAL_CONFIGURATION',
-    reason: configuredIp
-      ? 'Static IP has not been verified with the broker and against this server\'s outbound IP yet; live order execution stays blocked.'
-      : `${BROKER_IP_ENV[broker] || 'Static IP'} is not configured; live order execution stays blocked.`,
+    registrationVerifiable: false,
+    status: configured ? 'PENDING_VERIFICATION' : 'NOT_CONFIGURED',
+    reason: configured
+      ? 'The configured static IP has not been checked against this server\'s outbound IP yet; live order execution stays blocked.'
+      : `${STATIC_IP_ENV} is not configured; live order execution stays blocked.`,
   };
 }
 
 export async function detectEgressIp({ fetchImpl = fetch } = {}) {
   const errors = [];
   for (const endpoint of EGRESS_ENDPOINTS) {
+    let timer;
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
+      timer = setTimeout(() => controller.abort(), 5000);
       const response = await fetchImpl(endpoint.url, { signal: controller.signal });
-      clearTimeout(timer);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const body = typeof response.text === 'function' ? await response.text() : JSON.stringify(await response.json());
       const ip = text(endpoint.read(body));
@@ -67,6 +70,8 @@ export async function detectEgressIp({ fetchImpl = fetch } = {}) {
       throw new Error('unrecognised response');
     } catch (error) {
       errors.push(`${new URL(endpoint.url).host}: ${error.message}`);
+    } finally {
+      clearTimeout(timer);
     }
   }
   const error = new Error(`Could not detect this server's outbound IP (${errors.join('; ')})`);
@@ -75,77 +80,54 @@ export async function detectEgressIp({ fetchImpl = fetch } = {}) {
 }
 
 /**
- * Broker-verified static IP check for Dhan. `adapter` must expose
- * getRegisteredStaticIps() (GET /v2/ip/getIP, which needs no whitelisting).
+ * Verifies that this server's outbound IP equals ANGEL_ONE_STATIC_IP.
+ * `ready` means "orders will leave from the configured static IP"; whether
+ * that IP is registered against the SmartAPI key is enforced by Angel One.
  */
-export async function verifyDhanStaticIp(adapter, { force = false, fetchImpl } = {}) {
-  const configuredIp = configuredIpFor('DHAN');
-  const key = `DHAN:${adapter?.dhanClientId || 'unknown'}`;
-  const cached = verified.get(key);
-  if (!force && cached && cached.result.configuredIp === configuredIp && Date.now() - cached.at < VERIFY_TTL_MS) {
+export async function verifyAngelOneStaticIp({ force = false, fetchImpl } = {}) {
+  const configured = configuredIp();
+  if (!force && cached && cached.result.configuredIp === configured && Date.now() - cached.at < VERIFY_TTL_MS) {
     return cached.result;
   }
-
-  const base = { broker: 'DHAN', configuredIp, registeredIps: null, detectedIp: null, match: false, ready: false, verified: false };
+  const base = {
+    broker: BROKER,
+    configuredIp: configured,
+    detectedIp: null,
+    detectedVia: null,
+    match: false,
+    ready: false,
+    verified: false,
+    registrationVerifiable: false,
+  };
   let result;
-  if (!configuredIp) {
-    result = { ...base, status: 'NOT_CONFIGURED', reason: 'DHAN_STATIC_IP is not configured; live order execution stays blocked.' };
+  if (!configured) {
+    result = { ...base, status: 'NOT_CONFIGURED', reason: `${STATIC_IP_ENV} is not configured; live order execution stays blocked.` };
   } else {
-    let registered = null;
-    let egress = null;
-    let failure = null;
     try {
-      registered = await adapter.getRegisteredStaticIps();
+      const egress = await detectEgressIp(fetchImpl ? { fetchImpl } : {});
+      const match = egress.ip === configured;
+      result = {
+        ...base,
+        detectedIp: egress.ip,
+        detectedVia: egress.source,
+        match,
+        ready: match,
+        verified: true,
+        status: match ? 'PASS' : 'EGRESS_IP_MISMATCH',
+        reason: match
+          ? `This server's outbound IP matches the configured static IP ${configured}. It must also be registered against the SmartAPI key in the Angel One SmartAPI portal; Angel One rejects orders from unregistered IPs.`
+          : `The configured static IP is ${configured}, but this server's outbound IP is ${egress.ip}; Angel One would reject orders from this server.`,
+      };
     } catch (error) {
-      failure = { status: 'BROKER_CHECK_FAILED', reason: `Dhan GET /v2/ip/getIP failed: ${error.message}` };
+      result = { ...base, status: 'EGRESS_UNVERIFIED', reason: error.message };
     }
-    if (!failure) {
-      try {
-        egress = await detectEgressIp(fetchImpl ? { fetchImpl } : {});
-      } catch (error) {
-        failure = { status: 'EGRESS_UNVERIFIED', reason: error.message };
-      }
-    }
-    const registeredIps = registered ? [registered.primaryIP, registered.secondaryIP].map(text).filter(Boolean) : null;
-    const registeredOk = Boolean(registeredIps?.includes(configuredIp));
-    const egressOk = Boolean(egress && egress.ip === configuredIp);
-    let status;
-    let reason;
-    if (failure) {
-      ({ status, reason } = failure);
-    } else if (!registeredOk) {
-      status = 'NOT_WHITELISTED_WITH_DHAN';
-      reason = registeredIps.length
-        ? `Dhan has ${registeredIps.join(', ')} whitelisted, not the configured ${configuredIp}.`
-        : 'Dhan reports no whitelisted static IP for this account.';
-    } else if (!egressOk) {
-      status = 'EGRESS_IP_MISMATCH';
-      reason = `Dhan whitelists ${configuredIp}, but this server's outbound IP is ${egress.ip}; Dhan would reject orders from this server.`;
-    } else {
-      status = 'PASS';
-      reason = `Dhan whitelists ${configuredIp} and this server's outbound IP matches.`;
-    }
-    result = {
-      ...base,
-      registeredIps,
-      modifyDatePrimary: registered?.modifyDatePrimary ?? null,
-      detectedIp: egress?.ip ?? null,
-      detectedVia: egress?.source ?? null,
-      match: registeredOk && egressOk,
-      ready: status === 'PASS',
-      verified: !failure,
-      status,
-      reason,
-    };
   }
   result.verifiedAt = new Date().toISOString();
   result.verifiedAtMs = Date.now();
-  verified.set(key, { at: Date.now(), result });
-  lastVerifiedByBroker.set('DHAN', result);
+  cached = { at: Date.now(), result };
   return result;
 }
 
 export function clearStaticIpVerificationCache() {
-  verified.clear();
-  lastVerifiedByBroker = new Map();
+  cached = null;
 }

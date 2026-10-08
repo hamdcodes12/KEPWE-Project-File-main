@@ -68,13 +68,18 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | `RAZORPAY_KEY_SECRET` | `XXXXXXXX...` | **Backend-only** - never expose |
 | `VITE_RAZORPAY_KEY_ID` | `rzp_live_XXXX...` | Public key for frontend (same as KEY_ID) |
 
-#### 📈 Optional: Dhan Trading Integration
+#### 📈 Optional: Angel One SmartAPI (KEPWE Quant broker)
 
 | Key | Value | Notes |
 |-----|-------|-------|
-| `DHAN_API_KEY` | From Dhan dashboard | For live market data |
-| `DHAN_API_SECRET` | From Dhan dashboard | For OAuth flows |
-| `DHAN_REDIRECT_URL` | `https://your-domain.onrender.com/api/lemonn/callback` | Replace with your actual Render URL |
+| `BROKER_TOKEN_ENCRYPTION_KEY` | 64 hex characters | Required before any Angel One session can be stored |
+| `ANGEL_ONE_API_KEY` | From smartapi.angelone.in | Optional shared SmartAPI key; otherwise each user enters their own |
+| `ANGEL_ONE_STATIC_IP` | Your server's static outbound IP | Must be registered for the SmartAPI key; required for live orders |
+| `ANGEL_ONE_NIFTY_FREEZE_QTY` | Current NSE freeze quantity for NIFTY options | Required for order sizing |
+| `ANGEL_ONE_REDIRECT_URL` | `https://your-domain.onrender.com/api/angel-one/callback` | Only for the redirect login |
+| `ANGEL_ONE_WEBHOOK_TOKEN` | Random secret | For the order postback URL |
+
+See `backend/docs/ANGEL_ONE_INTEGRATION.md` for the full setup.
 
 #### 📊 Optional: Upstox Market Data
 
@@ -121,7 +126,7 @@ VITE_API_BASE_URL=/api
 RESEND_API_KEY=<your resend key>
 ```
 
-Then deploy. All other integrations (Razorpay, Dhan, GST, etc.) are optional and can be added later.
+Then deploy. All other integrations (Razorpay, Angel One, GST, etc.) are optional and can be added later.
 
 ---
 
@@ -177,7 +182,7 @@ https://your-kepwe-service.onrender.com/api
 - [Render Environment Variables Docs](https://render.com/docs/environment-variables)
 - [Resend Email Setup](https://resend.com/docs)
 - [Razorpay Dashboard](https://dashboard.razorpay.com)
-- [Dhan API Documentation](https://dhan.co/api)
+- [Angel One SmartAPI Documentation](https://smartapi.angelone.in/docs)
 
 ---
 

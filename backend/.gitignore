@@ -10,3 +10,6 @@ node_modules/
 server.log
 server.err
 npm-debug.log*
+
+# Output of scripts/angel-one-live-verify.mjs
+angel-one-live-verify-report.json

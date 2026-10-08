@@ -37,19 +37,6 @@
   - Action: Revoke and regenerate in Upstox API portal
   - Priority: CRITICAL (trading access)
 
-#### Dhan
-- [ ] **DHAN_API_KEY** - Dhan broker API key
-  - Action: Regenerate in Dhan API portal
-  - Priority: CRITICAL (trading access)
-
-- [ ] **DHAN_API_SECRET** - Dhan broker API secret
-  - Action: Regenerate in Dhan API portal
-  - Priority: CRITICAL (trading access)
-
-- [ ] **DHAN_WEBHOOK_TOKEN** - Dhan webhook authentication token
-  - Action: Regenerate custom webhook token
-  - Priority: HIGH (webhook security)
-
 #### Angel One
 - [ ] **ANGEL_ONE_API_KEY** - Angel One broker API key
   - Action: Regenerate in Angel One API portal
@@ -84,8 +71,8 @@
 
 ## Non-Sensitive Configuration (No Rotation Required)
 - **OTP_FROM_EMAIL** - Email sender address (not a credential)
-- **DHAN_REDIRECT_URL** - OAuth redirect URL (not a credential)
-- **DHAN_STATIC_IP** - Static IP address (not a credential)
+- **ANGEL_ONE_REDIRECT_URL** - SmartAPI redirect URL (not a credential)
+- **ANGEL_ONE_STATIC_IP** - Static IP address (not a credential)
 
 ## Rotation Checklist
 
@@ -120,7 +107,7 @@
 3. Test email delivery
 
 ### Step 6: Webhook Tokens
-1. Generate new random tokens for DHAN_WEBHOOK_TOKEN and ANGEL_ONE_WEBHOOK_TOKEN
+1. Generate a new random token for ANGEL_ONE_WEBHOOK_TOKEN
 2. Update .env and Render
 3. Update webhook configurations in broker portals if applicable
 

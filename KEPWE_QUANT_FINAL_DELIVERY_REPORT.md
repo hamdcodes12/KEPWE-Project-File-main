@@ -29,7 +29,7 @@ The **KEPWE QUANT** platform has been upgraded to match the client's reference v
 │  ├─ Paper Trading Terminal (Simulated orders + Emergency Kill Switch)   │
 │  ├─ Daily Risk Controller (3 Trades/Day, 2 Consecutive Loss Halt, 10% DD│
 │  ├─ Live Deployment Safety Gate (4-point prerequisite validator)        │
-│  └─ Broker Adapters (Lemonn OAuth + Angel One SmartAPI readiness)       │
+│  └─ Broker Adapter (Angel One SmartAPI)                                 │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  Frontend API Client: src/api/quantClient.js                            │
 │  └─ fetchQuantDashboard, saveQuantStrategy, runQuantBacktest, etc.      │
@@ -110,7 +110,7 @@ The **KEPWE QUANT** platform has been upgraded to match the client's reference v
 - Connected to `POST /api/quant/deployment/validate`.
 - Evaluates 4 prerequisite criteria:
   1. `STRATEGY_PARAMETERS`: Compliant risk % and daily trade limits.
-  2. `BROKER_LIVE_CONNECTION`: Verified Angel One / Lemonn connection.
+  2. `BROKER_LIVE_CONNECTION`: Verified Angel One connection.
   3. `MARKET_DATA_FEED`: Real-time streaming WebSocket feed.
   4. `PAPER_TESTING_HISTORY`: Validated paper execution track record.
 - If prerequisites are not met, displays prominent truthful security banner:

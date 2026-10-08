@@ -148,7 +148,6 @@ $ npm test
 ✔ live broker adapters remain disabled without official configuration (0.3ms)
 ✔ paper adapter preserves pending lifecycle state through modification and cancellation (0.6ms)
 ✔ Angel One adapter covers authentication, orders, status, positions and execution polling (2.7ms)
-✔ Lemonn adapter covers the configured broker contract (1.2ms)
 ✔ backtest returns complete metrics without fabricated trades (5.6ms)
 ℹ tests 12 | pass 12 | fail 0
 

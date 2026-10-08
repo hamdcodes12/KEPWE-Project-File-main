@@ -94,20 +94,32 @@ Value:                      rzp_live_XXXXXXXXXXXX
 Status:                     Optional (payments)
 
 
-OPTIONAL: Dhan Trading Integration
+OPTIONAL: Angel One SmartAPI (KEPWE Quant broker)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Variable Name:              DHAN_API_KEY
-Value:                      (From Dhan dashboard)
-Status:                     Optional (live trading)
+Variable Name:              BROKER_TOKEN_ENCRYPTION_KEY
+Value:                      (64 hex characters, generated once)
+Status:                     Required before any Angel One session can be stored
 
-Variable Name:              DHAN_API_SECRET
-Value:                      (From Dhan dashboard)
-Status:                     Optional (live trading)
+Variable Name:              ANGEL_ONE_API_KEY
+Value:                      (From smartapi.angelone.in - optional shared key)
+Status:                     Optional (otherwise each user enters their own key)
 
-Variable Name:              DHAN_REDIRECT_URL
-Value:                      https://your-kepwe-service.onrender.com/api/lemonn/callback
-Status:                     Optional (OAuth callbacks)
+Variable Name:              ANGEL_ONE_STATIC_IP
+Value:                      (Static outbound IP registered for the SmartAPI key)
+Status:                     Required for live orders
+
+Variable Name:              ANGEL_ONE_NIFTY_FREEZE_QTY
+Value:                      (Current NSE quantity freeze for NIFTY options)
+Status:                     Required for order sizing
+
+Variable Name:              ANGEL_ONE_REDIRECT_URL
+Value:                      https://your-kepwe-service.onrender.com/api/angel-one/callback
+Status:                     Optional (redirect login)
+
+Variable Name:              ANGEL_ONE_WEBHOOK_TOKEN
+Value:                      (Random secret for the order postback URL)
+Status:                     Optional (order postbacks)
 
 
 STEP 3: Save & Deploy

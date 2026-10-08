@@ -1,8 +1,6 @@
 import { randomUUID } from 'crypto';
-import { getBrokerAdapter } from '../algo/broker-adapters.js';
 import { createAndSubmitOrder } from '../algo/oms.js';
 import { evaluateRisk } from '../algo/risk-engine.js';
-import { decryptBrokerSecret } from './broker-token.service.js';
 import {
   NIFTY_SCALPING_STRATEGY,
   confirmNiftyScalpingEntry,
@@ -11,26 +9,17 @@ import {
   selectNiftyScalpingOption,
 } from './nifty-scalping-strategy.service.js';
 import { tryCreateQuantNotification } from './quant-notification.service.js';
-import { findNseFnoContract, loadDhanInstrumentMaster } from './dhan-instruments.service.js';
-import { fetchNiftyIndexQuote } from './dhan-market-feed.service.js';
+import { getAngelOneSession, isAngelOneSessionError, markAngelOneSessionExpired } from './angel-one-session.service.js';
+import { fetchNiftyIndexQuote } from './angel-one-market-feed.service.js';
+import { fetchNiftyOptionChain } from './angel-one-option-chain.service.js';
 
-export { loadDhanInstrumentMaster };
-
+const BROKER = 'ANGEL_ONE';
 let running = false;
 
-function istDate() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
-}
-
-function istDateOffset(days) {
+function istDate(offsetDays = 0) {
   const date = new Date();
-  date.setUTCDate(date.getUTCDate() + days);
+  date.setUTCDate(date.getUTCDate() + offsetDays);
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(date);
-}
-
-function number(value) {
-  const result = Number(value);
-  return Number.isFinite(result) ? result : null;
 }
 
 function timestampMs(value) {
@@ -46,100 +35,29 @@ export function isFreshMarketTimestamp(value, now = Date.now(), maxAgeMs = 90_00
   return timestamp !== null && timestamp <= now && now - timestamp <= maxAgeMs;
 }
 
-export function normalizeDhanCandles(payload, intervalMinutes, now = Date.now()) {
-  const data = payload?.data || payload || {};
-  const timestamps = data.timestamp || data.timestamps || [];
-  const opens = data.open || [];
-  const highs = data.high || [];
-  const lows = data.low || [];
-  const closes = data.close || [];
-  const volumes = data.volume || [];
-  if (![timestamps, opens, highs, lows, closes].every(Array.isArray)) return [];
-  return timestamps.map((timestamp, index) => ({
-    timestamp: new Date(Number(timestamp) < 1e12 ? Number(timestamp) * 1000 : timestamp).toISOString(),
-    open: number(opens[index]),
-    high: number(highs[index]),
-    low: number(lows[index]),
-    close: number(closes[index]),
-    volume: number(volumes[index]) || 0,
-    completed: false,
-  })).filter((candle) => [candle.open, candle.high, candle.low, candle.close].every((value) => value !== null))
-  .map((candle) => ({
-    ...candle,
-    completed: new Date(candle.timestamp).getTime() + (intervalMinutes * 60 * 1000) <= now,
-  }))
-  .filter((candle) => candle.completed);
+/**
+ * Keeps only candles whose interval has fully elapsed. Angel One includes the
+ * still-forming candle in getCandleData; the strategy must never see it.
+ */
+export function completedCandles(candles, intervalMinutes, now = Date.now()) {
+  if (!Array.isArray(candles)) return [];
+  return candles
+    .filter((candle) => candle && [candle.open, candle.high, candle.low, candle.close].every((value) => Number.isFinite(Number(value))))
+    .map((candle) => ({ ...candle, volume: Number(candle.volume) || 0 }))
+    .filter((candle) => new Date(candle.timestamp).getTime() + (intervalMinutes * 60 * 1000) <= now)
+    .map((candle) => ({ ...candle, completed: true }));
 }
 
-function expiryFromResponse(payload) {
-  const data = payload?.data || payload || {};
-  const values = Array.isArray(data) ? data : data.expiryList || data.expiry || data.expiries || [];
-  return values.map(String).sort()[0] || null;
-}
-
-export function resolveDhanOptionInstruments(payload, requestedAt, instrumentMaster, expiry) {
-  const data = payload?.data || payload || {};
-  const chain = data.oc || data.optionChain || data.options || {};
-  const instruments = [];
-  for (const [strike, legs] of Object.entries(chain)) {
-    for (const [optionType, quote] of [['CE', legs?.ce], ['PE', legs?.pe]]) {
-      if (!quote) continue;
-      const ltp = number(quote.last_price ?? quote.lastPrice ?? quote.ltp);
-      const bid = number(quote.top_bid_price ?? quote.bid_price ?? quote.bid);
-      const ask = number(quote.top_ask_price ?? quote.ask_price ?? quote.ask);
-      const securityId = quote.security_id ?? quote.securityId;
-      const master = findNseFnoContract(instrumentMaster, securityId);
-      if (!securityId || ltp === null || bid === null || ask === null || !master) continue;
-      // The official master lists NIFTY options with UNDERLYING_SYMBOL "NIFTY" and
-      // UNDERLYING_SECURITY_ID 26000 (not the IDX_I index id 13), so match on symbol.
-      if (String(master.underlyingSymbol || '').toUpperCase() !== 'NIFTY') continue;
-      if (master.instrument && String(master.instrument).toUpperCase() !== 'OPTIDX') continue;
-      if (master.exchangeSegment && !['NSE_FNO', 'NFO', 'NSE'].includes(String(master.exchangeSegment).toUpperCase())) continue;
-      if (master.optionType && String(master.optionType).toUpperCase() !== optionType) continue;
-      if (master.tradable === false) continue;
-      const timestamp = requestedAt;
-      instruments.push({
-        optionType,
-        strike: number(strike),
-        securityId: String(securityId),
-        ltp,
-        bid,
-        ask,
-        ltpTimestamp: timestamp,
-        expiry: master.expiry || expiry,
-        tradingSymbol: master.tradingSymbol,
-        displayName: master.displayName,
-        lotSize: master.lotSize,
-        quantityFreeze: master.freezeQuantity ?? null,
-        delta: number(quote.greeks?.delta),
-        isLiquid: ask >= bid && bid > 0 && Number(quote.volume || 0) > 0,
-        halted: false,
-        abnormallyVolatile: false,
-      });
-    }
-  }
-  return instruments.filter((instrument) => instrument.ltpTimestamp <= requestedAt + 5000);
-}
-
-async function liveAccount(pool, userId) {
-  const result = await pool.query(
-    `SELECT ba.id AS broker_account_id, ba.client_id, ba.status, ba.connection_mode,
-            bot.access_token_ciphertext, bot.token_expires_at
-     FROM broker_accounts ba
-     JOIN broker_oauth_tokens bot ON bot.broker_account_id = ba.id
-     WHERE ba.user_id = $1 AND ba.broker = 'DHAN'
-     ORDER BY bot.created_at DESC LIMIT 1`,
-    [userId],
-  );
-  const row = result.rows[0];
-  if (!row || row.status !== 'CONNECTED' || row.connection_mode !== 'LIVE') return null;
-  const adapter = getBrokerAdapter('DHAN', 'LIVE', {
-    dhanClientId: row.client_id,
-    accessToken: decryptBrokerSecret(row.access_token_ciphertext),
-    tokenExpiresAt: row.token_expires_at,
+/** NIFTY index candles (completed only) from SmartAPI getCandleData. */
+export async function fetchNiftyCandles(adapter, instrument, intervalMinutes, lookbackDays, now = Date.now()) {
+  const raw = await adapter.getHistoricalData({
+    exchange: instrument.exchange,
+    symbolToken: instrument.symbolToken,
+    interval: `${intervalMinutes}m`,
+    fromDate: `${istDate(-lookbackDays)} 09:15`,
+    toDate: new Date(now),
   });
-  adapter.brokerAccountId = row.broker_account_id;
-  return { row, adapter };
+  return { received: raw.length, candles: completedCandles(raw, intervalMinutes, now) };
 }
 
 async function deploymentGatePassed(pool, userId) {
@@ -175,6 +93,14 @@ async function riskStats(pool, userId) {
   };
 }
 
+function brokerErrorDetails(error) {
+  return {
+    category: error?.angelCategory || null,
+    brokerHttpStatus: error?.httpStatus ?? null,
+    brokerErrorCode: error?.providerErrorCode ?? null,
+  };
+}
+
 async function processUser(pool, userId) {
   const correlationId = randomUUID();
   const strategyResult = await pool.query(
@@ -202,14 +128,24 @@ async function processUser(pool, userId) {
     });
     return;
   }
-  const account = await liveAccount(pool, userId);
-  if (!account) {
-    await logStage('DHAN_SESSION', 'FAIL', 'No verified LIVE Dhan account is available.');
+
+  const session = await getAngelOneSession(pool, userId);
+  if (!session.adapter || session.row.status !== 'CONNECTED') {
+    await logStage('BROKER_SESSION', 'FAIL', session.reason === 'SESSION_EXPIRED'
+      ? 'The Angel One session has expired; reconnect the account.'
+      : 'No verified LIVE Angel One account is available.');
     return;
   }
-  const { adapter, row } = account;
-  await adapter.validateSession();
-  await logStage('DHAN_SESSION', 'PASS', 'Dhan session validated.');
+  const { adapter, row } = session;
+  try {
+    await adapter.validateSession();
+  } catch (error) {
+    if (isAngelOneSessionError(error)) await markAngelOneSessionExpired(pool, row.id);
+    await logStage('BROKER_SESSION', 'FAIL', `Angel One session validation failed: ${error.message}`, brokerErrorDetails(error));
+    throw error;
+  }
+  await logStage('BROKER_SESSION', 'PASS', 'Angel One session validated.');
+
   let niftyInstrument;
   let liveQuote;
   try {
@@ -217,30 +153,20 @@ async function processUser(pool, userId) {
     niftyInstrument = feed.instrument;
     liveQuote = { ltp: feed.quote?.price ?? null, ltt: feed.quote?.ltt ?? null, fresh: feed.fresh };
   } catch (error) {
-    await logStage('LIVE_DATA', 'FAIL', `Dhan market data unavailable: ${error.message}`, {
-      category: error?.dhanCategory || null, dhanHttpStatus: error?.httpStatus ?? null, dhanErrorCode: error?.providerErrorCode ?? null,
-    });
+    await logStage('LIVE_DATA', 'FAIL', `Angel One market data unavailable: ${error.message}`, brokerErrorDetails(error));
     return;
   }
-  const NIFTY_INDEX_SECURITY_ID = niftyInstrument.securityId;
+  const niftyToken = niftyInstrument.symbolToken;
   if (!liveQuote.ltp || !liveQuote.fresh) {
-    await logStage('LIVE_DATA', 'FAIL', 'Dhan NIFTY quote is missing LTP or has a stale/future LTT.', { securityId: NIFTY_INDEX_SECURITY_ID, ltp: liveQuote.ltp, ltt: liveQuote.ltt });
+    await logStage('LIVE_DATA', 'FAIL', 'Angel One NIFTY quote is missing LTP or has a stale/future exchange timestamp.', { symbolToken: niftyToken, ltp: liveQuote.ltp, ltt: liveQuote.ltt });
     return;
   }
-  await logStage('NIFTY_LTP_RECEIVED', 'PASS', 'Fresh NIFTY LTP received from Dhan.', { securityId: NIFTY_INDEX_SECURITY_ID, ltp: liveQuote.ltp });
-  await logStage('NIFTY_LTT_RECEIVED', 'PASS', 'Fresh NIFTY last-trade time received from Dhan.', { securityId: NIFTY_INDEX_SECURITY_ID, ltt: liveQuote.ltt });
+  await logStage('NIFTY_LTP_RECEIVED', 'PASS', 'Fresh NIFTY LTP received from Angel One.', { symbolToken: niftyToken, ltp: liveQuote.ltp });
+  await logStage('NIFTY_LTT_RECEIVED', 'PASS', 'Fresh NIFTY exchange timestamp received from Angel One.', { symbolToken: niftyToken, ltt: liveQuote.ltt });
 
-  const date = istDate();
-  const indexPayload = await adapter.getHistoricalData({
-    securityId: NIFTY_INDEX_SECURITY_ID,
-    exchangeSegment: 'IDX_I',
-    instrument: 'INDEX',
-    interval: 5,
-    fromDate: istDateOffset(-7),
-    toDate: date,
-  });
-  const indexCandles = normalizeDhanCandles(indexPayload, 5);
-  await logStage('CANDLE_5M_RECEIVED', 'PASS', 'Dhan returned NIFTY 5-minute candle data.', { securityId: NIFTY_INDEX_SECURITY_ID, count: Array.isArray(indexPayload?.data?.timestamp) ? indexPayload.data.timestamp.length : 0 });
+  const fiveMinute = await fetchNiftyCandles(adapter, niftyInstrument, 5, 7);
+  const indexCandles = fiveMinute.candles;
+  await logStage('CANDLE_5M_RECEIVED', 'PASS', 'Angel One returned NIFTY 5-minute candle data.', { symbolToken: niftyToken, count: fiveMinute.received });
   if (indexCandles.length < 55) {
     await logStage('CANDLE_5M_COMPLETED', 'FAIL', 'Fewer than 55 completed NIFTY 5-minute candles are available.', { count: indexCandles.length });
     return;
@@ -248,16 +174,6 @@ async function processUser(pool, userId) {
   const last5m = indexCandles.at(-1);
   await logStage('CANDLE_5M_COMPLETED', 'PASS', 'Completed NIFTY 5-minute candle is ready.', { ...last5m, count: indexCandles.length });
 
-  const expiryPayload = await adapter.getOptionExpiryList({ underlyingScrip: NIFTY_INDEX_SECURITY_ID, underlyingSeg: 'IDX_I' });
-  const expiry = expiryFromResponse(expiryPayload);
-  if (!expiry) {
-    await logStage('OPTION_CONTRACT', 'FAIL', 'Dhan returned no NIFTY option expiry.');
-    return;
-  }
-  const chainPayload = await adapter.getOptionChain({ underlyingScrip: NIFTY_INDEX_SECURITY_ID, underlyingSeg: 'IDX_I', expiry });
-  const instrumentMaster = await loadDhanInstrumentMaster();
-  const instruments = resolveDhanOptionInstruments(chainPayload, Date.now(), instrumentMaster, expiry);
-  await logStage('OPTION_CONTRACT', instruments.length > 0 ? 'PASS' : 'FAIL', instruments.length > 0 ? 'Official Dhan option-chain contracts resolved.' : 'No valid option contracts matched the official instrument master.', { expiry, contracts: instruments.length });
   const enriched = enrichNiftyScalpingCandles(indexCandles);
   const index = enriched.length - 1;
   const signal = evaluateNiftyScalpingSignal(enriched, index);
@@ -267,6 +183,36 @@ async function processUser(pool, userId) {
     return;
   }
   await logStage('SIGNAL_GENERATED', 'PASS', `${signal.signal} generated by the existing KEPWE strategy.`, { signal: signal.signal, candleAt: indexCandles[index].timestamp });
+
+  const oneMinute = await fetchNiftyCandles(adapter, niftyInstrument, 1, 0);
+  await logStage('CANDLE_1M_RECEIVED', 'PASS', 'Angel One returned NIFTY 1-minute confirmation data.', { symbolToken: niftyToken, count: oneMinute.received });
+  const last1m = oneMinute.candles.at(-1);
+  if (!last1m) {
+    await logStage('CANDLE_1M_COMPLETED', 'FAIL', 'No completed NIFTY 1-minute confirmation candle is available.');
+    return;
+  }
+  await logStage('CANDLE_1M_COMPLETED', 'PASS', 'Completed NIFTY 1-minute confirmation candle is ready.', last1m);
+  const confirmation = confirmNiftyScalpingEntry(signal, last1m);
+  if (!confirmation.confirmed) {
+    await logStage('SIGNAL_NOT_GENERATED', 'WAITING', `1-minute confirmation not met: ${confirmation.reason}`);
+    return;
+  }
+
+  // The option chain is fetched last so the chosen contract's quote is current.
+  let chain;
+  try {
+    chain = await fetchNiftyOptionChain(adapter, { spotPrice: liveQuote.ltp });
+  } catch (error) {
+    if (isAngelOneSessionError(error)) throw error;
+    await logStage('OPTION_CONTRACT', 'FAIL', `Angel One option chain unavailable: ${error.message}`, brokerErrorDetails(error));
+    return;
+  }
+  if (!chain.expiry) {
+    await logStage('OPTION_CONTRACT', 'FAIL', 'The Angel One instrument master lists no current NIFTY option expiry.');
+    return;
+  }
+  const instruments = chain.instruments;
+  await logStage('OPTION_CONTRACT', instruments.length > 0 ? 'PASS' : 'FAIL', instruments.length > 0 ? 'Angel One option contracts resolved from the official instrument master with live quotes.' : 'No option contract had a live two-sided quote.', { expiry: chain.expiry, contracts: instruments.length, greeksAvailable: chain.greeksAvailable });
 
   const selected = selectNiftyScalpingOption({
     spotPrice: indexCandles[index].close,
@@ -278,36 +224,16 @@ async function processUser(pool, userId) {
     await logStage('OPTION_CONTRACT', 'FAIL', selected.reason || 'Selected contract failed strict validation.');
     return;
   }
-  await logStage('OPTION_CONTRACT', 'PASS', 'Selected contract passed strict F&O validation.', { securityId: selected.contract.securityId, tradingSymbol: selected.contract.tradingSymbol, expiry: selected.contract.expiry, strike: selected.contract.strike, optionType: selected.contract.optionType, lotSize: selected.contract.lotSize });
+  const contract = selected.contract;
+  await logStage('OPTION_CONTRACT', 'PASS', 'Selected contract passed strict F&O validation.', { symbolToken: contract.securityId, tradingSymbol: contract.tradingSymbol, expiry: contract.expiryDate, strike: contract.strike, optionType: contract.optionType, lotSize: contract.lotSize });
 
-  const signalKey = `${userId}:${indexCandles[index].timestamp}:${selected.contract.securityId}`;
-  const optionPayload = await adapter.getHistoricalData({
-    securityId: NIFTY_INDEX_SECURITY_ID,
-    exchangeSegment: 'IDX_I',
-    instrument: 'INDEX',
-    interval: 1,
-    fromDate: date,
-    toDate: date,
-  });
-  const optionCandles = normalizeDhanCandles(optionPayload, 1);
-  await logStage('CANDLE_1M_RECEIVED', 'PASS', 'Dhan returned NIFTY 1-minute confirmation data.', { securityId: NIFTY_INDEX_SECURITY_ID, count: Array.isArray(optionPayload?.data?.timestamp) ? optionPayload.data.timestamp.length : 0 });
-  const last1m = optionCandles.at(-1);
-  if (!last1m) {
-    await logStage('CANDLE_1M_COMPLETED', 'FAIL', 'No completed NIFTY 1-minute confirmation candle is available.');
-    return;
-  }
-  await logStage('CANDLE_1M_COMPLETED', 'PASS', 'Completed NIFTY 1-minute confirmation candle is ready.', last1m);
-  const confirmation = confirmNiftyScalpingEntry(signal, optionCandles.at(-1));
-  if (!confirmation.confirmed) {
-    await logStage('SIGNAL_NOT_GENERATED', 'WAITING', `1-minute confirmation not met: ${confirmation.reason}`);
-    return;
-  }
+  const signalKey = `${userId}:${indexCandles[index].timestamp}:${contract.securityId}`;
   const existingSignal = await pool.query(
     'SELECT 1 FROM algo_orders WHERE user_id = $1 AND signal_key = $2 LIMIT 1',
     [userId, signalKey],
   );
   if (existingSignal.rows.length > 0) {
-    await logStage('OMS', 'BLOCKED', 'Durable signal idempotency blocked a repeat submission.', { securityId: selected.contract.securityId, signalKey });
+    await logStage('OMS', 'BLOCKED', 'Durable signal idempotency blocked a repeat submission.', { symbolToken: contract.securityId, signalKey });
     return;
   }
   await tryCreateQuantNotification(pool, {
@@ -315,7 +241,7 @@ async function processUser(pool, userId) {
     type: 'STRATEGY_SIGNAL',
     title: 'NIFTY 50 strategy signal',
     body: `${signal.signal} signal confirmed by the live strategy engine.`,
-    data: { instrument: selected.contract.securityId, candleAt: indexCandles[index].timestamp },
+    data: { instrument: contract.tradingSymbol, symbolToken: contract.securityId, candleAt: indexCandles[index].timestamp },
   });
 
   const settingsResult = await pool.query('SELECT * FROM algo_settings WHERE user_id = $1', [userId]);
@@ -336,15 +262,15 @@ async function processUser(pool, userId) {
   const stats = await riskStats(pool, userId);
   const existing = await pool.query(
     `SELECT 1 FROM algo_positions WHERE user_id = $1 AND symbol = $2 AND status = 'OPEN' LIMIT 1`,
-    [userId, selected.contract.securityId],
+    [userId, contract.securityId],
   );
   const duplicate = await pool.query(
     `SELECT 1 FROM algo_orders WHERE user_id = $1 AND instrument = $2
      AND status IN ('CREATED', 'RECOVERY_PENDING', 'SUBMITTED', 'PARTIALLY_FILLED') LIMIT 1`,
-    [userId, selected.contract.securityId],
+    [userId, contract.securityId],
   );
   const risk = evaluateRisk({
-    candidate: { signal: signal.signal, price: selected.contract.premium, stopLoss: selected.contract.stop },
+    candidate: { signal: signal.signal, price: contract.premium, stopLoss: contract.stop },
     settings,
     stats,
     existingPosition: existing.rows.length > 0,
@@ -353,10 +279,10 @@ async function processUser(pool, userId) {
     duplicateOrder: duplicate.rows.length > 0,
     slippage: 0,
     maxSlippage: 2,
-    lotSize: selected.contract.lotSize,
+    lotSize: contract.lotSize,
     availableMargin,
-    // Exchange freeze limit from the official master; unknown => 0 (blocks the order).
-    brokerLimit: Number(selected.contract.quantityFreeze) > 1 ? Number(selected.contract.quantityFreeze) - 1 : 0,
+    // NSE quantity freeze (ANGEL_ONE_NIFTY_FREEZE_QTY); unknown => 0, which blocks the order.
+    brokerLimit: Number(contract.quantityFreeze) > 1 ? Number(contract.quantityFreeze) - 1 : 0,
     exposureLimit: Number.MAX_SAFE_INTEGER,
   });
   await logStage('RISK_GATE', risk.approved ? 'PASS' : 'FAIL', risk.reason || (risk.approved ? 'Risk checks passed.' : 'Risk checks rejected the order.'), { checks: risk.checks, quantity: risk.sizing?.quantity || 0 });
@@ -370,32 +296,34 @@ async function processUser(pool, userId) {
     });
     return;
   }
-  await logStage('OMS', 'PASS', 'Creating and submitting a LIVE OMS order through the Dhan adapter.', { securityId: selected.contract.securityId, quantity: risk.sizing.quantity });
+  await logStage('OMS', 'PASS', 'Creating and submitting a LIVE OMS order through the Angel One adapter.', { symbolToken: contract.securityId, quantity: risk.sizing.quantity });
   await createAndSubmitOrder({
     pool,
     adapter,
     userId,
     executionMode: 'LIVE',
-    instrument: selected.contract.securityId,
+    instrument: contract.securityId,
     side: 'BUY',
     quantity: risk.sizing.quantity,
     price: 0,
-    stopLoss: selected.contract.stop,
-    target: selected.contract.target,
-    brokerAccountId: row.broker_account_id,
+    stopLoss: contract.stop,
+    target: contract.target,
+    brokerAccountId: row.id,
     metadata: {
-      broker: 'DHAN',
-      securityId: selected.contract.securityId,
-      tradingSymbol: selected.contract.tradingSymbol,
-      exchangeSegment: 'NSE_FNO',
+      broker: BROKER,
+      securityId: contract.securityId,
+      symbolToken: contract.securityId,
+      tradingSymbol: contract.tradingSymbol,
+      exchange: 'NFO',
+      exchangeSegment: 'NFO',
       productType: 'INTRADAY',
       orderType: 'MARKET',
       strategy: NIFTY_SCALPING_STRATEGY.slug,
       signalKey,
-      expiry: selected.contract.expiry,
-      optionType: selected.contract.optionType,
-      strike: selected.contract.strike,
-      lotSize: selected.contract.lotSize,
+      expiry: contract.expiryDate,
+      optionType: contract.optionType,
+      strike: contract.strike,
+      lotSize: contract.lotSize,
     },
   });
 }
@@ -422,10 +350,10 @@ export async function runLiveQuantCycle(pool) {
       } catch (error) {
         await tryCreateQuantNotification(pool, {
           userId: row.user_id,
-          type: /expired|unauthorized|session/i.test(error.message) ? 'SESSION_EXPIRED' : 'LIVE_TRADING_STOPPED',
+          type: isAngelOneSessionError(error) || /expired|unauthorized|session/i.test(error.message) ? 'SESSION_EXPIRED' : 'LIVE_TRADING_STOPPED',
           title: 'Live Quant trading blocked',
           body: error.message,
-          data: { strategy: NIFTY_SCALPING_STRATEGY.slug },
+          data: { strategy: NIFTY_SCALPING_STRATEGY.slug, broker: BROKER },
         });
       }
     }

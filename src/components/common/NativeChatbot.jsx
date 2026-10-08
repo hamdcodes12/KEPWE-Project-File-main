@@ -5,7 +5,7 @@ import { apiFetch } from '../../api/client';
 import './NativeChatbot.css';
 
 const WELCOME_MESSAGE = 'Hi, I am KEPWE Assist. Ask me about the dashboards, markets, trial access, plans, brokers, or how to use the platform.';
-const STARTER_PROMPTS = ['What can I use in my trial?', 'How do I connect Dhan?', 'Show available plans'];
+const STARTER_PROMPTS = ['What can I use in my trial?', 'How do I connect Angel One?', 'Show available plans'];
 
 export default function NativeChatbot() {
   const { authState } = useApp();

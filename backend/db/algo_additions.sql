@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS algo_states (
 CREATE TABLE IF NOT EXISTS broker_accounts (
     id                         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id                    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    broker                     VARCHAR(30) NOT NULL CHECK (broker IN ('ANGEL_ONE', 'DHAN')),
+    broker                     VARCHAR(30) NOT NULL CHECK (broker IN ('ANGEL_ONE')),
     client_id                  VARCHAR(60),
     connection_mode            VARCHAR(20) NOT NULL DEFAULT 'LIVE' CHECK (connection_mode IN ('LIVE')),
     status                     VARCHAR(30) NOT NULL DEFAULT 'NOT_CONNECTED' CHECK (status IN ('NOT_CONNECTED', 'CONNECTED', 'SESSION_EXPIRED', 'VERIFICATION_FAILED', 'CONNECTION_FAILED', 'PARTIALLY_CONNECTED')),
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS broker_accounts (
 CREATE TABLE IF NOT EXISTS broker_oauth_sessions (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id            UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    broker             VARCHAR(30) NOT NULL CHECK (broker IN ('ANGEL_ONE', 'DHAN')),
+    broker             VARCHAR(30) NOT NULL CHECK (broker IN ('ANGEL_ONE')),
     state_hash         CHAR(64) NOT NULL UNIQUE,
     redirect_uri       TEXT NOT NULL,
     status             VARCHAR(20) NOT NULL DEFAULT 'PENDING'
@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS broker_oauth_tokens (
     access_token_ciphertext    TEXT NOT NULL,
     refresh_token_ciphertext   TEXT,
     feed_token_ciphertext      TEXT,
+    api_key_ciphertext         TEXT,
     token_type                 VARCHAR(40),
     scopes                     TEXT[] NOT NULL DEFAULT '{}',
     token_expires_at           TIMESTAMPTZ,

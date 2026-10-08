@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { atr, calculateIndicators, ema, rsi } from '../src/algo/indicators.js';
 import { runBacktest } from '../src/algo/backtest.js';
-import { AngelOneAdapter, DhanAdapter, getBrokerReadiness } from '../src/algo/broker-adapters.js';
+import { AngelOneAdapter, getBrokerReadiness } from '../src/algo/broker-adapters.js';
 import { calculatePaperPnl, resolvePaperExit } from '../src/algo/paper-engine.js';
 import { killSwitchReasons } from '../src/algo/reconciliation.js';
 import { evaluateRisk, sizePosition } from '../src/algo/risk-engine.js';
@@ -96,121 +96,13 @@ test('live reconciliation kill-switch reasons remain deterministic', () => {
   assert.deepEqual(killSwitchReasons({ positionMismatch: true, excessiveSlippage: true }), ['POSITION_MISMATCH', 'EXCESSIVE_SLIPPAGE']);
 });
 
-test('live broker adapters remain disabled without official configuration', () => {
-  const angel = getBrokerReadiness('ANGEL_ONE', 'LIVE');
-  const dhan = getBrokerReadiness('DHAN', 'LIVE');
-  assert.equal(angel.enabled, false);
-  assert.equal(dhan.enabled, false);
-  assert.equal(angel.capabilities.orderPlacement, false);
-  assert.equal(dhan.capabilities.positions, false);
-  assert.equal(JSON.stringify(angel).includes('ACCESS_TOKEN'), false);
-  assert.equal(JSON.stringify(dhan).includes('ACCESS_TOKEN'), false);
-});
-
-async function withEnvironment(values, callback) {
-  const previous = Object.fromEntries(Object.keys(values).map((key) => [key, process.env[key]]));
-  try {
-    for (const [key, value] of Object.entries(values)) process.env[key] = value;
-    return await callback();
-  } finally {
-    for (const [key, value] of Object.entries(previous)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-  }
-}
-
-function jsonResponse(payload, ok = true, status = 200) {
-  return { ok, status, async json() { return payload; } };
-}
-
-test('Angel One adapter covers authentication, orders, status, positions and execution polling', async () => {
-  await withEnvironment({
-    ANGEL_ONE_BASE_URL: 'https://angel.test',
-    ANGEL_ONE_API_KEY: 'angel-key',
-    ANGEL_ONE_CLIENT_CODE: 'client',
-    ANGEL_ONE_PASSWORD: 'password',
-    ANGEL_ONE_TOTP_SECRET: 'JBSWY3DPEHPK3PXP',
-  }, async () => {
-    const originalFetch = global.fetch;
-    const calls = [];
-    global.fetch = async (url, options) => {
-      calls.push({ url: String(url), options });
-      if (String(url).includes('loginByPassword')) return jsonResponse({ status: true, data: { jwtToken: 'jwt', refreshToken: 'refresh', feedToken: 'feed' } });
-      if (String(url).includes('getOrderBook')) return jsonResponse({ status: true, data: [{ orderid: 'angel-1', orderstatus: 'complete', filledshares: '10', averageprice: '101' }] });
-      if (String(url).includes('getTradeBook')) return jsonResponse({ status: true, data: [{ orderid: 'angel-1' }] });
-      if (String(url).includes('getRMS')) return jsonResponse({ status: true, data: { availablecash: '100000' } });
-      if (String(url).includes('position')) return jsonResponse({ status: true, data: [{ tradingsymbol: 'NIFTY', symboltoken: '1', netqty: '10', averageprice: '100', ltp: '101', pnl: '10' }] });
-      if (String(url).includes('placeOrder')) return jsonResponse({ status: true, data: { orderid: 'angel-1' } });
-      return jsonResponse({ status: true, data: { orderid: 'angel-1' } });
-    };
-    try {
-      const adapter = new AngelOneAdapter();
-      assert.equal((await adapter.authenticate()).authenticated, true);
-      await adapter.getMarketData({ exchange: 'NFO', symbolToken: '1' });
-      await adapter.getHistoricalData({ exchange: 'NFO', symbolToken: '1', interval: '5m', fromDate: '2026-08-28 09:15', toDate: '2026-08-28 15:15' });
-      const order = await adapter.placeOrder({ instrument: 'NIFTY', side: 'BUY', quantity: 10, price: 100, metadata: { symbolToken: '1', tradingSymbol: 'NIFTY', exchange: 'NFO' } });
-      await adapter.modifyOrder({ ...order, side: 'BUY', quantity: 10, price: 101, metadata: { symbolToken: '1', tradingSymbol: 'NIFTY', exchange: 'NFO' } });
-      await adapter.cancelOrder(order);
-      assert.equal((await adapter.getOrderStatus({ brokerOrderId: 'angel-1' })).status, 'complete');
-      assert.equal((await adapter.getPositions())[0].quantity, 10);
-      assert.equal((await adapter.getTradeBook())[0].orderid, 'angel-1');
-      assert.equal((await adapter.getMargin()).availablecash, '100000');
-      const updates = [];
-      await adapter.subscribeExecutionUpdates({ brokerOrderIds: ['angel-1'], onUpdate: (update) => updates.push(update), signal: new AbortController().signal });
-      assert.equal(updates.length, 1);
-      assert.ok(calls.length >= 10);
-    } finally {
-      global.fetch = originalFetch;
-    }
-  });
-});
-
-test('Dhan adapter covers the configured broker contract', async () => {
-  await withEnvironment({
-    DHAN_API_KEY: 'c0be378b',
-    DHAN_API_SECRET: '29c396c8-8ca0-4df2-a360-fa914e5d780b',
-    DHAN_STATIC_IP: '203.0.113.10',
-  }, async () => {
-    const { clearStaticIpVerificationCache } = await import('../src/services/static-ip.service.js');
-    clearStaticIpVerificationCache();
-    const originalFetch = global.fetch;
-    const calls = [];
-    global.fetch = async (url, options = {}) => {
-      // Order APIs require a broker-verified static IP: Dhan whitelist + matching egress.
-      if (String(url).includes('ipify')) return jsonResponse({ ip: '203.0.113.10' });
-      calls.push({ url: String(url), options });
-      if (String(url).endsWith('/ip/getIP')) return jsonResponse({ primaryIP: '203.0.113.10' });
-      if (String(url).endsWith('/orders') && options.method === 'POST') return jsonResponse({ orderId: 'dhan-1', orderStatus: 'PENDING' });
-      if (String(url).includes('/orders/dhan-1') && options.method === 'PUT') return jsonResponse({ orderId: 'dhan-1', orderStatus: 'MODIFIED' });
-      if (String(url).includes('/orders/dhan-1') && options.method === 'DELETE') return jsonResponse({ orderId: 'dhan-1', orderStatus: 'CANCELLED' });
-      if (String(url).includes('/orders/dhan-1') && (!options.method || options.method === 'GET')) return jsonResponse({ orderId: 'dhan-1', orderStatus: 'EXECUTED' });
-      if (String(url).endsWith('/orders')) return jsonResponse([{ orderId: 'dhan-1', orderStatus: 'TRADED', quantity: 10, tradedQuantity: 10, price: 101 }]);
-      if (String(url).endsWith('/positions')) return jsonResponse([{ tradingSymbol: 'NIFTY', netQty: 10 }]);
-      if (String(url).endsWith('/holdings')) return jsonResponse([{ tradingSymbol: 'NIFTY', totalQty: 10 }]);
-      if (String(url).endsWith('/trades')) return jsonResponse([{ orderId: 'dhan-1' }]);
-      if (String(url).endsWith('/fundlimit')) return jsonResponse({ availabelBalance: 100000 });
-      return jsonResponse({ status: 'success' });
-    };
-    try {
-      const adapter = new DhanAdapter('LIVE', { dhanClientId: '1100000001', accessToken: 'dhan-session-token' });
-      const order = await adapter.placeOrder({ instrument: 'NIFTY', side: 'BUY', quantity: 10, price: 100, metadata: { exchangeSegment: 'NSE_EQ', productType: 'CNC', securityId: '1' } });
-      assert.equal(order.brokerOrderId, 'dhan-1');
-      await adapter.modifyOrder({ brokerOrderId: 'dhan-1', price: 101 });
-      await adapter.cancelOrder({ brokerOrderId: 'dhan-1' });
-      assert.equal((await adapter.getOrderStatus({ brokerOrderId: 'dhan-1' })).status, 'EXECUTED');
-      assert.equal((await adapter.getPositions())[0].instrument, 'NIFTY');
-      assert.equal((await adapter.getHoldings())[0].tradingSymbol, 'NIFTY');
-      assert.equal((await adapter.getTradeBook())[0].orderId, 'dhan-1');
-      assert.equal((await adapter.getMargin()).available, 100000);
-      const updates = [];
-      await adapter.subscribeExecutionUpdates({ brokerOrderIds: ['dhan-1'], onUpdate: (update) => updates.push(update), signal: new AbortController().signal });
-      assert.equal(updates.length, 1);
-      assert.ok(calls.every((call) => call.options.headers['access-token'] === 'dhan-session-token'));
-    } finally {
-      global.fetch = originalFetch;
-    }
-  });
+// Broker adapter behaviour (Angel One SmartAPI, the only supported broker) is
+// covered in test/angel-one-broker.test.js.
+test('Angel One is the only broker the adapter factory accepts', () => {
+  assert.equal(new AngelOneAdapter().broker, 'ANGEL_ONE');
+  assert.equal(getBrokerReadiness('ANGEL_ONE', 'LIVE').broker, 'ANGEL_ONE');
+  assert.throws(() => getBrokerReadiness('DHAN', 'LIVE'), /Unsupported broker/);
+  assert.throws(() => getBrokerReadiness('PAPER', 'LIVE'), /Unsupported broker/);
 });
 
 test('backtest returns complete metrics without fabricated trades', () => {

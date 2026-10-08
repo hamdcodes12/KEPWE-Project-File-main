@@ -1,10 +1,8 @@
 import { createHash, timingSafeEqual } from 'crypto';
 import { applyExecutionUpdate } from '../algo/oms.js';
-import { getBrokerAdapter } from '../algo/broker-adapters.js';
-import { decryptBrokerSecret } from './broker-token.service.js';
+import { adapterFromAngelOneAccount, isAngelOneSessionError, markAngelOneSessionExpired } from './angel-one-session.service.js';
 
 const WEBHOOK_TOKEN_ENV = {
-  DHAN: 'DHAN_WEBHOOK_TOKEN',
   ANGEL_ONE: 'ANGEL_ONE_WEBHOOK_TOKEN',
 };
 
@@ -15,8 +13,8 @@ function text(value) {
 export function verifyBrokerWebhookRequest(req, broker) {
   const envName = WEBHOOK_TOKEN_ENV[broker];
   const configured = text(process.env[envName]);
-  // Dhan's postback is a plain POST to the registered URL (no custom headers),
-  // so the shared secret may also arrive as ?token= on that URL.
+  // Angel One's postback is a plain POST to the registered URL (no custom
+  // headers, no signature), so the shared secret arrives as ?token= on that URL.
   const supplied = text(req.get('x-kepwe-broker-webhook-token') || req.query?.token);
   if (!configured || !supplied) return false;
   const expected = Buffer.from(configured);
@@ -39,6 +37,8 @@ export async function applyBrokerExecutionUpdate({
   averagePrice = null,
   rejectionReason = null,
   payload = {},
+  // Set only by callers that have just read this order from SmartAPI themselves.
+  authoritativeExecution = null,
 }) {
   const orderId = text(correlationId);
   const providerOrderId = text(brokerOrderId);
@@ -55,11 +55,12 @@ export async function applyBrokerExecutionUpdate({
        AND (
          ($2::text IS NOT NULL AND o.broker_order_id = $2)
          OR ($3::uuid IS NOT NULL AND o.internal_order_id = $3::uuid)
-         -- Dhan echoes correlationId, which KEPWE sets to the first 25 chars of internal_order_id.
-         OR ($4::text IS NOT NULL AND length($4) >= 20 AND o.internal_order_id::text LIKE $4 || '%')
+         -- Angel One echoes ordertag, which KEPWE sets to the first 20 alphanumeric
+         -- characters of internal_order_id (dashes removed).
+         OR ($4::text IS NOT NULL AND length($4) >= 20 AND replace(o.internal_order_id::text, '-', '') LIKE $4 || '%')
        )
      LIMIT 1`,
-    [broker, providerOrderId || null, /^[0-9a-f-]{36}$/i.test(orderId) ? orderId : null, orderId || null],
+    [broker, providerOrderId || null, /^[0-9a-f-]{36}$/i.test(orderId) ? orderId : null, /^[0-9A-Za-z]{20,32}$/.test(orderId) ? orderId : null],
   );
   const order = result.rows[0];
   if (!order || order.account_user_id !== order.user_id) {
@@ -71,17 +72,16 @@ export async function applyBrokerExecutionUpdate({
   let effectiveAverage = averagePrice;
   let effectiveRemaining = remainingQuantity;
   let effectiveRejection = rejectionReason;
-  let source = 'WEBHOOK_PAYLOAD';
-  if (broker === 'DHAN') {
-    // Dhan postbacks carry no averageTradedPrice and are not signed. Treat them
-    // only as a trigger and apply Dhan's authoritative order state instead.
-    const authoritative = await fetchAuthoritativeDhanOrder(pool, order, providerOrderId || order.broker_order_id);
-    if (!authoritative.ok) {
-      return { ignored: true, deferred: true, reason: authoritative.reason, orderId: order.id };
-    }
-    ({ status: effectiveStatus, filledQuantity: effectiveFilled, averagePrice: effectiveAverage, remainingQuantity: effectiveRemaining, rejectionReason: effectiveRejection } = authoritative.execution);
-    source = 'DHAN_ORDER_API';
+  // Angel One postbacks are unsigned. They are treated only as a trigger: the
+  // order's state is always read back from SmartAPI with the owner's session.
+  const authoritative = authoritativeExecution
+    ? { ok: true, execution: authoritativeExecution }
+    : await fetchAuthoritativeOrder(pool, order, providerOrderId || order.broker_order_id);
+  if (!authoritative.ok) {
+    return { ignored: true, deferred: true, reason: authoritative.reason, orderId: order.id };
   }
+  ({ status: effectiveStatus, filledQuantity: effectiveFilled, averagePrice: effectiveAverage, remainingQuantity: effectiveRemaining, rejectionReason: effectiveRejection } = authoritative.execution);
+  const source = 'ANGEL_ONE_ORDER_API';
   const normalizedFilledQuantity = Math.max(0, Number(effectiveFilled) || 0);
   const normalizedAveragePrice = effectiveAverage === null || effectiveAverage === undefined
     ? null
@@ -98,9 +98,9 @@ export async function applyBrokerExecutionUpdate({
       filledQuantity: normalizedFilledQuantity,
       remainingQuantity: effectiveRemaining,
       averagePrice: normalizedAveragePrice,
-      exchangeOrderId: payload.exchangeOrderId || payload.exchange_order_id || payload.ExchOrderNo,
-      correlationId: payload.correlationId || payload.correlation_id || payload.CorrelationId,
-      charges: payload.charges || payload.totalCharges || payload.brokerage,
+      exchangeOrderId: authoritative.execution.exchangeOrderId || payload.exchorderid || payload.exchangeOrderId || null,
+      correlationId: authoritative.execution.correlationId || payload.ordertag || payload.correlationId || null,
+      charges: authoritative.execution.charges ?? null,
       rejectionReason: effectiveRejection,
     },
   });
@@ -123,27 +123,27 @@ export async function applyBrokerExecutionUpdate({
   return { execution, orderId: order.id, duplicate: event.rows.length === 0, source };
 }
 
-/** Reads the order's current state from Dhan GET /v2/orders/{orderId} using the owner's stored session. */
-export async function fetchAuthoritativeDhanOrder(pool, order, brokerOrderId) {
-  if (!brokerOrderId) return { ok: false, reason: 'dhan_order_id_unknown' };
+/** Reads the order's current state from SmartAPI (order book) using the owner's stored session. */
+export async function fetchAuthoritativeOrder(pool, order, brokerOrderId) {
+  if (!brokerOrderId) return { ok: false, reason: 'broker_order_id_unknown' };
+  let row = null;
   try {
-    const tokens = await pool.query(
-      `SELECT a.client_id, t.access_token_ciphertext, t.token_expires_at
+    const accounts = await pool.query(
+      `SELECT a.id, a.user_id, a.client_id, a.status, a.connection_mode,
+              t.access_token_ciphertext, t.refresh_token_ciphertext, t.feed_token_ciphertext,
+              t.api_key_ciphertext, t.token_expires_at
        FROM broker_accounts a
        JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
-       WHERE a.id = $1 AND a.user_id = $2`,
+       WHERE a.id = $1 AND a.user_id = $2 AND a.broker = 'ANGEL_ONE'`,
       [order.broker_account_id, order.user_id],
     );
-    const row = tokens.rows[0];
-    if (!row?.access_token_ciphertext) return { ok: false, reason: 'dhan_session_unavailable' };
-    const adapter = getBrokerAdapter('DHAN', 'LIVE', {
-      dhanClientId: row.client_id,
-      accessToken: decryptBrokerSecret(row.access_token_ciphertext),
-      tokenExpiresAt: row.token_expires_at,
-    });
+    row = accounts.rows[0];
+    if (!row?.access_token_ciphertext) return { ok: false, reason: 'broker_session_unavailable' };
+    const adapter = adapterFromAngelOneAccount(pool, row);
     const execution = await adapter.getOrderStatus({ brokerOrderId: String(brokerOrderId) });
     return { ok: true, execution };
   } catch (error) {
-    return { ok: false, reason: `dhan_order_fetch_failed: ${error.message}` };
+    if (row?.id && isAngelOneSessionError(error)) await markAngelOneSessionExpired(pool, row.id);
+    return { ok: false, reason: `broker_order_fetch_failed: ${error.message}` };
   }
 }

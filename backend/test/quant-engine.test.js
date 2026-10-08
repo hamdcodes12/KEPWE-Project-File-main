@@ -158,8 +158,8 @@ async function runQuantEngineTestSuite() {
     assert.strictEqual(gateCheck.isDeployable, false, 'Unconnected user must NOT be deployable live');
     assert.strictEqual(gateCheck.status, 'DEPLOYMENT_BLOCKED');
     // Gate is derived server-side from the broker-backed health check.
-    const brokerCheck = gateCheck.checks.find((c) => c.key === 'dhanSession' || c.key === 'LIVE_HEALTH_CHECK');
-    assert.ok(brokerCheck, 'Gate must report the Dhan session prerequisite');
+    const brokerCheck = gateCheck.checks.find((c) => c.key === 'brokerSession' || c.key === 'LIVE_HEALTH_CHECK');
+    assert.ok(brokerCheck, 'Gate must report the Angel One session prerequisite');
     assert.strictEqual(brokerCheck.passed, false, 'Broker check must be marked unpassed without credentials');
     const evidence = gateCheck.checks.find((c) => c.key === 'INDEPENDENT_VALIDATION_EVIDENCE');
     assert.strictEqual(evidence.passed, false, 'Client-supplied evidence is never accepted');

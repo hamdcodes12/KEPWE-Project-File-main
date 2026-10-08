@@ -59,7 +59,7 @@ import { BrokerProvider, useBroker } from '../../context/BrokerContext';
 import {
   fetchQuantDashboard,
   fetchQuantLiveMarket,
-  runDhanLiveHealthCheck,
+  runLiveHealthCheck,
   fetchQuantStrategies,
   fetchQuantAnalytics,
   fetchAlgoBacktests,
@@ -68,15 +68,16 @@ import {
   validateLiveDeploymentGate,
   fetchRiskStatus,
   fetchBrokerReadiness,
-  fetchBrokerStatus,
-  connectDhanAccount,
-  startDhanOAuth,
+  connectAngelOneAccount,
+  startAngelOneRedirectLogin,
+  refreshAngelOneSession,
   disconnectBroker,
-  fetchDhanFunds,
-  fetchDhanPositions,
-  fetchDhanHoldings,
-  fetchDhanOrderBook,
-  fetchDhanTradeBook,
+  fetchBrokerPortfolio,
+  fetchBrokerPositions,
+  fetchBrokerHoldings,
+  fetchBrokerOrderBook,
+  fetchBrokerTradeBook,
+  fetchBrokerHistoricalCandles,
   fetchNotifications,
   markNotificationAsRead,
   fetchAlgoSettings,
@@ -317,23 +318,20 @@ function MarketTape() {
     label: 'Market Feed: Checking…',
     error: '',
   });
-  const { dhanStatus, isBrokerConnected, brokerState } = useBroker();
+  const { brokerStatus, isBrokerConnected, brokerState } = useBroker();
 
   const loadTape = useCallback(async (signal) => {
     // Broker session and market-data status are separate: a market-data
-    // problem never implies the Dhan session is disconnected.
+    // problem never implies the Angel One session is disconnected.
     const labels = {
-      LIVE: 'Market Feed: Live (Dhan)',
-      STALE: 'Market Feed: Dhan (last trade not recent)',
-      DATA_API_NOT_ACTIVE: 'Market Data Unavailable · Dhan Data API inactive',
-      DATA_API_ACCESS_DENIED: 'Market Feed: Dhan Data API access denied',
-      AUTH_FAILED: 'Market Feed: Dhan auth failed',
-      INVALID_CLIENT_ID: 'Market Feed: Dhan client ID rejected',
-      INVALID_SECURITY_ID: 'Market Feed: invalid security ID',
-      RATE_LIMITED: 'Market Feed: Dhan rate limit, retrying',
+      LIVE: 'Market Feed: Live (Angel One)',
+      STALE: 'Market Feed: Angel One (last update not recent)',
+      AUTH_FAILED: 'Market Feed: Angel One session rejected',
+      RATE_LIMITED: 'Market Feed: Angel One rate limit, retrying',
       NETWORK_ERROR: 'Market Feed: network error',
       INSTRUMENT_MASTER_UNAVAILABLE: 'Market Feed: instrument master unavailable',
-      NOT_CHECKED: 'Market Feed: waiting for Dhan session',
+      NO_DATA: 'Market Feed: no price returned',
+      NOT_CHECKED: 'Market Feed: waiting for Angel One session',
     };
     try {
       const res = await fetchQuantLiveMarket({ signal });
@@ -342,7 +340,7 @@ function MarketTape() {
       const status = md?.status || (res?.data?.connected ? 'LIVE' : null);
       const hasRealPrice = (status === 'LIVE' || status === 'STALE') && Number(md?.price ?? res?.data?.price) > 0;
       const indices = hasRealPrice
-        ? [{ symbol: 'NIFTY', name: 'NIFTY 50', price: Number(md?.price ?? res.data.price), change: md?.netChange ?? null, changePercent: null }]
+        ? [{ symbol: 'NIFTY', name: 'NIFTY 50', price: Number(md?.price ?? res.data.price), change: md?.netChange ?? null, changePercent: md?.percentChange ?? null }]
         : [];
       setMarketFeed({
         indices,
@@ -383,17 +381,17 @@ function MarketTape() {
     { name: 'INDIA VIX', symbol: 'INDIAVIX' },
   ];
 
-  let dhanStatusText = 'Dhan: Checking...';
-  let dhanDotClass = 'muted';
+  let brokerStatusText = 'Angel One: Checking...';
+  let brokerDotClass = 'muted';
   if (brokerState.status === 'CONNECTED' && isBrokerConnected) {
-    dhanStatusText = `Dhan: Connected (${dhanStatus?.clientId || 'Live'})`;
-    dhanDotClass = '';
-  } else if (brokerState.status === 'DHAN_SESSION_EXPIRED') {
-    dhanStatusText = 'Dhan: Session Expired';
-    dhanDotClass = 'warn';
+    brokerStatusText = `Angel One: Connected (${brokerStatus?.clientId || 'Live'})`;
+    brokerDotClass = '';
+  } else if (brokerState.status === 'SESSION_EXPIRED') {
+    brokerStatusText = 'Angel One: Session Expired';
+    brokerDotClass = 'warn';
   } else if (brokerState.status === 'DISCONNECTED') {
-    dhanStatusText = 'Dhan: Disconnected';
-    dhanDotClass = 'muted';
+    brokerStatusText = 'Angel One: Disconnected';
+    brokerDotClass = 'muted';
   }
 
   return (
@@ -435,8 +433,8 @@ function MarketTape() {
           {marketFeed.loading ? 'Loading market feed…' : marketFeed.label}
         </span>
         <span className="quant-tape-status" style={{ borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '12px' }}>
-          <span className={`quant-status-dot ${dhanDotClass}`} />
-          {dhanStatusText}
+          <span className={`quant-status-dot ${brokerDotClass}`} />
+          {brokerStatusText}
         </span>
       </div>
     </div>
@@ -1082,13 +1080,10 @@ function BacktestRunnerView() {
       if (!marketRequest.start_time || !marketRequest.end_time) {
         throw new Error('Historical data unavailable: enter a start and end time.');
       }
-      const marketResult = await apiFetch('/broker/DHAN/market-data/historical-chart', {
-        method: 'POST',
-        body: marketRequest,
-      });
-      if (!marketResult.ok) throw new Error(marketResult.data?.error || 'Historical market data unavailable from broker.');
-      const providerData = marketResult.data?.data?.data || marketResult.data?.data || {};
-      const candles = providerData.candles || providerData.data || [];
+      // Real historical candles from Angel One SmartAPI (getCandleData) via the connected account.
+      const marketResult = await fetchBrokerHistoricalCandles(marketRequest);
+      if (!marketResult.ok) throw new Error(marketResult.data?.error || 'Historical market data unavailable from Angel One. Connect your Angel One account first.');
+      const candles = marketResult.data?.data?.candles || [];
       if (!Array.isArray(candles) || candles.length < 30) throw new Error('At least 30 historical candles are required for backtest.');
       const data = await runQuantBacktest({
         capital: Number(capital),
@@ -1301,20 +1296,20 @@ function BacktestRunnerView() {
 // ─────────────────────────────────────────────────────────────────────────────
 function LiveDeploymentGateView({ onNavigate }) {
   // ✅ USE SHARED BROKER STATE FROM CONTEXT (NOT LOCAL/STALE)
-  const { brokerState, isBrokerConnected, dhanStatus } = useBroker();
+  const { brokerState, isBrokerConnected } = useBroker();
 
   const [gateData, setGateData] = useState(null);
   const [gateLoading, setGateLoading] = useState(false);
 
   // ✅ DETERMINE GATE STATUS BASED ON REAL BROKER STATE
   const isBrokerLoading = brokerState.status === 'LOADING';
-  const isDhanConnected = isBrokerConnected && brokerState.status === 'CONNECTED';
-  const isDhanExpired = brokerState.status === 'DHAN_SESSION_EXPIRED';
-  const isDhanDisconnected = brokerState.status === 'DISCONNECTED';
+  const isSessionConnected = isBrokerConnected && brokerState.status === 'CONNECTED';
+  const isSessionExpired = brokerState.status === 'SESSION_EXPIRED';
+  const isSessionDisconnected = brokerState.status === 'DISCONNECTED';
 
   const checkGate = useCallback(async () => {
     // ✅ ONLY CHECK GATE IF BROKER IS CONNECTED
-    if (!isDhanConnected) {
+    if (!isSessionConnected) {
       setGateData(null);
       return;
     }
@@ -1326,14 +1321,15 @@ function LiveDeploymentGateView({ onNavigate }) {
         maxTradesPerDay: 3,
         maxConsecutiveLosses: 2,
       });
-      setGateData(res);
+      // apiFetch returns { ok, status, data }: the gate result is in data.
+      setGateData(res?.ok ? res.data : { isDeployable: false, checks: [{ label: 'Live prerequisites check', passed: false, reason: res?.data?.error || 'The deployment gate could not be evaluated.' }] });
     } catch (err) {
       setGateData(null);
       console.error('[LiveGate] Validation error:', err.message);
     } finally {
       setGateLoading(false);
     }
-  }, [isDhanConnected]);
+  }, [isSessionConnected]);
 
   // ✅ CHECK GATE WHEN BROKER STATE CHANGES (REAL-TIME POLLING)
   useEffect(() => {
@@ -1341,8 +1337,8 @@ function LiveDeploymentGateView({ onNavigate }) {
   }, [checkGate]);
 
   // ✅ DETERMINE OVERALL GATE STATE
-  const isGateReady = isDhanConnected && gateData?.isDeployable === true;
-  const brokerError = isDhanExpired ? 'Dhan session expired' : isDhanDisconnected ? 'Broker not connected' : null;
+  const isGateReady = isSessionConnected && gateData?.isDeployable === true;
+  const brokerError = isSessionExpired ? 'Angel One session expired' : isSessionDisconnected ? 'Broker not connected' : null;
 
   return (
     <div className="quant-page-view">
@@ -1371,24 +1367,24 @@ function LiveDeploymentGateView({ onNavigate }) {
             gap: '8px',
             padding: '12px',
             borderRadius: '8px',
-            background: isDhanConnected ? '#e6f8f2' : isDhanExpired ? '#fef3c7' : '#fee2e2',
-            color: isDhanConnected ? '#159975' : isDhanExpired ? '#b45309' : '#c53030',
+            background: isSessionConnected ? '#e6f8f2' : isSessionExpired ? '#fef3c7' : '#fee2e2',
+            color: isSessionConnected ? '#159975' : isSessionExpired ? '#b45309' : '#c53030',
           }}>
             <span style={{
               display: 'inline-block',
               width: '8px',
               height: '8px',
               borderRadius: '50%',
-              background: isDhanConnected ? '#159975' : isDhanExpired ? '#b45309' : '#c53030',
+              background: isSessionConnected ? '#159975' : isSessionExpired ? '#b45309' : '#c53030',
             }} />
             {isBrokerLoading ? (
               <>Verifying broker connection…</>
-            ) : isDhanConnected ? (
-              <>Dhan Connected · Live Execution Ready</>
-            ) : isDhanExpired ? (
-              <>Dhan Session Expired · Reconnect Required</>
+            ) : isSessionConnected ? (
+              <>Angel One Connected · Session Verified</>
+            ) : isSessionExpired ? (
+              <>Angel One Session Expired · Reconnect Required</>
             ) : (
-              <>Dhan Disconnected · Connection Required</>
+              <>Angel One Disconnected · Connection Required</>
             )}
           </div>
         </div>
@@ -1399,15 +1395,15 @@ function LiveDeploymentGateView({ onNavigate }) {
         <div className="quant-panel" style={{ padding: '24px', textAlign: 'center', marginBottom: '18px' }}>
           <AlertTriangle size={32} style={{ color: '#b45309', margin: '0 auto 12px', display: 'block' }} />
           <h3 style={{ fontSize: '15px', color: '#1e293b', marginBottom: '8px' }}>
-            {isDhanExpired ? 'Session Expired' : 'Broker Disconnected'}
+            {isSessionExpired ? 'Session Expired' : 'Broker Disconnected'}
           </h3>
           <p style={{ color: '#64748b', fontSize: '11px', maxWidth: '480px', margin: '0 auto 18px', lineHeight: 1.5 }}>
-            {isDhanExpired
-              ? 'Your Dhan session has expired. Reconnect your broker to resume live trading.'
-              : 'Live trading requires a connected broker. Set up your Dhan account to enable live execution.'}
+            {isSessionExpired
+              ? 'Your Angel One session has expired. Reconnect your broker to resume live trading.'
+              : 'Live trading requires a connected broker. Connect your Angel One account to enable live execution.'}
           </p>
           <button className="quant-button quant-button-primary" onClick={() => onNavigate('broker')}>
-            <Link2 size={15} /> {isDhanExpired ? 'Reconnect' : 'Connect'} Broker
+            <Link2 size={15} /> {isSessionExpired ? 'Reconnect' : 'Connect'} Broker
           </button>
         </div>
       )}
@@ -1415,12 +1411,12 @@ function LiveDeploymentGateView({ onNavigate }) {
       {/* ✅ BROKER LOADING - SHOW LOADING STATE */}
       {isBrokerLoading && (
         <div className="quant-panel" style={{ padding: '28px', textAlign: 'center' }}>
-          <EmptyData title="Verifying Broker Connection..." description="Checking Dhan session and market feed availability..." action={false} />
+          <EmptyData title="Verifying Broker Connection..." description="Checking Angel One session and market feed availability..." action={false} />
         </div>
       )}
 
       {/* ✅ BROKER CONNECTED - SHOW GATE CHECKS */}
-      {!isBrokerLoading && isDhanConnected && (
+      {!isBrokerLoading && isSessionConnected && (
         <>
           {/* Prominent Status Banner */}
           <div className="quant-gate-hero" style={{ marginBottom: '18px' }}>
@@ -1436,7 +1432,7 @@ function LiveDeploymentGateView({ onNavigate }) {
               </h2>
               <p style={{ color: isGateReady ? '#16a34a' : '#742a2a', fontSize: '11px', margin: 0 }}>
                 {isGateReady
-                  ? 'All prerequisites passed. Strategy can be deployed with live Dhan broker.'
+                  ? 'All prerequisites passed. Strategy can be deployed with your live Angel One account.'
                   : gateLoading
                     ? 'Validating strategy parameters and broker readiness…'
                     : 'Review prerequisite checks below.'}
@@ -1480,7 +1476,7 @@ function LiveDeploymentGateView({ onNavigate }) {
               <CheckCircle2 size={32} style={{ color: '#159975', margin: '0 auto 12px', display: 'block' }} />
               <h3 style={{ fontSize: '15px', color: '#15803d', marginBottom: '8px' }}>Live Deployment Unlocked</h3>
               <p style={{ color: '#166534', fontSize: '11px', maxWidth: '480px', margin: '0 auto 18px', lineHeight: 1.5 }}>
-                Your strategy has passed all security prerequisites. You may now deploy with live Dhan broker for real funds execution.
+                Your strategy has passed all security prerequisites. You may now deploy with your live Angel One account for real funds execution.
               </p>
               <button className="quant-button quant-button-primary" onClick={() => onNavigate('strategies')}>
                 <Zap size={15} /> Deploy Live Strategy
@@ -1525,7 +1521,7 @@ function RiskManagementView({ onNavigate }) {
   const [killOk, setKillOk] = useState(true);
   const handleKill = async () => {
     if (!window.confirm('Halt live trading now? The runner stops and cannot be restarted today.')) return;
-    const flattenPositions = window.confirm('Also ask Dhan to EXIT ALL open positions? (This sends real exit orders.)\n\nOK = halt and exit all positions\nCancel = halt only');
+    const flattenPositions = window.confirm('Also EXIT ALL open Angel One positions? (This sends a real MARKET exit order for every open position.)\n\nOK = halt and exit all positions\nCancel = halt only');
     setKillLoading(true);
     try {
       const res = await apiFetch('/quant/emergency-stop', { method: 'POST', body: { flattenPositions } });
@@ -1539,7 +1535,7 @@ function RiskManagementView({ onNavigate }) {
         setKillMessage(!flatten.requested
           ? 'Live trading halted. Open positions were not changed.'
           : flatten.accepted
-            ? `Live trading halted. Dhan accepted exit-all (${flatten.positionsPendingConfirmation ?? 0} position(s) pending confirmation).`
+            ? `Live trading halted. Angel One accepted ${flatten.exitOrdersPlaced ?? 0} exit order(s) (${flatten.positionsPendingConfirmation ?? 0} position(s) pending confirmation).`
             : `Live trading halted, but exit-all was NOT completed: ${flatten.reason}`);
       }
       loadRisk();
@@ -1903,15 +1899,15 @@ function DashboardOverview({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [oauthInProgress, setOauthInProgress] = useState(() => {
     try {
-      return sessionStorage.getItem('kepwe:dhan-oauth-in-progress') === 'true';
+      return sessionStorage.getItem('kepwe:angel-one-login-in-progress') === 'true';
     } catch (_) {
       return false;
     }
   });
-  const { brokerState, dhanStatus, isBrokerConnected } = useBroker();
+  const { brokerState, isBrokerConnected } = useBroker();
   const { isFeatureAllowed, isActive, isTrial, isExpired, openUpgradeModal } = useSubscription();
   const brokerLoading = brokerState.status === 'LOADING';
-  const sessionExpired = brokerState.status === 'DHAN_SESSION_EXPIRED';
+  const sessionExpired = brokerState.status === 'SESSION_EXPIRED';
 
   useEffect(() => {
     let cancelled = false;
@@ -1938,14 +1934,14 @@ function DashboardOverview({ onNavigate }) {
     }
     let cancelled = false;
     setHealthLoading(true);
-    runDhanLiveHealthCheck()
+    runLiveHealthCheck()
       .then((health) => {
         if (!cancelled && health?.data) setLiveHealth(health.data);
       })
       .catch(() => {})
       .finally(() => {
         try {
-          sessionStorage.removeItem('kepwe:dhan-oauth-in-progress');
+          sessionStorage.removeItem('kepwe:angel-one-login-in-progress');
         } catch (_) {}
         if (!cancelled) setOauthInProgress(false);
         if (!cancelled) setHealthLoading(false);
@@ -1953,18 +1949,19 @@ function DashboardOverview({ onNavigate }) {
     return () => { cancelled = true; };
   }, [isBrokerConnected]);
 
-  const dhanConnected = isBrokerConnected;
-  const pipelineReady = dhanConnected && liveHealth?.ready === true;
+  const brokerConnected = isBrokerConnected;
+  const pipelineReady = brokerConnected && liveHealth?.ready === true;
   const healthLabels = {
-    dhanAuthentication: 'Dhan Session',
-    dhanSession: 'Session',
+    brokerAuthentication: 'Angel One Connection',
+    brokerSession: 'Session',
     clientIdentity: 'Account Identity',
     fundsMargin: 'Margin',
     liveNiftyLtp: 'Live LTP',
     liveNiftyLtt: 'Live LTT',
     liveNiftyMarketData: 'Live NIFTY Feed',
-    dhanDataPlan: 'Dhan Data API Plan',
     instrumentMaster: 'Instrument Master',
+    freezeQuantity: 'Quantity Freeze',
+    holdingsSynchronization: 'Holdings Sync',
     brokerResponseParsing: 'Order/Trade Book',
     tradeFillReconciliation: 'Trade Reconciliation',
     omsSchema: 'OMS Schema',
@@ -1977,8 +1974,8 @@ function DashboardOverview({ onNavigate }) {
     riskConfiguration: 'Risk Configuration',
     optionChainContractResolution: 'Option Chain',
     riskEngine: 'Risk Engine',
-    orderApi: 'Dhan Order API',
-    orderRequestConstruction: 'Order API',
+    orderApi: 'Order API Static IP',
+    orderRequestConstruction: 'Order Payload',
     orderStatusReconciliation: 'Order Reconciliation',
     positionSynchronization: 'Position Sync',
     realizedPnl: 'P&L Sync',
@@ -1989,7 +1986,8 @@ function DashboardOverview({ onNavigate }) {
   const healthStatusLabel = (result) => {
     if (result?.passed) return 'Verified';
     if (result?.status === 'BLOCKED') return 'Blocked';
-    if (result?.status === 'DATA_API_NOT_ACTIVE') return 'Dhan Data API not active';
+    if (result?.status === 'STALE') return 'Market closed / delayed';
+    if (result?.status === 'NOT_CONFIGURED') return 'Not configured';
     if (result?.status === 'NOT_VERIFIED') return 'Needs market data';
     if (result?.status === 'STATIC_IP_NOT_READY') return 'Static IP not verified';
     if (result?.status === 'SESSION_EXPIRED') return 'Session expired';
@@ -2011,7 +2009,7 @@ function DashboardOverview({ onNavigate }) {
         </div>
         <div className="quant-welcome-actions">
           <span className="quant-environment">
-            <span className={`quant-status-dot ${pipelineReady ? 'active' : 'muted'}`} /> {pipelineReady ? 'Live Pipeline Ready' : dhanConnected ? 'Dhan Connected · Verification Required' : 'No live broker connected'}
+            <span className={`quant-status-dot ${pipelineReady ? 'active' : 'muted'}`} /> {pipelineReady ? 'Live Pipeline Ready' : brokerConnected ? 'Angel One Connected · Verification Required' : 'No live broker connected'}
           </span>
           <button className="quant-button quant-button-primary" onClick={() => onNavigate('builder')}>
             <Plus size={15} /> New Strategy
@@ -2025,9 +2023,9 @@ function DashboardOverview({ onNavigate }) {
           <Link2 size={17} />
         </div>
         <div>
-          <strong>{pipelineReady ? 'Dhan live trading pipeline verified' : dhanConnected ? 'Dhan connected, live pipeline not ready' : 'No live Dhan broker connected'}</strong>
+          <strong>{pipelineReady ? 'Angel One live trading pipeline verified' : brokerConnected ? 'Angel One connected, live pipeline not ready' : 'No Angel One account connected'}</strong>
           <p>
-            {pipelineReady ? 'Session, NIFTY data, candles, strategy, risk, order validation, and reconciliation checks are passing.' : dhanConnected ? 'Your broker is connected. Live pipeline checks are being verified before execution can be enabled.' : 'Connect your personal Dhan trading account to enable live execution. Backtest analysis is available without broker connection.'}
+            {pipelineReady ? 'Session, NIFTY data, candles, strategy, risk, order validation, and reconciliation checks are passing.' : brokerConnected ? 'Your broker is connected. Live pipeline checks are being verified before execution can be enabled.' : 'Connect your personal Angel One trading account to enable live market data and execution.'}
           </p>
         </div>
         <button className="quant-banner-link" onClick={() => onNavigate('broker')}>
@@ -2040,7 +2038,7 @@ function DashboardOverview({ onNavigate }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <RefreshCw size={18} className="quant-spin" />
             <div>
-              <strong>{oauthInProgress ? 'Connecting Dhan...' : 'Checking broker connection...'}</strong>
+              <strong>{oauthInProgress ? 'Connecting Angel One...' : 'Checking broker connection...'}</strong>
               <p style={{ margin: '4px 0 0', color: '#64748b' }}>
                 {oauthInProgress ? 'Securely verifying your broker connection.' : 'Verifying your live broker state.'}
               </p>
@@ -2049,20 +2047,20 @@ function DashboardOverview({ onNavigate }) {
         </section>
       )}
 
-      {!brokerLoading && !oauthInProgress && !dhanConnected && !sessionExpired && (
+      {!brokerLoading && !oauthInProgress && !brokerConnected && !sessionExpired && (
         <section className="quant-panel" style={{ padding: '22px', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
             <div className="quant-banner-icon"><Link2 size={18} /></div>
             <div style={{ flex: 1 }}>
-              <strong>Dhan Broker Not Connected</strong>
+              <strong>Angel One Not Connected</strong>
               <p style={{ margin: '6px 0 14px', color: '#64748b' }}>
-                Connect your Dhan trading account to enable live trading and live market data.
+                Connect your Angel One trading account to enable live trading and live market data.
               </p>
               <button className="quant-button quant-button-primary quant-button-small" onClick={() => onNavigate('broker')}>
-                <Link2 size={14} /> Connect Dhan
+                <Link2 size={14} /> Connect Angel One
               </button>
               <p style={{ margin: '12px 0 0', color: '#64748b', fontSize: '0.82rem' }}>
-                Backtesting and strategy research remain available without a broker connection.
+                Strategy research stays available; historical candles for backtests are fetched from your connected Angel One account.
               </p>
             </div>
           </div>
@@ -2074,26 +2072,26 @@ function DashboardOverview({ onNavigate }) {
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
             <div className="quant-banner-icon" style={{ background: '#fef3c7', color: '#b45309' }}><AlertTriangle size={18} /></div>
             <div style={{ flex: 1 }}>
-              <strong>Dhan Connection Expired</strong>
+              <strong>Angel One Session Expired</strong>
               <p style={{ margin: '6px 0 14px', color: '#64748b' }}>
-                Reconnect your Dhan account to resume live trading.
+                Angel One ends API sessions daily. Reconnect your Angel One account to resume live trading.
               </p>
               <button className="quant-button quant-button-primary quant-button-small" onClick={() => onNavigate('broker')}>
-                <Link2 size={14} /> Reconnect Dhan
+                <Link2 size={14} /> Reconnect Angel One
               </button>
             </div>
           </div>
         </section>
       )}
 
-      {!brokerLoading && dhanConnected && healthLoading && !liveHealth && (
+      {!brokerLoading && brokerConnected && healthLoading && !liveHealth && (
         <section className="quant-panel" style={{ padding: '22px', marginBottom: '20px' }} aria-live="polite">
           <strong>Verifying live pipeline...</strong>
-          <p style={{ margin: '6px 0 0', color: '#64748b' }}>Checking your Dhan session and live trading prerequisites.</p>
+          <p style={{ margin: '6px 0 0', color: '#64748b' }}>Checking your Angel One session and live trading prerequisites.</p>
         </section>
       )}
 
-      {!brokerLoading && dhanConnected && liveHealth && (
+      {!brokerLoading && brokerConnected && liveHealth && (
         <section className="quant-panel" style={{ padding: '18px', marginBottom: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
             <strong>Live pipeline health</strong>
@@ -2103,10 +2101,8 @@ function DashboardOverview({ onNavigate }) {
           </div>
           {liveHealth.marketData && liveHealth.marketData.status !== 'LIVE' && (
             <p style={{ margin: '0 0 10px', color: '#64748b', fontSize: '12px' }}>
-              <strong>Market data unavailable.</strong>{' '}
-              {liveHealth.marketData.status === 'DATA_API_NOT_ACTIVE'
-                ? 'Reason: Dhan Data API entitlement is inactive for this Dhan account.'
-                : `Reason: ${liveHealth.marketData.message || liveHealth.marketData.status}`}
+              <strong>{liveHealth.marketData.status === 'STALE' ? 'Market data is not live.' : 'Market data unavailable.'}</strong>{' '}
+              {`Reason: ${liveHealth.marketData.message || liveHealth.marketData.status}`}
             </p>
           )}
           <details>
@@ -2324,128 +2320,141 @@ function DashboardOverview({ onNavigate }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function BrokerConnectionView() {
   const { authState } = useApp();
-  const { brokerState: centralBrokerState, dhanStatus, isBrokerConnected, refreshBrokerState } = useBroker();
+  const { brokerState, brokerStatus, isBrokerConnected, refreshBrokerState } = useBroker();
   const [notice, setNotice] = useState({ type: '', text: '' });
-  const [angelNotice, setAngelNotice] = useState({ type: '', text: '' });
   const [readiness, setReadiness] = useState(null);
   const [connecting, setConnecting] = useState(false);
-  const [angelConnecting, setAngelConnecting] = useState(false);
-  const [dhanClientId, setDhanClientId] = useState('');
-  const [accessToken, setAccessToken] = useState('');
-  const [angelClientCode, setAngelClientCode] = useState('');
-  const [angelPassword, setAngelPassword] = useState('');
-  const [angelOneStatus, setAngelOneStatus] = useState(null);
-
-  const loadReadiness = async () => {
-    try {
-      const readinessResult = await fetchBrokerReadiness();
-      if (readinessResult?.ok) {
-        setReadiness(readinessResult.data);
-      }
-    } catch (_) {}
-  };
-
-  const loadAngelOneStatus = async () => {
-    try {
-      const response = await fetch('/api/algo/broker/ANGEL_ONE/status', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('kepwe_access_token')}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAngelOneStatus(data);
-      }
-    } catch (_) {}
-  };
+  const [clientCode, setClientCode] = useState('');
+  const [mpin, setMpin] = useState('');
+  const [totp, setTotp] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [useOwnApiKey, setUseOwnApiKey] = useState(false);
 
   useEffect(() => {
-    loadReadiness();
-    loadAngelOneStatus();
+    let cancelled = false;
+    fetchBrokerReadiness()
+      .then((result) => {
+        if (!cancelled && result?.ok) setReadiness(result.data);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
-  const dhanReadiness = readiness?.brokers?.find((broker) => broker.broker === 'DHAN');
-  const angelReadiness = readiness?.brokers?.find((broker) => broker.broker === 'ANGEL_ONE');
+  const angelReadiness = readiness?.brokers?.find((broker) => broker.broker === 'ANGEL_ONE') || null;
+  const serverKeyConfigured = angelReadiness?.serverApiKeyConfigured === true;
+  const apiKeyRequired = readiness !== null && !serverKeyConfigured;
+  const showApiKeyField = apiKeyRequired || useOwnApiKey;
+  const staticIp = angelReadiness?.staticIp?.configuredIp || null;
   const isConnected = isBrokerConnected;
-  const isAngelConnected = angelOneStatus?.connected === true && angelOneStatus?.status === 'CONNECTED';
-  const isAngelSessionExpired = angelOneStatus?.status === 'ANGEL_ONE_SESSION_EXPIRED' || angelOneStatus?.status === 'SESSION_EXPIRED';
-  const isSessionExpired = centralBrokerState.status === 'DHAN_SESSION_EXPIRED';
-  const loading = centralBrokerState.status === 'LOADING';
+  const isSessionExpired = brokerState.status === 'SESSION_EXPIRED';
+  const loading = brokerState.status === 'LOADING';
 
   useEffect(() => {
     if (!isConnected) return undefined;
     let cancelled = false;
-    runDhanLiveHealthCheck().then((result) => {
+    runLiveHealthCheck().then((result) => {
       if (cancelled || (result.ok && result.data?.ready === true)) return;
-      const blocker = result.data?.blockers?.[0]?.blocker || 'Dhan live integration health check did not pass.';
-      setNotice({ type: 'error', text: blocker });
+      const blocker = result.data?.blockers?.[0]?.blocker || result.data?.error || 'Angel One live integration health check did not pass.';
+      setNotice((current) => (current.type === 'success' ? current : { type: 'warning', text: `Live pipeline not ready: ${blocker}` }));
     }).catch((error) => {
-      if (!cancelled) setNotice({ type: 'error', text: error.message || 'Dhan live integration health check failed.' });
+      if (!cancelled) setNotice({ type: 'error', text: error.message || 'Angel One live integration health check failed.' });
     });
     return () => { cancelled = true; };
   }, [isConnected]);
 
-  const handleDirectConnect = async (e) => {
+  const handleConnect = async (e) => {
     e.preventDefault();
-    if (!dhanClientId.trim() || !accessToken.trim()) {
-      setNotice({ type: 'error', text: 'Please provide both Dhan Client ID and Access Token.' });
+    if (!authState.isLoggedIn) {
+      setNotice({ type: 'error', text: 'You must be signed in to KEPWE to connect your Angel One account. Please sign in first.' });
       return;
     }
-    if (!authState.isLoggedIn) {
-      setNotice({ type: 'error', text: 'You must be signed in to KEPWE to connect your Dhan account. Please sign in first.' });
+    if (!clientCode.trim() || !mpin.trim() || !totp.trim()) {
+      setNotice({ type: 'error', text: 'Please provide your Angel One Client Code, MPIN and the current TOTP.' });
+      return;
+    }
+    if (!/^\d{6}$/.test(totp.trim())) {
+      setNotice({ type: 'error', text: 'The TOTP is the 6-digit code shown in your authenticator app for Angel One.' });
+      return;
+    }
+    if (showApiKeyField && apiKeyRequired && !apiKey.trim()) {
+      setNotice({ type: 'error', text: 'Enter the API key of your SmartAPI app (smartapi.angelone.in).' });
       return;
     }
     setConnecting(true);
     setNotice({ type: '', text: '' });
     try {
-      const result = await connectDhanAccount({
-        dhanClientId: dhanClientId.trim(),
-        accessToken: accessToken.trim(),
+      const result = await connectAngelOneAccount({
+        clientCode: clientCode.trim().toUpperCase(),
+        mpin: mpin.trim(),
+        totp: totp.trim(),
+        apiKey: showApiKeyField ? apiKey.trim() : undefined,
       });
-      // Only a backend-verified CONNECTED result (Dhan /v2/profile succeeded and
-      // matched the Client ID) counts as connected. HTTP 206 (partial) is not.
+      // The MPIN and TOTP are single-use for this request; never keep them in memory.
+      setMpin('');
+      setTotp('');
+      // Only a backend-verified CONNECTED result (SmartAPI login + getProfile
+      // identity match + live verification) counts as connected.
       if (result.ok && result.data?.status === 'CONNECTED') {
-        setAccessToken('');
+        setApiKey('');
         const marketData = result.data?.marketData;
         setNotice(marketData?.available === false
-          ? { type: 'warning', text: `Dhan account connected (Client ID ${result.data.dhanClientId}). Dhan rejected live market data for this account${marketData.dataPlan ? ` (Dhan Data API plan: ${marketData.dataPlan})` : ''}, so the market feed stays blocked.` }
-          : { type: 'success', text: `Dhan account connected and verified (Client ID ${result.data.dhanClientId}).` });
-        await refreshBrokerState({ force: true });
+          ? { type: 'warning', text: `Angel One account ${result.data.clientCode} connected. The live market-data check did not pass: ${marketData.reason || 'no live quote was returned'}.` }
+          : { type: 'success', text: `Angel One account ${result.data.clientCode}${result.data.clientName ? ` (${result.data.clientName})` : ''} connected and verified.` });
       } else {
-        const failedChecks = Object.values(result.data?.verification?.checks || {})
-          .filter((check) => check && check.status !== 'PASS')
-          .map((check) => `${check.name}: ${check.message}`);
-        const dhanCode = result.data?.dhanErrorCode ? ` [Dhan ${result.data.dhanErrorCode}]` : '';
-        const errorMsg = (result.data?.error || result.data?.message || (result.status === 401 ? 'Your session has expired. Please log in again.' : 'Failed to validate and connect Dhan account.'))
-          + dhanCode
+        const failedChecks = Object.entries(result.data?.verification?.checks || {})
+          .filter(([, check]) => check && check.status !== 'PASS')
+          .map(([name, check]) => `${name}: ${check.message}`);
+        const brokerCode = result.data?.brokerErrorCode ? ` [Angel One ${result.data.brokerErrorCode}]` : '';
+        const errorMsg = (result.data?.error || result.data?.message || 'Failed to validate and connect the Angel One account.')
+          + brokerCode
           + (failedChecks.length ? ` — ${failedChecks.join('; ')}` : '');
         setNotice({ type: 'error', text: errorMsg });
-        await refreshBrokerState({ force: true });
       }
+      await refreshBrokerState({ force: true });
     } catch (err) {
-      setNotice({ type: 'error', text: err.message || 'Network error while connecting Dhan account.' });
+      setNotice({ type: 'error', text: err.message || 'Network error while connecting the Angel One account.' });
     } finally {
       setConnecting(false);
     }
   };
 
-  const handleDhanConsentConnect = async () => {
+  const handleRedirectLogin = async () => {
     if (!authState.isLoggedIn) {
-      setNotice({ type: 'error', text: 'You must be signed in to KEPWE to connect your Dhan account. Please sign in first.' });
+      setNotice({ type: 'error', text: 'You must be signed in to KEPWE to connect your Angel One account. Please sign in first.' });
       return;
     }
     setConnecting(true);
     setNotice({ type: '', text: '' });
     try {
-      const result = await startDhanOAuth();
+      const result = await startAngelOneRedirectLogin();
       if (result.ok && result.data?.authorizationUrl) {
         try {
-          sessionStorage.setItem('kepwe:dhan-oauth-in-progress', 'true');
+          sessionStorage.setItem('kepwe:angel-one-login-in-progress', 'true');
         } catch (_) {}
         window.location.assign(result.data.authorizationUrl);
       } else {
-        setNotice({ type: 'error', text: result.data?.error || 'Dhan consent session could not be started.' });
+        setNotice({ type: 'error', text: result.data?.error || 'The Angel One login page could not be opened.' });
       }
     } catch (err) {
-      setNotice({ type: 'error', text: err.message || 'Failed to start Dhan consent session.' });
+      setNotice({ type: 'error', text: err.message || 'Failed to start the Angel One login.' });
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleRefreshSession = async () => {
+    setConnecting(true);
+    setNotice({ type: '', text: '' });
+    try {
+      const result = await refreshAngelOneSession();
+      if (result.ok) {
+        setNotice({ type: 'success', text: `Angel One session renewed${result.data?.tokenExpiresAt ? ` (valid until ${new Date(result.data.tokenExpiresAt).toLocaleString('en-IN')})` : ''}.` });
+      } else {
+        setNotice({ type: 'error', text: result.data?.error || 'The Angel One session could not be renewed.' });
+      }
+      await refreshBrokerState({ force: true });
+    } catch (err) {
+      setNotice({ type: 'error', text: err.message || 'Failed to renew the Angel One session.' });
     } finally {
       setConnecting(false);
     }
@@ -2455,84 +2464,17 @@ function BrokerConnectionView() {
     setConnecting(true);
     setNotice({ type: '', text: '' });
     try {
-      const result = await disconnectBroker('DHAN');
+      const result = await disconnectBroker();
       if (result.ok) {
-        setNotice({ type: 'success', text: 'Dhan disconnected. Live execution is stopped.' });
+        setNotice({ type: 'success', text: 'Angel One disconnected and the stored session was deleted. Live execution is stopped.' });
         await refreshBrokerState({ force: true });
       } else {
-        setNotice({ type: 'error', text: result.data?.error || 'Dhan could not be disconnected.' });
+        setNotice({ type: 'error', text: result.data?.error || 'Angel One could not be disconnected.' });
       }
     } catch (err) {
-      setNotice({ type: 'error', text: err.message || 'Failed to disconnect Dhan account.' });
+      setNotice({ type: 'error', text: err.message || 'Failed to disconnect the Angel One account.' });
     } finally {
       setConnecting(false);
-    }
-  };
-
-  const handleAngelOneConnect = async (e) => {
-    e.preventDefault();
-    if (!angelClientCode.trim() || !angelPassword.trim()) {
-      setAngelNotice({ type: 'error', text: 'Please provide both Client Code and Password/MPIN.' });
-      return;
-    }
-    if (!authState.isLoggedIn) {
-      setAngelNotice({ type: 'error', text: 'You must be signed in to KEPWE to connect your Angel One account. Please sign in first.' });
-      return;
-    }
-    setAngelConnecting(true);
-    setAngelNotice({ type: '', text: '' });
-    try {
-      const response = await fetch('/api/broker/angel-one/connect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('kepwe_access_token')}`,
-        },
-        body: JSON.stringify({
-          angelOneClientCode: angelClientCode.trim(),
-          password: angelPassword.trim(),
-        }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setAngelNotice({ type: 'success', text: 'Angel One account connected and session verified successfully!' });
-        setAngelPassword('');
-        await loadAngelOneStatus();
-        await refreshBrokerState({ force: true });
-      } else {
-        const errorMsg = data?.error || (response.status === 401 ? 'Your session has expired. Please log in again.' : 'Failed to validate and connect Angel One account.');
-        setAngelNotice({ type: 'error', text: errorMsg });
-      }
-    } catch (err) {
-      setAngelNotice({ type: 'error', text: err.message || 'Network error while connecting Angel One account.' });
-    } finally {
-      setAngelConnecting(false);
-    }
-  };
-
-  const handleAngelOneDisconnect = async () => {
-    setAngelConnecting(true);
-    setAngelNotice({ type: '', text: '' });
-    try {
-      const response = await fetch('/api/broker/angel-one/disconnect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('kepwe_access_token')}`,
-        },
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setAngelNotice({ type: 'success', text: 'Angel One disconnected. Live execution is stopped.' });
-        await loadAngelOneStatus();
-        await refreshBrokerState({ force: true });
-      } else {
-        setAngelNotice({ type: 'error', text: data?.error || 'Angel One could not be disconnected.' });
-      }
-    } catch (err) {
-      setAngelNotice({ type: 'error', text: err.message || 'Failed to disconnect Angel One account.' });
-    } finally {
-      setAngelConnecting(false);
     }
   };
 
@@ -2540,9 +2482,9 @@ function BrokerConnectionView() {
     <div className="quant-page-view">
       <section className="quant-page-intro">
         <div>
-          <span className="quant-eyebrow">SYSTEM · BROKER ADAPTERS</span>
-          <h1>Broker Connection Architecture</h1>
-          <p>Connect official DhanHQ v2 adapter for live market data feeds and algorithmic order execution.</p>
+          <span className="quant-eyebrow">SYSTEM · BROKER CONNECTION</span>
+          <h1>Angel One Connection</h1>
+          <p>KEPWE Quant trades through Angel One SmartAPI: live market data, funds, positions, holdings and order execution come from your own Angel One account.</p>
         </div>
       </section>
 
@@ -2551,163 +2493,59 @@ function BrokerConnectionView() {
           <Link2 size={21} />
         </div>
         <div>
-          <span className="quant-eyebrow">DHAN ADAPTER STATE</span>
-          <h2>{isConnected ? 'Dhan Connected · Live Execution Active' : isSessionExpired ? 'Dhan Session Expired' : 'Dhan Disconnected'}</h2>
-          <p>{isConnected ? `Backend verified live DhanHQ session for client ID ${dhanStatus?.clientId || ''}.` : isSessionExpired ? 'Dhan rejected the stored session. Please reconnect with fresh credentials.' : 'Live order routing is disabled until you connect your personal Dhan account.'}</p>
+          <span className="quant-eyebrow">ANGEL ONE SMARTAPI</span>
+          <h2>{isConnected ? 'Angel One Connected · Session Verified' : isSessionExpired ? 'Angel One Session Expired' : 'Angel One Disconnected'}</h2>
+          <p>{isConnected ? `Angel One confirmed the live session for client code ${brokerStatus?.clientId || ''}.` : isSessionExpired ? 'Angel One no longer accepts the stored session (sessions end daily). Reconnect with your MPIN and a fresh TOTP.' : 'Live data and order routing are disabled until you connect your personal Angel One account.'}</p>
         </div>
         <span className={`quant-connection-pill ${isConnected ? 'connected' : ''}`}>
-          <span /> {isConnected ? 'Connected / Live Active' : isSessionExpired ? 'Session Expired' : 'Disconnected'}
+          <span /> {isConnected ? 'Connected / Live' : isSessionExpired ? 'Session Expired' : 'Disconnected'}
         </span>
       </div>
 
-      <div className="quant-broker-grid">
-        {(isConnected || isAngelConnected) && (
-          <div className="quant-panel" style={{ marginBottom: '20px', padding: '16px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <Link2 size={18} style={{ color: '#0f766e' }} />
-              <strong style={{ fontSize: '0.9rem' }}>Active Broker Selection</strong>
-            </div>
-            <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0 0 12px 0', lineHeight: 1.5 }}>
-              When placing orders through strategies, specify the broker in the order metadata. Both connected brokers can be used simultaneously for different strategies.
-            </p>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {isConnected && (
-                <div style={{ flex: '1', minWidth: '200px', padding: '12px', background: 'white', border: '2px solid #0f766e', borderRadius: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ width: '8px', height: '8px', background: '#0f766e', borderRadius: '50%' }} />
-                    <strong style={{ fontSize: '0.85rem' }}>Dhan</strong>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Client: {dhanStatus?.clientId || 'Connected'}</div>
-                </div>
-              )}
-              {isAngelConnected && (
-                <div style={{ flex: '1', minWidth: '200px', padding: '12px', background: 'white', border: '2px solid #C8102E', borderRadius: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ width: '8px', height: '8px', background: '#C8102E', borderRadius: '50%' }} />
-                    <strong style={{ fontSize: '0.85rem' }}>Angel One</strong>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Client: {angelOneStatus?.clientId || 'Connected'}</div>
-                </div>
-              )}
-            </div>
-            <div style={{ marginTop: '12px', fontSize: '0.75rem', color: '#64748b', padding: '8px', background: '#fef3c7', borderRadius: '4px', border: '1px solid #fbbf24' }}>
-              💡 Orders will use the broker specified in the strategy configuration. The system supports running multiple strategies on different brokers simultaneously.
-            </div>
-          </div>
-        )}
+      <div className="quant-broker-grid" style={{ gridTemplateColumns: '1fr' }}>
         <section className="quant-panel quant-broker-card primary">
           <div className="quant-broker-card-top">
-            <span className="quant-broker-logo" style={{ background: '#075056' }}>D</span>
-            <span className="quant-coming-pill">{isConnected ? 'LIVE / SESSION ACTIVE' : isSessionExpired ? 'SESSION EXPIRED' : 'ACTIVE BROKER'}</span>
+            <span className="quant-broker-logo" style={{ background: '#C8102E' }}>A</span>
+            <span className="quant-coming-pill">{isConnected ? 'LIVE / SESSION ACTIVE' : isSessionExpired ? 'SESSION EXPIRED' : 'SUPPORTED BROKER'}</span>
           </div>
-          <h3>DhanHQ v2 Broker Adapter</h3>
+          <h3>Angel One SmartAPI</h3>
           <p>
-            Official DhanHQ API v2 integration for real-time market execution, position tracking, margin limits, and postback webhook synchronization.
+            Official Angel One SmartAPI integration for live quotes, historical candles, funds, positions, holdings, order placement and order status.
           </p>
 
           <div className="quant-broker-note">
             <ShieldCheck size={15} />
             <span>
-              {loading ? 'Checking backend Dhan readiness…' : isConnected ? `Verified Dhan session for account ${dhanStatus?.clientId || ''}. Live execution active.` : isSessionExpired ? 'Stored Dhan session expired or invalid. Reconnect to continue live execution.' : 'Static IP 103.117.180.146 is whitelisted for Dhan API. Each user connects their personal account.'}
+              {loading
+                ? 'Checking your Angel One connection…'
+                : isConnected
+                  ? `Verified Angel One session for ${brokerStatus?.clientId || 'your account'}${brokerStatus?.clientName ? ` (${brokerStatus.clientName})` : ''}.`
+                  : isSessionExpired
+                    ? 'The stored Angel One session expired. Reconnect to continue.'
+                    : 'Your MPIN and TOTP are used once to log in at Angel One and are never stored. Session tokens are encrypted with AES-256-GCM.'}
             </span>
           </div>
 
           {isConnected ? (
             <div style={{ marginTop: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', fontSize: '0.82rem', color: '#475569' }}>
-                <div><strong>Client ID:</strong> {dhanStatus?.clientId || 'Connected'}</div>
-                <div><strong>Connection Mode:</strong> LIVE (DhanHQ API v2)</div>
-                <div><strong>Static Whitelist IP:</strong> <code>103.117.180.146</code></div>
-                <div><strong>Postback Webhook:</strong> <code>https://kepwe.in/api/dhan/callback</code></div>
+                <div><strong>Client Code:</strong> {brokerStatus?.clientId || 'Connected'}</div>
+                {brokerStatus?.clientName && <div><strong>Account Holder:</strong> {brokerStatus.clientName}</div>}
+                <div><strong>Connection Mode:</strong> LIVE (Angel One SmartAPI)</div>
+                {brokerStatus?.tokenExpiresAt && <div><strong>Session Token Valid Until:</strong> {new Date(brokerStatus.tokenExpiresAt).toLocaleString('en-IN')}</div>}
+                <div>
+                  <strong>Order API Static IP:</strong>{' '}
+                  {staticIp ? <><code>{staticIp}</code> — must be registered for the SmartAPI key (SmartAPI portal &gt; My Profile &gt; My APIs)</> : 'not configured on the server; live orders stay blocked'}
+                </div>
               </div>
-              <button className="quant-button quant-button-secondary" onClick={handleDisconnect} disabled={connecting}>
-                Disconnect Dhan <X size={15} />
-              </button>
-            </div>
-          ) : (
-            <div>
-              {!authState.isLoggedIn && (
-                <div className="quant-connection-alert error" style={{ marginBottom: '12px' }}>
-                  Your session is inactive. Please <Link to="/quant/login?returnTo=/quant/dashboard/broker" style={{ color: 'inherit', fontWeight: 600, textDecoration: 'underline' }}>sign in</Link> to connect your personal Dhan account.
-                </div>
-              )}
-              <form onSubmit={handleDirectConnect} style={{ marginTop: '12px' }}>
-                <div className="quant-form-group">
-                  <label className="quant-form-label">Dhan Client ID</label>
-                  <input
-                    type="text"
-                    className="quant-form-input"
-                    placeholder="e.g. 1100345678"
-                    value={dhanClientId}
-                    onChange={(e) => setDhanClientId(e.target.value)}
-                    disabled={connecting}
-                    required
-                  />
-                </div>
-                <div className="quant-form-group">
-                  <label className="quant-form-label">Dhan 24h Access Token (JWT)</label>
-                  <input
-                    type="password"
-                    className="quant-form-input"
-                    placeholder="Paste 24-hour Access Token from web.dhan.co"
-                    value={accessToken}
-                    onChange={(e) => setAccessToken(e.target.value)}
-                    disabled={connecting}
-                    required
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
-                  <button type="submit" className="quant-button quant-button-primary" disabled={connecting || loading}>
-                    {connecting ? 'Validating…' : isSessionExpired ? 'Reconnect Dhan' : 'Connect Dhan Account'} <ChevronRight size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    className="quant-button quant-button-secondary"
-                    onClick={handleDhanConsentConnect}
-                    disabled={connecting || loading}
-                    title="Authenticate using Dhan consent login popup"
-                  >
-                    Login with Dhan Consent <ExternalLink size={14} />
-                  </button>
-                </div>
-              </form>
-              <div style={{ marginTop: '12px', fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5 }}>
-                💡 <em>Generate your token at <strong>web.dhan.co &gt; My Profile &gt; Access DhanHQ APIs</strong>. Tokens are encrypted using AES-256-GCM.</em>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button className="quant-button quant-button-secondary" onClick={handleRefreshSession} disabled={connecting}>
+                  <RefreshCw size={14} /> Renew Session
+                </button>
+                <button className="quant-button quant-button-secondary" onClick={handleDisconnect} disabled={connecting}>
+                  Disconnect Angel One <X size={15} />
+                </button>
               </div>
-            </div>
-          )}
-
-          {notice.text && <div className={`quant-connection-alert ${notice.type}`}>{notice.text}</div>}
-        </section>
-
-        <section className="quant-panel quant-broker-card">
-          <div className="quant-broker-card-top">
-            <span className="quant-broker-logo" style={{ background: '#C8102E' }}>A</span>
-            <span className="quant-coming-pill">{isAngelConnected ? 'LIVE / SESSION ACTIVE' : isAngelSessionExpired ? 'SESSION EXPIRED' : 'ACTIVE BROKER'}</span>
-          </div>
-          <h3>Angel One SmartAPI</h3>
-          <p>
-            Official Angel One SmartAPI integration for real-time market execution, position tracking, margin limits, and order synchronization.
-          </p>
-
-          <div className="quant-broker-note">
-            <ShieldCheck size={15} />
-            <span>
-              {isAngelConnected ? `Verified Angel One session for account ${angelOneStatus?.clientId || ''}. Live execution active.` : isAngelSessionExpired ? 'Stored Angel One session expired or invalid. Reconnect to continue live execution.' : 'Static IP 103.117.180.146 is whitelisted for Angel One SmartAPI. Each user connects their personal account.'}
-            </span>
-          </div>
-
-          {isAngelConnected ? (
-            <div style={{ marginTop: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', fontSize: '0.82rem', color: '#475569' }}>
-                <div><strong>Client Code:</strong> {angelOneStatus?.clientId || 'Connected'}</div>
-                <div><strong>Connection Mode:</strong> LIVE (SmartAPI)</div>
-                <div><strong>Static Whitelist IP:</strong> <code>103.117.180.146</code></div>
-                <div><strong>Postback Webhook:</strong> <code>https://kepwe.in/api/angel-one/postback</code></div>
-              </div>
-              <button className="quant-button quant-button-secondary" onClick={handleAngelOneDisconnect} disabled={angelConnecting}>
-                Disconnect Angel One <X size={15} />
-              </button>
             </div>
           ) : (
             <div>
@@ -2716,64 +2554,131 @@ function BrokerConnectionView() {
                   Your session is inactive. Please <Link to="/quant/login?returnTo=/quant/dashboard/broker" style={{ color: 'inherit', fontWeight: 600, textDecoration: 'underline' }}>sign in</Link> to connect your personal Angel One account.
                 </div>
               )}
-              <form onSubmit={handleAngelOneConnect} style={{ marginTop: '12px' }}>
+              <form onSubmit={handleConnect} style={{ marginTop: '12px', maxWidth: '460px' }} autoComplete="off">
                 <div className="quant-form-group">
-                  <label className="quant-form-label">Angel One Client Code</label>
+                  <label className="quant-form-label" htmlFor="angel-client-code">Angel One Client Code</label>
                   <input
+                    id="angel-client-code"
                     type="text"
                     className="quant-form-input"
-                    placeholder="e.g. A12345"
-                    value={angelClientCode}
-                    onChange={(e) => setAngelClientCode(e.target.value)}
-                    disabled={angelConnecting}
+                    placeholder="e.g. A123456"
+                    value={clientCode}
+                    onChange={(e) => setClientCode(e.target.value)}
+                    disabled={connecting}
+                    autoComplete="off"
                     required
                   />
                 </div>
                 <div className="quant-form-group">
-                  <label className="quant-form-label">Password or MPIN</label>
+                  <label className="quant-form-label" htmlFor="angel-mpin">MPIN</label>
                   <input
+                    id="angel-mpin"
                     type="password"
+                    inputMode="numeric"
                     className="quant-form-input"
-                    placeholder="Enter your Angel One password or 4-digit MPIN"
-                    value={angelPassword}
-                    onChange={(e) => setAngelPassword(e.target.value)}
-                    disabled={angelConnecting}
+                    placeholder="Your Angel One MPIN"
+                    value={mpin}
+                    onChange={(e) => setMpin(e.target.value)}
+                    disabled={connecting}
+                    autoComplete="off"
                     required
                   />
                 </div>
+                <div className="quant-form-group">
+                  <label className="quant-form-label" htmlFor="angel-totp">TOTP (6-digit code)</label>
+                  <input
+                    id="angel-totp"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    className="quant-form-input"
+                    placeholder="Current code from your authenticator app"
+                    value={totp}
+                    onChange={(e) => setTotp(e.target.value.replace(/\D/g, ''))}
+                    disabled={connecting}
+                    autoComplete="one-time-code"
+                    required
+                  />
+                </div>
+                {showApiKeyField && (
+                  <div className="quant-form-group">
+                    <label className="quant-form-label" htmlFor="angel-api-key">SmartAPI Key{apiKeyRequired ? '' : ' (optional)'}</label>
+                    <input
+                      id="angel-api-key"
+                      type="password"
+                      className="quant-form-input"
+                      placeholder="API key of your app from smartapi.angelone.in"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      disabled={connecting}
+                      autoComplete="off"
+                      required={apiKeyRequired}
+                    />
+                  </div>
+                )}
+                {!apiKeyRequired && readiness !== null && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#64748b', marginBottom: '6px' }}>
+                    <input type="checkbox" checked={useOwnApiKey} onChange={(e) => setUseOwnApiKey(e.target.checked)} disabled={connecting} />
+                    Use my own SmartAPI key
+                  </label>
+                )}
                 <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
-                  <button type="submit" className="quant-button quant-button-primary" disabled={angelConnecting || loading}>
-                    {angelConnecting ? 'Validating…' : 'Connect Angel One Account'} <ChevronRight size={15} />
+                  <button type="submit" className="quant-button quant-button-primary" disabled={connecting || loading}>
+                    {connecting ? 'Verifying with Angel One…' : isSessionExpired ? 'Reconnect Angel One' : 'Connect Angel One Account'} <ChevronRight size={15} />
                   </button>
+                  {serverKeyConfigured && (
+                    <button
+                      type="button"
+                      className="quant-button quant-button-secondary"
+                      onClick={handleRedirectLogin}
+                      disabled={connecting || loading}
+                      title="Sign in on Angel One's own login page and return to KEPWE"
+                    >
+                      Login on Angel One <ExternalLink size={14} />
+                    </button>
+                  )}
                 </div>
               </form>
-              <div style={{ marginTop: '12px', fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5 }}>
-                💡 <em>Uses your Angel One login credentials with TOTP for secure authentication. Credentials are encrypted using AES-256-GCM.</em>
+              <div style={{ marginTop: '12px', fontSize: '0.75rem', color: '#64748b', lineHeight: 1.6 }}>
+                Enable TOTP for your account at <strong>smartapi.angelone.in &gt; Enable TOTP</strong> and add it to an authenticator app.
+                {' '}Angel One ends API sessions daily, so you reconnect once per trading day.
+                {staticIp
+                  ? <> Live orders are accepted by Angel One only from static IP <code>{staticIp}</code>, which must be registered for the SmartAPI key.</>
+                  : ' Live orders additionally need a static IP registered with Angel One for the SmartAPI key.'}
               </div>
             </div>
           )}
 
-          {angelNotice.text && <div className={`quant-connection-alert ${angelNotice.type}`}>{angelNotice.text}</div>}
+          {notice.text && <div className={`quant-connection-alert ${notice.type}`}>{notice.text}</div>}
         </section>
       </div>
     </div>
   );
 }
 
+const BROKER_DATA_COLUMNS = {
+  positions: [['tradingSymbol', 'Instrument'], ['side', 'Side'], ['quantity', 'Qty'], ['entryPrice', 'Avg Price'], ['currentPrice', 'LTP'], ['pnl', 'P&L'], ['realizedPnl', 'Realized'], ['unrealizedPnl', 'Unrealized'], ['productType', 'Product'], ['exchange', 'Exchange']],
+  watchlist: [['tradingSymbol', 'Instrument'], ['exchange', 'Exchange'], ['currentPrice', 'LTP'], ['quantity', 'Qty'], ['pnl', 'P&L']],
+  holdings: [['tradingSymbol', 'Instrument'], ['exchange', 'Exchange'], ['totalQty', 'Qty'], ['availableQty', 'Available'], ['avgCostPrice', 'Avg Cost'], ['currentPrice', 'LTP'], ['pnl', 'P&L'], ['pnlPercentage', 'P&L %'], ['isin', 'ISIN']],
+  orders: [['orderId', 'Order ID'], ['tradingSymbol', 'Instrument'], ['side', 'Side'], ['quantity', 'Qty'], ['orderType', 'Type'], ['productType', 'Product'], ['price', 'Price'], ['status', 'Status'], ['filledQuantity', 'Filled'], ['averagePrice', 'Avg Fill'], ['rejectionReason', 'Broker Remark'], ['updatedAt', 'Updated']],
+  trades: [['tradeId', 'Trade ID'], ['orderId', 'Order ID'], ['tradingSymbol', 'Instrument'], ['side', 'Side'], ['tradedQuantity', 'Qty'], ['tradedPrice', 'Price'], ['tradeValue', 'Value'], ['productType', 'Product'], ['exchange', 'Exchange'], ['tradeTime', 'Time']],
+};
+
 function BrokerDataView({ type, onConnect }) {
-  const { brokerState, dhanStatus, isBrokerConnected, isDhanConnected, refreshBrokerState } = useBroker();
+  const { brokerState, isBrokerConnected, refreshBrokerState } = useBroker();
   const [liveData, setLiveData] = useState(null);
   const [liveError, setLiveError] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Every loader reads the connected Angel One account through SmartAPI.
   const loaders = {
-    portfolio: fetchDhanFunds,
-    positions: fetchDhanPositions,
-    orders: fetchDhanOrderBook,
-    holdings: fetchDhanHoldings,
-    trades: fetchDhanTradeBook,
-    analytics: fetchDhanFunds,
-    watchlist: fetchDhanPositions,
+    portfolio: fetchBrokerPortfolio,
+    positions: fetchBrokerPositions,
+    orders: fetchBrokerOrderBook,
+    holdings: fetchBrokerHoldings,
+    trades: fetchBrokerTradeBook,
+    analytics: fetchBrokerPortfolio,
+    watchlist: fetchBrokerPositions,
   };
 
   const titles = {
@@ -2787,32 +2692,39 @@ function BrokerDataView({ type, onConnect }) {
   };
 
   const emptyDescriptions = {
-    portfolio: 'No active funds data returned from your Dhan account.',
-    positions: 'No open positions in your Dhan account.',
-    holdings: 'No demat holdings found in your Dhan account.',
-    orders: 'No orders placed today on Dhan.',
-    trades: 'No trades executed today on Dhan.',
+    portfolio: 'No funds data was returned from your Angel One account.',
+    positions: 'No positions in your Angel One account today.',
+    holdings: 'No demat holdings found in your Angel One account.',
+    orders: 'No orders placed today on Angel One.',
+    trades: 'No trades executed today on Angel One.',
     watchlist: 'No instruments currently tracked in live watchlist.',
   };
 
   const loadAll = async () => {
-    setLoading(true);
     setLiveError('');
+    if (!isBrokerConnected) {
+      setLiveData(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
 
     try {
-      const loaderFn = loaders[type] || fetchDhanFunds;
+      const loaderFn = loaders[type] || fetchBrokerPortfolio;
       const liveRes = await loaderFn();
 
       if (liveRes?.ok) {
         setLiveData(liveRes.data);
       } else {
-        if (liveRes?.data?.code === 'DHAN_SESSION_EXPIRED' || liveRes?.status === 401) {
+        if (liveRes?.data?.code === 'ANGEL_ONE_SESSION_EXPIRED' || liveRes?.status === 401) {
           refreshBrokerState({ force: true });
         }
-        setLiveError(liveRes?.data?.error || 'Live Dhan data is unavailable.');
+        setLiveData(null);
+        setLiveError(liveRes?.data?.error || 'Live Angel One data is unavailable.');
       }
     } catch (err) {
-      setLiveError(err?.message || 'Live Dhan data is unavailable.');
+      setLiveData(null);
+      setLiveError(err?.message || 'Live Angel One data is unavailable.');
     } finally {
       setLoading(false);
     }
@@ -2820,18 +2732,22 @@ function BrokerDataView({ type, onConnect }) {
 
   useEffect(() => {
     loadAll();
-  }, [type]);
+  }, [type, isBrokerConnected]);
 
-  // Live Records parsing
-  const providerPayload = liveData?.data?.data || liveData?.data || liveData;
-  const providerArrays = providerPayload && typeof providerPayload === 'object'
-    ? Object.values(providerPayload).filter(Array.isArray).flat()
-    : [];
-  const liveRecords = liveData?.realizedPnl !== undefined ? [liveData]
-    : liveData?.funds ? [liveData.funds]
-    : liveData?.positions || liveData?.holdings || liveData?.orderbook?.data?.orders || liveData?.orders || liveData?.trades || providerArrays;
-  const liveColumns = [...new Set(liveRecords.flatMap((record) => Object.keys(record || {})))].slice(0, 10);
-  const formatValue = (value) => value && typeof value === 'object' ? JSON.stringify(value) : String(value ?? 'No data');
+  const isPortfolio = type === 'portfolio' || type === 'analytics';
+  const liveRecords = isPortfolio ? [] : (liveData?.positions || liveData?.holdings || liveData?.orderbook || liveData?.trades || []);
+  const columns = BROKER_DATA_COLUMNS[type] || [];
+  const formatValue = (value) => {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'number') return value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    return typeof value === 'object' ? JSON.stringify(value) : String(value);
+  };
+  const rupees = (value) => (value === null || value === undefined || !Number.isFinite(Number(value))
+    ? 'No data'
+    : `₹${Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+  const funds = liveData?.funds || null;
+  const holdingTotals = liveData?.holdings && !Array.isArray(liveData.holdings) ? liveData.holdings : null;
+  const positionTotals = liveData?.positions && !Array.isArray(liveData.positions) ? liveData.positions : null;
 
   return (
     <div className="quant-page-view">
@@ -2839,7 +2755,7 @@ function BrokerDataView({ type, onConnect }) {
         <div>
           <span className="quant-eyebrow">EXECUTION & PORTFOLIO</span>
           <h1>{titles[type] || 'Execution View'}</h1>
-          <p>View live Dhan account data and real execution records.</p>
+          <p>View live Angel One account data and real execution records.</p>
         </div>
         <div className="quant-page-action">
           <button className="quant-button quant-button-secondary quant-button-small" onClick={loadAll}>
@@ -2848,83 +2764,105 @@ function BrokerDataView({ type, onConnect }) {
         </div>
       </section>
 
-      {/* LIVE DHAN DATA ONLY - PRODUCTION MODE */}
+      {/* LIVE ANGEL ONE DATA ONLY - PRODUCTION MODE */}
       <div className="quant-panel quant-table-panel">
         <PanelHeader
-          eyebrow="DHANHQ API V2"
-          title={`Live Dhan ${titles[type]}`}
+          eyebrow="ANGEL ONE SMARTAPI"
+          title={`Live Angel One ${titles[type] || ''}`}
           icon={WalletCards}
         />
-        {loading ? (
-          <EmptyData title="Loading live provider data" description="The backend is querying your active Dhan session..." action={false} />
-        ) : brokerState.status === 'LOADING' ? (
-          <EmptyData title="Verifying broker connection" description="Checking your authenticated Dhan session with the backend..." action={false} />
-        ) : brokerState.status === 'DHAN_SESSION_EXPIRED' ? (
+        {brokerState.status === 'LOADING' ? (
+          <EmptyData title="Verifying broker connection" description="Checking your Angel One session with the backend..." action={false} />
+        ) : brokerState.status === 'SESSION_EXPIRED' ? (
           <EmptyData
-            title="Dhan session expired"
-            description="Your 24-hour Dhan access token has expired. Please reconnect your Dhan account."
+            title="Angel One session expired"
+            description="Angel One ends API sessions daily. Reconnect your Angel One account with your MPIN and a fresh TOTP."
             action={true}
-            actionLabel="Reconnect Dhan"
+            actionLabel="Reconnect Angel One"
             onConnect={onConnect}
           />
         ) : !isBrokerConnected ? (
           <EmptyData
-            title="Dhan Live Broker Disconnected"
-            description="Connect your Dhan account to view live positions, orders, and portfolio data."
+            title="Angel One Not Connected"
+            description="Connect your Angel One account to view live positions, orders, and portfolio data."
             action={true}
             actionLabel="Connect broker"
             onConnect={onConnect}
           />
+        ) : loading ? (
+          <EmptyData title="Loading live Angel One data" description="The backend is querying your active Angel One session..." action={false} />
         ) : liveError ? (
           <EmptyData
-            title="Unable to load Dhan data"
+            title="Unable to load Angel One data"
             description={liveError}
             action={true}
             actionLabel="Retry"
             onConnect={loadAll}
           />
-        ) : type === 'portfolio' ? (
+        ) : isPortfolio ? (
           <div style={{ padding: '24px' }}>
             <div className="quant-metric-grid" style={{ marginBottom: '16px' }}>
               <div className="quant-metric-card">
                 <div className="quant-metric-top"><span>Available Margin</span><WalletCards size={16} /></div>
-                <strong>₹{Number(liveData?.funds?.available ?? liveData?.available ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                <small>Cash balance for orders</small>
+                <strong>{rupees(funds?.available)}</strong>
+                <small>Cash available for orders</small>
               </div>
               <div className="quant-metric-card">
                 <div className="quant-metric-top"><span>Utilized Margin</span><BriefcaseBusiness size={16} /></div>
-                <strong>₹{Number(liveData?.funds?.utilized ?? liveData?.utilized ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                <small>Margin in open positions</small>
+                <strong>{rupees(funds?.utilized)}</strong>
+                <small>Margin used today</small>
               </div>
               <div className="quant-metric-card">
                 <div className="quant-metric-top"><span>Collateral Amount</span><ShieldCheck size={16} /></div>
-                <strong>₹{Number(liveData?.funds?.collateral ?? liveData?.collateral ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                <strong>{rupees(funds?.collateral)}</strong>
                 <small>Pledged securities</small>
               </div>
               <div className="quant-metric-card">
-                <div className="quant-metric-top"><span>Withdrawable Balance</span><CircleDollarSign size={16} /></div>
-                <strong>₹{Number(liveData?.funds?.withdrawable ?? liveData?.withdrawable ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                <small>Available to withdraw</small>
+                <div className="quant-metric-top"><span>Net Balance</span><CircleDollarSign size={16} /></div>
+                <strong>{rupees(funds?.net)}</strong>
+                <small>Net funds reported by Angel One</small>
+              </div>
+            </div>
+            <div className="quant-metric-grid">
+              <div className="quant-metric-card">
+                <div className="quant-metric-top"><span>Holdings Value</span><BriefcaseBusiness size={16} /></div>
+                <strong>{rupees(holdingTotals?.totalHoldingValue)}</strong>
+                <small>{holdingTotals ? `${holdingTotals.holdingsCount} holding(s), invested ${rupees(holdingTotals.totalInvestedValue)}` : (liveData?.errors?.holdings || 'Holdings totals unavailable')}</small>
+              </div>
+              <div className="quant-metric-card">
+                <div className="quant-metric-top"><span>Holdings P&L</span><TrendingUp size={16} /></div>
+                <strong style={{ color: Number(holdingTotals?.totalPnl || 0) >= 0 ? '#159975' : '#c53030' }}>{rupees(holdingTotals?.totalPnl)}</strong>
+                <small>{holdingTotals?.totalPnlPercentage != null ? `${Number(holdingTotals.totalPnlPercentage).toFixed(2)}% overall` : 'Overall holdings P&L'}</small>
+              </div>
+              <div className="quant-metric-card">
+                <div className="quant-metric-top"><span>Positions Unrealized P&L</span><TrendingUp size={16} /></div>
+                <strong style={{ color: Number(positionTotals?.unrealizedPnl || 0) >= 0 ? '#159975' : '#c53030' }}>{rupees(positionTotals?.unrealizedPnl)}</strong>
+                <small>{positionTotals ? `${positionTotals.count} open position(s)` : (liveData?.errors?.positions || 'Positions unavailable')}</small>
+              </div>
+              <div className="quant-metric-card">
+                <div className="quant-metric-top"><span>Positions Realized P&L</span><CircleDollarSign size={16} /></div>
+                <strong style={{ color: Number(positionTotals?.realizedPnl || 0) >= 0 ? '#159975' : '#c53030' }}>{rupees(positionTotals?.realizedPnl)}</strong>
+                <small>Booked today</small>
               </div>
             </div>
           </div>
         ) : liveRecords.length === 0 ? (
           <EmptyData
             title="No records found"
-            description={emptyDescriptions[type] || `No ${type} records found in your Dhan account.`}
+            description={emptyDescriptions[type] || `No ${type} records found in your Angel One account.`}
             action={false}
           />
         ) : (
           <div className="quant-table-wrap">
             <table className="quant-table">
               <thead>
-                <tr>{liveColumns.filter((c) => c !== 'raw').map((col) => <th key={col}>{col}</th>)}</tr>
+                <tr>{columns.map(([key, label]) => <th key={key}>{label}</th>)}</tr>
               </thead>
               <tbody>
                 {liveRecords.map((record, index) => (
-                  <tr key={record.id || record.orderId || record.orderID || record.tradeNo || index}>
-                    {liveColumns.filter((c) => c !== 'raw').map((col) => (
-                      <td key={col}>{formatValue(record[col])}</td>
+                  <tr key={record.orderId || record.tradeId || record.brokerPositionKey || record.isin || index}>
+                    {columns.map(([key]) => (
+                      <td key={key}>{formatValue(record[key])}</td>
                     ))}
                   </tr>
                 ))}
@@ -3774,7 +3712,7 @@ function TradingDeskView({ onNavigate }) {
       {selectedTool === 'positions' && (
         <div className="quant-panel" style={{ padding: '24px 28px' }}>
           <h3 style={{ marginBottom: '16px', color: '#0F172A' }}>Open Positions</h3>
-          <EmptyData title="No open positions" description="Active positions from your Dhan account will appear here." />
+          <EmptyData title="No open positions" description="Active positions from your Angel One account will appear here." />
         </div>
       )}
 
@@ -4558,13 +4496,13 @@ function GenericTableView({ type, onNavigate }) {
         <div>
           <span className="quant-eyebrow">QUANT WORKSPACE</span>
           <h1>{titles[type] || 'Section'}</h1>
-          <p>Real execution data will populate as strategies are deployed and executed on Dhan.</p>
+          <p>Real execution data will populate as strategies are deployed and executed on Angel One.</p>
         </div>
       </section>
       <div className="quant-panel" style={{ padding: '30px' }}>
         <EmptyData
           title={`No ${titles[type]} data yet`}
-          description="Real execution data will appear here as strategies execute on your live Dhan account."
+          description="Real execution data will appear here as strategies execute on your live Angel One account."
           action={false}
         />
       </div>
@@ -4621,7 +4559,7 @@ function QuantDashboardContent() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get('dhan') === 'connected') {
+    if (params.get('angelone') === 'connected') {
       refreshBrokerState({ force: true });
     }
   }, [location.search, refreshBrokerState]);
@@ -4710,7 +4648,7 @@ function QuantDashboardContent() {
             <span className="quant-avatar">Q</span>
             <span>
               <strong>Quant Lab</strong>
-              <small>Live · Dhan</small>
+              <small>Live · Angel One</small>
             </span>
             <ChevronDown size={14} />
           </button>
@@ -4758,8 +4696,8 @@ function QuantDashboardContent() {
           <button onClick={() => goTo('broker')}>
             <Link2 size={15} />
             <span>
-              <strong>Broker Adapters</strong>
-              <small>Dhan (HQ API v2)</small>
+              <strong>Broker Connection</strong>
+              <small>Angel One SmartAPI</small>
             </span>
             <ChevronRight size={14} />
           </button>

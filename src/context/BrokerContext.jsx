@@ -1,18 +1,27 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { fetchDhanBrokerStatus, fetchBrokerStatus } from '../api/quantClient';
+import { fetchAngelOneStatus } from '../api/quantClient';
+
+// Angel One SmartAPI is the only supported broker for KEPWE Quant.
+export const BROKER = 'ANGEL_ONE';
+export const BROKER_NAME = 'Angel One';
 
 const BrokerContext = createContext(null);
 
 const INITIAL_STATE = {
-  status: 'LOADING', // 'LOADING' | 'CONNECTED' | 'DISCONNECTED' | 'DHAN_SESSION_EXPIRED' | 'ERROR'
-  broker: 'DHAN',
+  status: 'LOADING', // 'LOADING' | 'CONNECTED' | 'DISCONNECTED' | 'SESSION_EXPIRED' | 'ERROR'
+  broker: BROKER,
+  brokerName: BROKER_NAME,
   executionMode: 'LIVE',
   clientId: null,
+  clientName: null,
   sessionValid: false,
   connectedAt: null,
+  tokenExpiresAt: null,
   lastChecked: null,
   error: null,
 };
+
+const isExpiredStatus = (status) => status === 'ANGEL_ONE_SESSION_EXPIRED' || status === 'SESSION_EXPIRED';
 
 export function BrokerProvider({ children }) {
   const [brokerState, setBrokerState] = useState(INITIAL_STATE);
@@ -32,31 +41,8 @@ export function BrokerProvider({ children }) {
 
     const fetchPromise = (async () => {
       try {
-        // Try specialized single-broker status endpoint first
-        let res = await fetchDhanBrokerStatus();
-
-        // Fallback to /api/broker/status if not available
-        if (!res.ok && res.status === 404) {
-          res = await fetchBrokerStatus();
-          if (res.ok && res.data) {
-            const dhan = res.data.dhan || res.data.brokers?.find((b) => b.broker === 'DHAN');
-            if (dhan) {
-              res = {
-                ok: true,
-                status: 200,
-                data: {
-                  connected: dhan.status === 'CONNECTED',
-                  broker: 'DHAN',
-                  status: dhan.status,
-                  executionMode: dhan.mode || dhan.executionMode || 'LIVE',
-                  clientId: dhan.clientId || null,
-                  sessionValid: dhan.status === 'CONNECTED',
-                  connectedAt: dhan.connectedAt || null,
-                },
-              };
-            }
-          }
-        }
+        // The backend confirms the stored session with Angel One (getProfile) on every check.
+        const res = await fetchAngelOneStatus();
 
         // Stale check: Discard response if a newer request was dispatched
         if (!isMountedRef.current || currentRequestId !== requestIdRef.current) {
@@ -66,26 +52,28 @@ export function BrokerProvider({ children }) {
         if (res.ok && res.data) {
           const data = res.data;
           const isConnected = data.connected === true && data.status === 'CONNECTED';
-          const isExpired = data.status === 'DHAN_SESSION_EXPIRED' || data.status === 'SESSION_EXPIRED';
-          const nextStatus = isConnected ? 'CONNECTED' : (isExpired ? 'DHAN_SESSION_EXPIRED' : 'DISCONNECTED');
+          const nextStatus = isConnected ? 'CONNECTED' : (isExpiredStatus(data.status) ? 'SESSION_EXPIRED' : 'DISCONNECTED');
 
           setBrokerState({
             status: nextStatus,
-            broker: 'DHAN',
+            broker: BROKER,
+            brokerName: BROKER_NAME,
             executionMode: data.executionMode || 'LIVE',
             clientId: data.clientId || null,
+            clientName: data.clientName || null,
             sessionValid: isConnected,
             connectedAt: data.connectedAt || null,
+            tokenExpiresAt: data.tokenExpiresAt || null,
             lastChecked: Date.now(),
-            error: null,
+            error: isConnected ? null : (data.lastError || null),
           });
-        } else if (res.status === 401 && (res.data?.code === 'DHAN_SESSION_EXPIRED' || res.data?.broker === 'DHAN')) {
+        } else if (res.status === 401 && (res.data?.code === 'ANGEL_ONE_SESSION_EXPIRED' || res.data?.broker === BROKER)) {
           setBrokerState((prev) => ({
             ...prev,
-            status: 'DHAN_SESSION_EXPIRED',
+            status: 'SESSION_EXPIRED',
             sessionValid: false,
             lastChecked: Date.now(),
-            error: res.data?.error || 'Dhan session has expired. Please reconnect.',
+            error: res.data?.error || 'Angel One session has expired. Please reconnect.',
           }));
         } else {
           // If request failed (e.g. 500 or network), only set ERROR if we don't have an active connected state
@@ -161,25 +149,28 @@ export function BrokerProvider({ children }) {
   }, [refreshBrokerState]);
 
   const isBrokerConnected = brokerState.status === 'CONNECTED' && brokerState.sessionValid;
-  const isDhanConnected = brokerState?.status === 'CONNECTED' && brokerState?.sessionValid === true;
+  const isSessionExpired = brokerState.status === 'SESSION_EXPIRED';
 
-  const dhanStatus = {
-    broker: 'DHAN',
+  const brokerStatus = {
+    broker: BROKER,
+    brokerName: BROKER_NAME,
     status: brokerState.status,
     clientId: brokerState.clientId,
+    clientName: brokerState.clientName,
     mode: brokerState.executionMode,
     connected: isBrokerConnected,
     sessionValid: brokerState.sessionValid,
     connectedAt: brokerState.connectedAt,
+    tokenExpiresAt: brokerState.tokenExpiresAt,
     lastChecked: brokerState.lastChecked,
     error: brokerState.error,
   };
 
   const value = {
     brokerState,
-    dhanStatus,
+    brokerStatus,
     isBrokerConnected,
-    isDhanConnected,
+    isSessionExpired,
     sessionValid: brokerState.sessionValid,
     refreshBrokerState,
   };

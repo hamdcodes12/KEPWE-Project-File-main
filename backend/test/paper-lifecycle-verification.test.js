@@ -99,11 +99,11 @@ async function runTest() {
     assert.strictEqual(st3.tradesHistory[0].status, 'CLOSED');
     assert.strictEqual(st3.tradesHistory[0].pnl, 125);
 
-    // 8. Verify Absolute Dhan Broker Isolation
+    // 8. Verify Absolute Live Broker Isolation
     const liveOrders = await pool.query("SELECT COUNT(id)::int AS count FROM algo_orders WHERE user_id = $1 AND execution_mode = 'LIVE'", [userId]);
-    console.log('[7] Dhan Live Orders Placed:', liveOrders.rows[0].count);
+    console.log('[7] Live Broker Orders Placed:', liveOrders.rows[0].count);
     assert.strictEqual(liveOrders.rows[0].count, 0);
-    console.log('  ✔ Zero Dhan live orders placed. Complete broker isolation confirmed!');
+    console.log('  ✔ Zero live broker orders placed. Complete broker isolation confirmed!');
 
     // 9. Stop Engine
     const stopRes = await fetch(base + '/api/quant/paper/stop', { method: 'POST', headers }).then(r => r.json());

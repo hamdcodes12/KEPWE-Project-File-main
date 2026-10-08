@@ -38,14 +38,14 @@ describe('Broker Connection Security - User Isolation', () => {
     // Setup broker connections for both users
     const brokerA = await pool.query(
       `INSERT INTO broker_accounts (user_id, broker, client_id, status, connection_mode)
-       VALUES ($1, 'DHAN', 'CLIENT_A', 'CONNECTED', 'LIVE') RETURNING id`,
+       VALUES ($1, 'ANGEL_ONE', 'CLIENT_A', 'CONNECTED', 'LIVE') RETURNING id`,
       [userAId]
     );
     userABrokerId = brokerA.rows[0].id;
 
     const brokerB = await pool.query(
       `INSERT INTO broker_accounts (user_id, broker, client_id, status, connection_mode)
-       VALUES ($1, 'DHAN', 'CLIENT_B', 'CONNECTED', 'LIVE') RETURNING id`,
+       VALUES ($1, 'ANGEL_ONE', 'CLIENT_B', 'CONNECTED', 'LIVE') RETURNING id`,
       [userBId]
     );
     userBBrokerId = brokerB.rows[0].id;
@@ -111,7 +111,7 @@ describe('Broker Connection Security - User Isolation', () => {
       const response = await request(app)
         .post('/api/broker/set-active')
         .set('Authorization', `Bearer ${userAToken}`)
-        .send({ broker: 'DHAN', userId: userBId }) // Malicious userId
+        .send({ broker: 'ANGEL_ONE', userId: userBId }) // Malicious userId
         .expect(400);
 
       // Should fail - userId should come from JWT, not request body
@@ -169,7 +169,7 @@ describe('Broker Connection Security - User Isolation', () => {
         `INSERT INTO broker_verification_history 
          (user_id, broker_account_id, broker, verification_id, status, overall_score, 
           checks_passed, checks_total, checks_detail)
-         VALUES ($1, $2, 'DHAN', $3, 'CONNECTED', 100, 10, 10, '{}'::jsonb)`,
+         VALUES ($1, $2, 'ANGEL_ONE', $3, 'CONNECTED', 100, 10, 10, '{}'::jsonb)`,
         [userAId, userABrokerId, verificationId]
       );
 
@@ -185,7 +185,7 @@ describe('Broker Connection Security - User Isolation', () => {
 
     it('should only return own verification history', async () => {
       const response = await request(app)
-        .get('/api/broker/DHAN/verification/history')
+        .get('/api/broker/ANGEL_ONE/verification/history')
         .set('Authorization', `Bearer ${userAToken}`)
         .expect(200);
 
@@ -254,7 +254,7 @@ describe('Broker Connection Security - User Isolation', () => {
     });
 
     it('should allow different users to have same broker active', async () => {
-      // Both User A and User B can have DHAN active simultaneously
+      // Both User A and User B can have ANGEL_ONE active simultaneously
       await pool.query(
         `UPDATE broker_accounts SET is_active_broker = TRUE WHERE id = $1`,
         [userABrokerId]
@@ -299,7 +299,7 @@ describe('Broker Connection Security - User Isolation', () => {
         .post('/api/broker/set-active')
         .set('Authorization', `Bearer ${userAToken}`)
         .send({
-          broker: 'DHAN',
+          broker: 'ANGEL_ONE',
           user_id: userBId, // Attempt to tamper
         })
         .expect(400);

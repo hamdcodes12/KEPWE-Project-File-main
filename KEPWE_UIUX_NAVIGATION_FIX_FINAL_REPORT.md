@@ -239,7 +239,7 @@ Comprehensive one-shot implementation of complete KEPWE UI/UX and navigation fix
 - ✓ SANDBOX connections rejected with HTTP 403 in /broker/connect
 - ✓ All paper_trades table references removed
 - ✓ Paper execution paths eliminated from runner.js
-- ✓ Real Dhan broker integration maintained
+- ✓ Real live broker integration maintained
 - ✓ DB constraint: CHECK (execution_mode = 'LIVE')
 
 **Result**: KEPWE Quant is hardened to LIVE-only. No paper trading, no sandbox, no simulated execution.
@@ -292,7 +292,7 @@ Comprehensive one-shot implementation of complete KEPWE UI/UX and navigation fix
 
 **E. Quant Audit**:
 - ✓ LIVE-only enforcement active
-- ✓ Real Dhan execution maintained
+- ✓ Real live broker execution maintained
 - ✓ Risk engine protecting orders
 - ✓ No paper trading possible
 
@@ -441,7 +441,7 @@ These are intentional and do not affect KEPWE Quant LIVE-only status.
 
 ## Conclusion
 
-Complete KEPWE UI/UX and Navigation Fix implemented successfully in one-shot deployment. System is stable, secure, and production-ready. All user-facing functionality improved while preserving existing working features. KEPWE Quant remains LIVE-ONLY and fully functional with real Dhan broker integration.
+Complete KEPWE UI/UX and Navigation Fix implemented successfully in one-shot deployment. System is stable, secure, and production-ready. All user-facing functionality improved while preserving existing working features. KEPWE Quant remains LIVE-ONLY.
 
 **Status**: ✅ COMPLETE AND VERIFIED
 

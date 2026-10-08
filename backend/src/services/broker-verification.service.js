@@ -1,7 +1,8 @@
 import { createHash } from 'crypto';
 import { pool } from '../config/db.js';
-import { getBrokerAdapter } from '../algo/broker-adapters.js';
-import { decryptBrokerSecret } from './broker-token.service.js';
+import { ANGEL_ONE } from '../algo/broker-adapters.js';
+import { getAngelOneSession } from './angel-one-session.service.js';
+import { getNiftyIndexInstrument } from './angel-one-instruments.service.js';
 
 /**
  * Comprehensive broker verification pipeline
@@ -39,7 +40,7 @@ const CONNECTION_STATUS = {
 /**
  * Perform comprehensive verification of a broker connection
  * @param {string} userId - KEPWE user ID
- * @param {string} broker - Broker name (DHAN, ANGEL_ONE)
+ * @param {string} broker - Broker code (ANGEL_ONE)
  * @param {Object} options - Verification options
  * @returns {Object} Verification result with detailed checks
  */
@@ -148,23 +149,19 @@ export async function verifyBrokerConnection(userId, broker, options = {}) {
     // Calculate overall status
     result.overallScore = Math.round((passedChecks / totalChecks) * 100);
 
-    // Market data is a separately subscribed Dhan product (Data API plan). A
-    // Data-API rejection with an otherwise valid trading session must not
-    // downgrade the connection; it is reported separately as marketData.
+    // A market-data failure with an otherwise valid trading session (for
+    // example outside market hours) is reported separately as marketData and
+    // does not by itself fail the connection.
     const marketCheck = result.checks[VERIFICATION_CHECKS.MARKET_DATA];
-    const marketDataPlanRejected = marketCheck?.status === VERIFICATION_STATUS.FAIL && marketCheck?.dataApiRejected === true;
     const coreChecks = Object.entries(result.checks)
       .filter(([name]) => name !== VERIFICATION_CHECKS.MARKET_DATA && name !== VERIFICATION_CHECKS.PERMISSIONS);
     const coreAllPass = coreChecks.length > 0 && coreChecks.every(([, c]) => c.status === VERIFICATION_STATUS.PASS);
-    const profileData = result.checks[VERIFICATION_CHECKS.PROFILE]?.data || null;
     result.marketData = {
       available: marketCheck ? marketCheck.status === VERIFICATION_STATUS.PASS : null,
       reason: marketCheck && marketCheck.status !== VERIFICATION_STATUS.PASS ? marketCheck.message : null,
-      dataPlan: profileData?.dataPlan ?? null,
-      dataValidity: profileData?.dataValidity ?? null,
     };
 
-    if (passedChecks === totalChecks || (coreAllPass && (skipMarketData || marketDataPlanRejected))) {
+    if (passedChecks === totalChecks || coreAllPass) {
       result.status = CONNECTION_STATUS.CONNECTED;
     } else if (passedChecks >= Math.ceil(totalChecks * 0.7)) {
       result.status = CONNECTION_STATUS.PARTIALLY_CONNECTED;
@@ -203,54 +200,13 @@ export async function verifyBrokerConnection(userId, broker, options = {}) {
 }
 
 /**
- * Get broker adapter configured for a specific user
+ * Get the Angel One adapter for a specific user's stored session
  */
 async function getBrokerAdapterForUser(userId, broker) {
+  if (broker !== ANGEL_ONE) return null;
   try {
-    const result = await pool.query(
-      `SELECT a.id, a.client_id, a.status, a.connection_mode,
-              t.access_token_ciphertext, t.refresh_token_ciphertext, t.feed_token_ciphertext,
-              t.token_expires_at
-       FROM broker_accounts a
-       LEFT JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
-       WHERE a.user_id = $1 AND a.broker = $2 AND a.status IN ('CONNECTED', 'PARTIALLY_CONNECTED')`,
-      [userId, broker]
-    );
-
-    if (result.rows.length === 0) {
-      return null;
-    }
-
-    const row = result.rows[0];
-    
-    if (broker === 'DHAN') {
-      const adapter = getBrokerAdapter('DHAN', 'LIVE', {
-        dhanClientId: row.client_id,
-        accessToken: decryptBrokerSecret(row.access_token_ciphertext),
-        tokenExpiresAt: row.token_expires_at,
-      });
-      adapter.expectedClientId = row.client_id;
-      return adapter;
-    }
-    
-    if (broker === 'ANGEL_ONE') {
-      // For Angel One, we need to create adapter with stored session tokens
-      const { AngelOneAdapter } = await import('../algo/broker-adapters.js');
-      const adapter = new AngelOneAdapter({
-        angelOneClientCode: row.client_id,
-        jwtToken: decryptBrokerSecret(row.access_token_ciphertext),
-        refreshToken: row.refresh_token_ciphertext ? decryptBrokerSecret(row.refresh_token_ciphertext) : null,
-        feedToken: row.feed_token_ciphertext ? decryptBrokerSecret(row.feed_token_ciphertext) : null,
-        tokenExpiresAt: row.token_expires_at,
-        // Include environment-based config for API key and TOTP secret
-        apiKey: process.env.ANGEL_ONE_API_KEY,
-        totpSecret: process.env.ANGEL_ONE_TOTP_SECRET,
-      });
-      adapter.expectedClientId = row.client_id;
-      return adapter;
-    }
-
-    return null;
+    const session = await getAngelOneSession(pool, userId);
+    return session.adapter;
   } catch (error) {
     throw new Error(`Failed to get broker adapter: ${error.message}`);
   }
@@ -290,10 +246,8 @@ async function verifyAuthentication(adapter) {
 
 export async function assertBrokerIdentity(adapter, broker, expectedClientId) {
   const profile = await adapter.getProfile();
-  const actualClientId = broker === 'DHAN'
-    ? profile?.clientId || profile?.client_id
-    : profile?.clientCode || profile?.clientcode || profile?.clientId;
-  if (!actualClientId || String(actualClientId) !== String(expectedClientId)) {
+  const actualClientId = profile?.clientCode || profile?.clientId;
+  if (!actualClientId || String(actualClientId).toUpperCase() !== String(expectedClientId || '').toUpperCase()) {
     const error = new Error(`${broker} profile identity does not match the connected account`);
     error.statusCode = 409;
     error.code = 'BROKER_ACCOUNT_IDENTITY_MISMATCH';
@@ -313,22 +267,20 @@ async function verifyProfile(adapter, expectedClientId) {
 
   try {
     const profile = await adapter.getProfile();
-    const actualClientId = profile?.clientId || profile?.client_id || profile?.clientCode || profile?.clientcode;
-    if (expectedClientId && (!actualClientId || String(actualClientId) !== String(expectedClientId))) {
+    const actualClientId = profile?.clientCode || profile?.clientId;
+    if (expectedClientId && (!actualClientId || String(actualClientId).toUpperCase() !== String(expectedClientId).toUpperCase())) {
       check.message = 'Broker profile identity does not match the stored account';
       return check;
     }
     if (profile && actualClientId) {
       check.status = VERIFICATION_STATUS.PASS;
       check.message = 'Profile data retrieved';
-      // Only non-secret profile fields; never the token.
+      // Only non-secret profile fields; never a token.
       check.data = {
-        clientId: profile.clientId || profile.clientcode || null,
+        clientId: actualClientId,
         name: profile.name || null,
-        tokenValidity: profile.tokenValidity || null,
-        dataPlan: profile.dataPlan || null,
-        dataValidity: profile.dataValidity || null,
-        activeSegment: profile.activeSegment || null,
+        exchanges: profile.exchanges || [],
+        products: profile.products || [],
       };
     } else {
       check.message = 'Profile data unavailable';
@@ -351,10 +303,11 @@ async function verifyFunds(adapter) {
 
   try {
     const funds = await adapter.getMargin();
-    if (funds && (funds.availablecash !== undefined || funds.available !== undefined || funds.net !== undefined)) {
+    if (funds && Number.isFinite(Number(funds.available))) {
       check.status = VERIFICATION_STATUS.PASS;
       check.message = 'Funds data retrieved';
-      check.data = funds;
+      const { raw, ...summary } = funds;
+      check.data = summary;
     } else {
       check.message = 'Funds data unavailable';
     }
@@ -475,40 +428,19 @@ async function verifyMarketData(adapter, broker) {
   };
 
   try {
-    // Test with commonly available symbols
-    const testSymbols = {
-      DHAN: { exchange: 'IDX_I', symbol: 'NIFTY 50', symbolToken: '13' },
-      ANGEL_ONE: { exchange: 'NSE', symbol: 'NIFTY', symbolToken: '99926000' },
-    };
-
-    const testSymbol = testSymbols[broker];
-    if (!testSymbol) {
-      check.message = 'Market data test not configured for this broker';
-      check.status = VERIFICATION_STATUS.PARTIAL;
-      return check;
-    }
-
-    const marketData = await adapter.getMarketData({
-      exchange: testSymbol.exchange,
-      symbolToken: testSymbol.symbolToken,
-    });
-
-    const data = marketData?.data || marketData;
-    const quote = data?.[testSymbol.exchange]?.[String(testSymbol.symbolToken)] || data?.IDX_I?.[String(testSymbol.symbolToken)];
-    const hasMarketData = Number(quote?.last_price ?? quote?.ltp) > 0;
-    if (hasMarketData) {
+    // NIFTY 50 resolved from the official Angel One instrument master.
+    const instrument = await getNiftyIndexInstrument();
+    const quote = await adapter.getQuote({ exchange: instrument.exchange, symbolToken: instrument.symbolToken, mode: 'FULL' });
+    if (Number(quote?.ltp) > 0) {
       check.status = VERIFICATION_STATUS.PASS;
       check.message = 'Market data retrieved';
-      check.data = { symbol: testSymbol.symbol, securityId: testSymbol.symbolToken, ltp: Number(quote.last_price ?? quote.ltp) };
+      check.data = { symbol: instrument.name, symbolToken: instrument.symbolToken, ltp: Number(quote.ltp), exchangeTime: quote.lastUpdateTime || null };
     } else {
       check.message = 'Market data unavailable';
     }
   } catch (error) {
-    check.message = error.dataApiRejected
-      ? `Dhan Data API rejected the request (HTTP ${error.httpStatus}${error.providerErrorCode ? `, ${error.providerErrorCode}` : ''}). The Dhan Data API plan may be inactive.`
-      : `Market data error: ${error.message}`;
+    check.message = `Market data error: ${error.message}`;
     check.status = VERIFICATION_STATUS.FAIL;
-    check.dataApiRejected = error.dataApiRejected === true;
     check.httpStatus = error.httpStatus ?? null;
     check.providerErrorCode = error.providerErrorCode ?? null;
   }

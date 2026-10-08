@@ -53,6 +53,7 @@ export async function storeBrokerTokens({
   accessToken,
   refreshToken = null,
   feedToken = null,
+  apiKey = null,
   tokenType = null,
   scopes = [],
   expiresAt = null,
@@ -80,13 +81,14 @@ export async function storeBrokerTokens({
   await client.query(
     `INSERT INTO broker_oauth_tokens
        (broker_account_id, user_id, access_token_ciphertext, refresh_token_ciphertext,
-        feed_token_ciphertext, token_type, scopes, token_expires_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::text[], $8, NOW())
+        feed_token_ciphertext, api_key_ciphertext, token_type, scopes, token_expires_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::text[], $9, NOW())
      ON CONFLICT (broker_account_id) DO UPDATE SET
        user_id = EXCLUDED.user_id,
        access_token_ciphertext = EXCLUDED.access_token_ciphertext,
        refresh_token_ciphertext = EXCLUDED.refresh_token_ciphertext,
        feed_token_ciphertext = EXCLUDED.feed_token_ciphertext,
+       api_key_ciphertext = EXCLUDED.api_key_ciphertext,
        token_type = EXCLUDED.token_type,
        scopes = EXCLUDED.scopes,
        token_expires_at = EXCLUDED.token_expires_at,
@@ -97,6 +99,7 @@ export async function storeBrokerTokens({
       encryptBrokerSecret(accessToken),
       refreshToken ? encryptBrokerSecret(refreshToken) : null,
       feedToken ? encryptBrokerSecret(feedToken) : null,
+      apiKey ? encryptBrokerSecret(apiKey) : null,
       tokenType,
       scopes,
       expiresAt,
@@ -116,7 +119,7 @@ export async function getBrokerCredentials(userId, broker) {
   const result = await pool.query(
     `SELECT a.id, a.client_id, a.status, a.connection_mode, a.is_active_broker,
             t.access_token_ciphertext, t.refresh_token_ciphertext, t.feed_token_ciphertext,
-            t.token_expires_at
+            t.api_key_ciphertext, t.token_expires_at
      FROM broker_accounts a
      LEFT JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
      WHERE a.user_id = $1 AND a.broker = $2`,
@@ -143,6 +146,7 @@ export async function getBrokerCredentials(userId, broker) {
       accessToken: decryptBrokerSecret(row.access_token_ciphertext),
       refreshToken: row.refresh_token_ciphertext ? decryptBrokerSecret(row.refresh_token_ciphertext) : null,
       feedToken: row.feed_token_ciphertext ? decryptBrokerSecret(row.feed_token_ciphertext) : null,
+      apiKey: row.api_key_ciphertext ? decryptBrokerSecret(row.api_key_ciphertext) : null,
       tokenExpiresAt: row.token_expires_at,
     };
   } catch (error) {

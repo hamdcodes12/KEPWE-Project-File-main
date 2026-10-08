@@ -71,11 +71,8 @@ if (!credentials) {
   return res.status(404).json({ error: 'Broker not connected for this user' });
 }
 
-// Create adapter with THIS USER's credentials
-const adapter = getBrokerAdapter(broker, 'LIVE', {
-  dhanClientId: credentials.clientId,
-  accessToken: credentials.accessToken,
-});
+// Create the adapter from THIS USER's stored Angel One session
+const { adapter } = await getAngelOneSession(pool, userId);
 ```
 
 **Never Trust Client Input:**
@@ -192,12 +189,14 @@ await client.query(
 **Zod schemas for all inputs:**
 ```javascript
 const connectSchema = z.object({
-  dhanClientId: z.string().trim().min(1).max(60),
-  accessToken: z.string().trim().min(1).max(4096),
+  clientCode: z.string().trim().min(1).max(60).optional(),
+  mpin: z.string().trim().min(1).max(64).optional(),
+  totp: z.string().trim().min(6).max(128),
+  apiKey: z.string().trim().max(128).optional(),
 }).strict();
 
 const setBrokerSchema = z.object({
-  broker: z.enum(['DHAN', 'ANGEL_ONE']),
+  broker: z.enum(['ANGEL_ONE']),
 }).strict();
 ```
 
@@ -270,11 +269,8 @@ if (!credentials) {
   throw new Error('Broker not connected');
 }
 
-// 3. Create adapter with user's credentials
-const adapter = getBrokerAdapter(broker, 'LIVE', {
-  dhanClientId: credentials.clientId,
-  accessToken: credentials.accessToken,
-});
+// 3. Create the adapter from the user's stored Angel One session
+const { adapter } = await getAngelOneSession(pool, userId);
 
 // 4. Check algo is active for THIS user
 const state = await pool.query(
@@ -302,64 +298,38 @@ const order = await createAndSubmitOrder({
 
 ### 6. Broker Postback Security
 
-#### Dhan Postback Validation
+#### Angel One Postback Validation
 
-**Endpoint:** `/api/broker/dhan/callback` (POST)
+**Endpoint:** `/api/angel-one/postback` (POST)
 
 **Security Measures:**
-1. **No authentication required** (broker-initiated webhook)
-2. **Order ownership verified** before updating
-3. **Status transitions validated**
-4. **User ID from database**, not request
-5. **Idempotent updates** (duplicate postbacks safe)
-
-**Safe Update Process:**
-```javascript
-// Look up order by brokerOrderId or correlationId
-const order = await client.query(
-  'SELECT id, user_id FROM algo_orders WHERE broker_order_id = $1',
-  [orderId]
-);
-
-// Update ONLY if order exists and belongs to a user
-if (order.rows.length > 0) {
-  await client.query(
-    'UPDATE algo_orders SET status = $2 WHERE id = $1 AND user_id = $3',
-    [order.id, newStatus, order.user_id] // user_id from database
-  );
-}
-```
+1. **Shared secret required**: the registered postback URL carries `?token=<ANGEL_ONE_WEBHOOK_TOKEN>`; requests without it are rejected (401)
+2. **Trigger only**: Angel One postbacks are unsigned, so the payload's status/price fields are never applied. The order is re-read from SmartAPI (order book) with the owner's stored session and that authoritative state is applied
+3. **Order ownership verified** before updating (order -> broker account -> same user)
+4. **Status transitions validated** by the OMS
+5. **Idempotent updates** (duplicate or out-of-order postbacks are acknowledged, never re-applied)
 
 **What Cannot Happen:**
+- ❌ A forged postback filling or rejecting an order
 - ❌ One user's postback updating another user's order
 - ❌ Creating orders via postback
 - ❌ Changing order ownership
 - ❌ Accessing user credentials
 
-#### Angel One Postback Validation
-
-Same security principles as Dhan postback.
-
 ### 7. Session Management Security
 
 #### Session Expiry Handling
 
-**Dhan Sessions:**
-- 24-hour token validity
-- Automatic expiry detection (401 responses)
-- Status updated to SESSION_EXPIRED
-- Algo execution stopped
-- User prompted to reconnect
-
 **Angel One Sessions:**
-- JWT token with variable expiry
-- Refresh token for renewal
-- Automatic refresh attempt
-- Fallback to reconnection
+- SmartAPI tokens expire daily; MPIN and TOTP are never stored
+- Expiry detected from SmartAPI error codes (AG8001/AG8002/AB1010 and HTTP 401)
+- One refresh-token renewal is attempted (generateTokens); rotated tokens are re-encrypted and persisted
+- If renewal fails the account is marked SESSION_EXPIRED and algo execution stops
+- User is prompted to sign in again with client code, MPIN and TOTP
 
 **Security During Expiry:**
 - Expired credentials not used
-- No automatic reconnection without user action
+- No re-login without user action (unless the operator configures the optional auto re-login env vars)
 - Clear error messages
 - Audit trail of session events
 

@@ -27,7 +27,7 @@ async function testBrokerStatusRegression() {
     const accountResult = await client.query(
       `INSERT INTO broker_accounts 
        (user_id, broker, client_id, status, connection_mode, connected_at) 
-       VALUES ($1, 'DHAN', '1234567890', 'PARTIALLY_CONNECTED', 'LIVE', NOW())
+       VALUES ($1, 'ANGEL_ONE', 'A123456', 'PARTIALLY_CONNECTED', 'LIVE', NOW())
        RETURNING id`,
       [testUserId]
     );
@@ -47,7 +47,7 @@ async function testBrokerStatusRegression() {
              t.access_token_ciphertext, t.token_expires_at
       FROM broker_accounts a
       LEFT JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
-      WHERE a.user_id = $1 AND a.broker = 'DHAN'
+      WHERE a.user_id = $1 AND a.broker = 'ANGEL_ONE'
     `, [testUserId]);
     
     const account = statusQuery.rows[0];

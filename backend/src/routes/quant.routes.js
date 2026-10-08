@@ -17,10 +17,9 @@ import {
   runNiftyScalpingBacktest,
   validateNiftyScalpingDeploymentGate,
 } from '../services/nifty-scalping-strategy.service.js';
-import { runDhanLiveHealthCheck } from '../services/dhan-live-health.service.js';
-import { getDhanMarketFeed } from '../services/dhan-market-feed.service.js';
-import { getBrokerAdapter } from '../algo/broker-adapters.js';
-import { decryptBrokerSecret } from '../services/broker-token.service.js';
+import { runAngelOneLiveHealthCheck } from '../services/angel-one-live-health.service.js';
+import { getAngelOneMarketFeed } from '../services/angel-one-market-feed.service.js';
+import { getAngelOneSession, isAngelOneSessionError, markAngelOneSessionExpired } from '../services/angel-one-session.service.js';
 import { tryCreateQuantNotification } from '../services/quant-notification.service.js';
 
 const router = Router();
@@ -56,7 +55,7 @@ function toNumberOrNull(value) {
 }
 
 function deriveExecutionMode(status, latestEventType) {
-  if (latestEventType === 'LIVE_DEPLOYED' || status === 'LIVE_ACTIVE') return 'LIVE / Dhan';
+  if (latestEventType === 'LIVE_DEPLOYED' || status === 'LIVE_ACTIVE') return 'LIVE / Angel One';
   return null;
 }
 
@@ -131,9 +130,9 @@ function computeMaxDrawdownFromPnlSeries(pnls = []) {
   return Number(maxDrawdown.toFixed(2));
 }
 
-async function getDhanLiveSnapshot(userId) {
-  // One verified Dhan feed shared with /live-health and the live runner.
-  return getDhanMarketFeed(pool, userId);
+async function getLiveMarketSnapshot(userId) {
+  // One verified Angel One feed shared with /live-health and the live runner.
+  return getAngelOneMarketFeed(pool, userId);
 }
 
 /**
@@ -179,7 +178,7 @@ router.get('/dashboard', async (req, res, next) => {
          ORDER BY s.updated_at DESC`,
         [req.userId]
       ),
-      getDhanLiveSnapshot(req.userId),
+      getLiveMarketSnapshot(req.userId),
     ]);
 
     const settings = settingsRes.rows[0];
@@ -228,7 +227,7 @@ router.get('/dashboard', async (req, res, next) => {
       })),
       feedStatus: {
         connected: liveSnapshot.connected,
-        source: liveSnapshot.source || 'DHAN',
+        source: liveSnapshot.source || 'ANGEL_ONE',
         symbol: liveSnapshot.symbol || 'NIFTY 50',
         price: liveSnapshot.price || null,
         clientId: liveSnapshot.clientId || null,
@@ -236,10 +235,9 @@ router.get('/dashboard', async (req, res, next) => {
         blocker: liveSnapshot.blocker || null,
         brokerStatus: liveSnapshot.broker?.status || null,
         marketDataStatus: liveSnapshot.marketData?.status || null,
-        dataPlan: liveSnapshot.marketData?.dataPlan || null,
         label: liveSnapshot.connected
-          ? 'Market Feed: Live (Dhan)'
-          : (liveSnapshot.marketData?.status === 'DATA_API_NOT_ACTIVE' ? 'Market Feed: Dhan Data API not active' : 'Market Feed: Blocked'),
+          ? 'Market Feed: Live (Angel One)'
+          : (liveSnapshot.marketData?.status === 'STALE' ? 'Market Feed: Angel One (last update not recent)' : 'Market Feed: Blocked'),
       },
       strategies: userStrategies,
     });
@@ -251,8 +249,8 @@ router.get('/dashboard', async (req, res, next) => {
 router.get('/live-market', async (req, res, next) => {
   try {
     // Always a structured 200: broker.status and marketData.status carry the
-    // truthful state (LIVE, DATA_API_NOT_ACTIVE, AUTH_FAILED, RATE_LIMITED, ...).
-    const snapshot = await getDhanLiveSnapshot(req.userId);
+    // truthful state (LIVE, STALE, AUTH_FAILED, RATE_LIMITED, NETWORK_ERROR, ...).
+    const snapshot = await getLiveMarketSnapshot(req.userId);
     return res.json(snapshot);
   } catch (error) {
     return next(error);
@@ -261,7 +259,7 @@ router.get('/live-market', async (req, res, next) => {
 
 router.post('/live-health', async (req, res, next) => {
   try {
-    const health = await runDhanLiveHealthCheck(pool, req.userId);
+    const health = await runAngelOneLiveHealthCheck(pool, req.userId);
     // Structured 200 for every determinable outcome; `ready` and `code` carry the verdict.
     res.json({
       ...health,
@@ -316,7 +314,7 @@ router.get('/strategies', requireFeature(FEATURES.ALGO_STRATEGIES), async (req, 
 
 /**
  * GET /api/quant/analytics
- * Real stored analytics derived from LIVE Dhan orders, trades, and backtest records only.
+ * Real stored analytics derived from LIVE Angel One orders, trades, and backtest records only.
  * Requires PNL_ANALYTICS feature (available in trial)
  */
 router.get('/analytics', requireFeature(FEATURES.PNL_ANALYTICS), async (req, res, next) => {
@@ -791,8 +789,9 @@ router.post('/deployment/validate', requireFeature(FEATURES.LIVE_EXECUTION), asy
  * POST /api/quant/emergency-stop   body: { flattenPositions?: boolean }
  * Halts the live runner immediately (always) and records a KILL_SWITCH for the
  * IST day, which blocks restarting. Only when flattenPositions === true does it
- * ask Dhan to exit all positions; that call is subject to Dhan's order-API
- * prerequisites (static IP) and its real outcome is returned.
+ * place a MARKET exit order for every open Angel One position; those orders are
+ * subject to Angel One's order-API prerequisites (static IP) and the real
+ * outcome of each is returned.
  */
 router.post('/emergency-stop', async (req, res, next) => {
   try {
@@ -813,36 +812,37 @@ router.post('/emergency-stop', async (req, res, next) => {
 
     let flattenResult = { requested: false };
     if (flatten) {
-      const brokerRes = await pool.query(
-        `SELECT ba.client_id, ba.status, ba.connection_mode, bot.access_token_ciphertext, bot.token_expires_at
-         FROM broker_accounts ba JOIN broker_oauth_tokens bot ON bot.broker_account_id = ba.id
-         WHERE ba.user_id = $1 AND ba.broker = 'DHAN' LIMIT 1`,
-        [userId],
-      );
-      const broker = brokerRes.rows[0];
-      if (!broker || broker.status !== 'CONNECTED' || broker.connection_mode !== 'LIVE') {
-        flattenResult = { requested: true, accepted: false, code: 'BROKER_UNAVAILABLE', reason: 'No verified LIVE Dhan session; positions were not exited.' };
+      const session = await getAngelOneSession(pool, userId);
+      if (!session.adapter || session.row.status !== 'CONNECTED') {
+        flattenResult = { requested: true, accepted: false, code: 'BROKER_UNAVAILABLE', reason: 'No verified LIVE Angel One session; positions were not exited.' };
       } else {
         try {
-          const adapter = getBrokerAdapter('DHAN', 'LIVE', {
-            dhanClientId: broker.client_id,
-            accessToken: decryptBrokerSecret(broker.access_token_ciphertext),
-            tokenExpiresAt: broker.token_expires_at,
-          });
-          await adapter.exitAllPositions();
-          const pending = await pool.query(
-            `UPDATE algo_positions SET status = 'EMERGENCY_PENDING', updated_at = NOW()
-             WHERE user_id = $1 AND status = 'OPEN' RETURNING id`,
-            [userId],
-          );
-          flattenResult = { requested: true, accepted: true, positionsPendingConfirmation: pending.rows.length };
+          const exit = await session.adapter.exitAllPositions();
+          const pending = exit.placed.length > 0
+            ? await pool.query(
+              `UPDATE algo_positions SET status = 'EMERGENCY_PENDING', updated_at = NOW()
+               WHERE user_id = $1 AND status = 'OPEN' RETURNING id`,
+              [userId],
+            )
+            : { rows: [] };
+          flattenResult = {
+            requested: true,
+            accepted: exit.failed.length === 0,
+            code: exit.failed.length === 0 ? null : 'PARTIAL_EXIT',
+            reason: exit.failed.length === 0 ? null : `${exit.failed.length} of ${exit.openPositions} exit order(s) were refused by Angel One: ${exit.failed[0].reason}`,
+            openPositions: exit.openPositions,
+            exitOrdersPlaced: exit.placed.length,
+            exitOrdersFailed: exit.failed,
+            positionsPendingConfirmation: pending.rows.length,
+          };
         } catch (error) {
+          if (isAngelOneSessionError(error)) await markAngelOneSessionExpired(pool, session.row.id);
           flattenResult = {
             requested: true,
             accepted: false,
             code: error?.code === 'STATIC_IP_NOT_READY' ? 'STATIC_IP_NOT_READY' : 'BROKER_REJECTED',
             reason: error.message,
-            dhanErrorCode: error?.providerErrorCode ?? null,
+            brokerErrorCode: error?.providerErrorCode ?? null,
           };
         }
       }
@@ -852,7 +852,7 @@ router.post('/emergency-stop', async (req, res, next) => {
       type: 'EMERGENCY_STOP',
       title: 'Emergency stop activated',
       body: flattenResult.requested
-        ? (flattenResult.accepted ? 'Live trading halted and Dhan accepted the exit-all-positions request.' : `Live trading halted. Exit-all was NOT completed: ${flattenResult.reason}`)
+        ? (flattenResult.accepted ? 'Live trading halted and Angel One accepted an exit order for every open position.' : `Live trading halted. Exit-all was NOT completed: ${flattenResult.reason}`)
         : 'Live trading halted. Open positions were not changed.',
       data: flattenResult,
     });
@@ -864,7 +864,7 @@ router.post('/emergency-stop', async (req, res, next) => {
 
 /**
  * GET /api/quant/risk/status
- * Get real-time daily risk controller status from live Dhan account
+ * Get real-time daily risk controller status from live Angel One account
  * Requires RISK_MANAGEMENT feature (available in trial)
  */
 router.get('/risk/status', requireFeature(FEATURES.RISK_MANAGEMENT), async (req, res, next) => {

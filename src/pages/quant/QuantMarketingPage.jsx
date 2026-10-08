@@ -175,8 +175,8 @@ const HOW_IT_WORKS_STEPS = [
     step: '04',
     title: 'Automate',
     tagline: 'Guarded Broker Deployment',
-    description: 'Connect Dhan (DhanHQ v2) or supported brokers via direct OAuth/Access Token. Every trade passes pre-execution risk checks, max loss caps, and kill-switch guards.',
-    features: ['Sub-second order routing', 'Multi-broker connectivity', 'Automated token refresh', 'Pre-trade safety gate'],
+    description: 'Connect your own Angel One account through SmartAPI (client code, MPIN and TOTP). Every trade passes pre-execution risk checks, max loss caps, and kill-switch guards.',
+    features: ['Angel One SmartAPI order routing', 'Encrypted session tokens', 'Automatic session renewal', 'Pre-trade safety gate'],
     icon: Zap,
   },
   {
@@ -192,58 +192,13 @@ const HOW_IT_WORKS_STEPS = [
 // ─── 09. Broker Connections ──────────────────────────────────────────────────
 const BROKER_LIST = [
   {
-    name: 'Dhan (DhanHQ v2)',
-    category: 'Advanced Trading & Tech Broker',
-    status: 'Live & Active',
-    statusType: 'ready',
-    logoLetter: 'D',
-    logoColor: '#075056',
-    description: 'Official DhanHQ API v2 integration for automated lightning-fast order placement, position tracking, margin limits, and live postback synchronization.',
-  },
-  {
     name: 'Angel One (SmartAPI)',
-    category: 'Full-Service Tech Broker',
-    status: 'Integration Ready',
+    category: 'Supported Broker',
+    status: 'Live',
     statusType: 'ready',
     logoLetter: 'A',
-    logoColor: '#EA580C',
-    description: 'Multi-asset trading engine adapter supporting equities, index F&O, and commodities with tokenized auth.',
-  },
-  {
-    name: 'Zerodha (Kite Connect)',
-    category: 'Discount Broker',
-    status: 'Coming Soon',
-    statusType: 'pending',
-    logoLetter: 'Z',
-    logoColor: '#059669',
-    description: 'Adapter pipeline currently in development for standard Kite Connect API protocol.',
-  },
-  {
-    name: 'Upstox',
-    category: 'Algorithmic Trading Broker',
-    status: 'Coming Soon',
-    statusType: 'pending',
-    logoLetter: 'U',
-    logoColor: '#7C3AED',
-    description: 'High-throughput order routing adapter in testing for HFT and intraday systematic setups.',
-  },
-  {
-    name: 'Dhan (HQ API)',
-    category: 'Superfast Trading Platform',
-    status: 'Connection Pending',
-    statusType: 'pending',
-    logoLetter: 'D',
-    logoColor: '#0284C7',
-    description: 'Direct webhook and REST execution gateway planned for lightning-fast options automation.',
-  },
-  {
-    name: 'Fyers',
-    category: 'API-First Trading Broker',
-    status: 'Connection Pending',
-    statusType: 'pending',
-    logoLetter: 'F',
-    logoColor: '#D97706',
-    description: 'Multi-leg option order execution module scheduled for Q4 deployment.',
+    logoColor: '#C8102E',
+    description: 'Official Angel One SmartAPI integration: live quotes and historical candles, funds, positions and holdings, order placement, order status and order history from your own Angel One account.',
   },
 ];
 
@@ -261,7 +216,7 @@ const PRICING_PLANS = [
     features: [
       'Unlimited Historical Backtesting (5 Yrs)',
       'Full Strategy Builder Canvas',
-      'Live Broker Automation (Dhan & DhanHQ v2)',
+      'Live Broker Automation (Angel One SmartAPI)',
       'Sub-Second Order Routing & Execution',
       'Institutional Risk Management & Kill Switch',
       'Custom Python & TradingView Webhooks',
@@ -314,7 +269,7 @@ const QUANT_FAQS = [
   },
   {
     q: 'How do I validate my strategy before going live?',
-    a: 'Run unlimited historical backtests against 5+ years of tick-level market data. Measure win rates, drawdown, Sharpe ratio, and other performance metrics. Once validated, connect your real Dhan account and deploy under strict risk guardrails with institutional kill-switch controls.',
+    a: 'Run unlimited historical backtests against 5+ years of tick-level market data. Measure win rates, drawdown, Sharpe ratio, and other performance metrics. Once validated, connect your real Angel One account and deploy under strict risk guardrails with institutional kill-switch controls.',
   },
 ];
 
@@ -381,7 +336,7 @@ export default function QuantMarketingPage() {
                 </div>
                 <div className="trust-item">
                   <CheckCircle2 size={16} className="trust-icon" />
-                  <span>Multi-Broker OAuth</span>
+                  <span>Angel One SmartAPI</span>
                 </div>
                 <div className="trust-item">
                   <CheckCircle2 size={16} className="trust-icon" />
@@ -1124,13 +1079,13 @@ export default function QuantMarketingPage() {
               <span className="eyebrow-dot" />
               <span>BROKER CONNECTIVITY</span>
             </div>
-            <h2 className="quant-section-title">Seamless Broker Integrations</h2>
+            <h2 className="quant-section-title">Angel One SmartAPI Integration</h2>
             <p className="quant-section-sub">
-              Connect your preferred SEBI-registered broker account with bank-grade 256-bit AES encryption and OAuth security.
+              Connect your own Angel One account. Session tokens are stored with AES-256-GCM encryption; your MPIN and TOTP are never stored.
             </p>
           </div>
 
-          <div className="brokers-grid">
+          <div className="brokers-grid" style={{ gridTemplateColumns: 'minmax(0, 440px)', justifyContent: 'center' }}>
             {BROKER_LIST.map((b) => (
               <div key={b.name} className="broker-card">
                 <div className="broker-card-top">
@@ -1146,7 +1101,7 @@ export default function QuantMarketingPage() {
                 <p className="broker-desc">{b.description}</p>
                 <div className="broker-card-foot">
                   <ShieldCheck size={14} className="text-blue" />
-                  <span>Encrypted OAuth Flow</span>
+                  <span>Encrypted Session Tokens</span>
                 </div>
               </div>
             ))}
@@ -1155,7 +1110,7 @@ export default function QuantMarketingPage() {
           <div className="quant-source-note text-center">
             <HelpCircle size={15} />
             <span>
-              KEPWE QUANT never fakes broker connections. Unconfigured providers are transparently labeled as "Integration Ready" or "Coming Soon". Live credentials are never assumed or fabricated.
+              KEPWE QUANT never fakes broker connections. Angel One SmartAPI is the supported broker; a connection is shown as live only after Angel One itself confirms your session.
             </span>
           </div>
 

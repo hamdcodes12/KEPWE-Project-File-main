@@ -131,9 +131,9 @@ async function main() {
     await applySqlFile(client, join(__dirname, 'migrations/003_broker_enhancements.sql'), '003_broker_enhancements.sql');
     await applySqlFile(client, join(__dirname, 'migrations/005_live_broker_execution.sql'), '005_live_broker_execution.sql');
     await applySqlFile(client, join(__dirname, 'migrations/006_production_readiness_oms.sql'), '006_production_readiness_oms.sql');
-    await applySqlFile(client, join(__dirname, 'migrations/007_dhan_live_flow_hardening.sql'), '007_dhan_live_flow_hardening.sql');
+    await applySqlFile(client, join(__dirname, 'migrations/007_live_flow_hardening.sql'), '007_live_flow_hardening.sql');
     await applySqlFile(client, join(__dirname, 'migrations/008_order_remaining_quantity.sql'), '008_order_remaining_quantity.sql');
-    await applySqlFile(client, join(__dirname, 'dhan_integration.sql'), 'dhan_integration.sql');
+    await applySqlFile(client, join(__dirname, 'migrations/009_angel_one_only.sql'), '009_angel_one_only.sql');
     await applySqlFile(client, join(__dirname, 'quant_subscription_system.sql'), 'quant_subscription_system.sql');
     await applySqlFile(client, join(__dirname, 'fix_quant_memberships.sql'), 'fix_quant_memberships.sql');
     // Deduplicate ledger_categories before applying the PRD dashboard migration

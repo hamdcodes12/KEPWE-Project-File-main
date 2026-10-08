@@ -46,7 +46,13 @@ export function normalizeExecutionStatus(value) {
   const status = String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
   if (['COMPLETE', 'COMPLETED', 'EXECUTED', 'FILLED', 'TRADED'].includes(status)) return 'FILLED';
   if (['PARTIAL', 'PART_TRADED', 'PARTIALLY_TRADED', 'PARTIALLY_FILLED', 'PARTIALLYFILLED'].includes(status)) return 'PARTIALLY_FILLED';
-  if (['OPEN', 'PENDING', 'PENDING_NEW', 'TRANSIT', 'TRIGGER_PENDING', 'PUT_ORDER_REQUEST_RECEIVED', 'SUBMITTED'].includes(status)) return 'SUBMITTED';
+  if ([
+    'OPEN', 'PENDING', 'PENDING_NEW', 'TRANSIT', 'TRIGGER_PENDING', 'PUT_ORDER_REQUEST_RECEIVED', 'SUBMITTED',
+    // Angel One SmartAPI order-book states for an order that is still working.
+    'OPEN_PENDING', 'VALIDATION_PENDING', 'PUT_ORDER_REQ_RECEIVED', 'MODIFIED', 'MODIFY_PENDING',
+    'MODIFY_VALIDATION_PENDING', 'NOT_MODIFIED', 'NOT_CANCELLED', 'CANCEL_PENDING',
+    'AMO_REQ_RECEIVED', 'AFTER_MARKET_ORDER_REQ_RECEIVED', 'MODIFY_AFTER_MARKET_ORDER_REQ_RECEIVED',
+  ].includes(status)) return 'SUBMITTED';
   if (['CANCELLED', 'CANCELED', 'CANCELLED_AFTER_MARKET_ORDER', 'EXPIRED'].includes(status)) return 'CANCELLED';
   if (['REJECTED', 'ERROR', 'FAILED'].includes(status)) return 'REJECTED';
   return ORDER_STATUSES.has(status) ? status : null;
@@ -300,7 +306,7 @@ export async function applyExecutionUpdate({ pool, orderId, brokerOrderId, userI
       await tryCreateQuantNotification(pool, {
         userId: order.user_id,
         type: notificationType,
-        title: notificationType === 'PARTIAL_FILL' ? 'Dhan order partially filled' : notificationType === 'STOP_LOSS' ? 'Stop-loss exit filled' : notificationType === 'TARGET' ? 'Target exit filled' : notificationType === 'ORDER_FILLED' ? 'Dhan order filled' : notificationType === 'ORDER_REJECTED' ? 'Dhan order rejected' : 'Order cancelled',
+        title: notificationType === 'PARTIAL_FILL' ? 'Angel One order partially filled' : notificationType === 'STOP_LOSS' ? 'Stop-loss exit filled' : notificationType === 'TARGET' ? 'Target exit filled' : notificationType === 'ORDER_FILLED' ? 'Angel One order filled' : notificationType === 'ORDER_REJECTED' ? 'Angel One order rejected' : 'Order cancelled',
         body: `${order.side} ${order.instrument} order is ${nextStatus.toLowerCase()}.`,
         data: { orderId: order.id, brokerOrderId: update.brokerOrderId, status: nextStatus, filledQuantity: nextFilled },
       });
@@ -309,8 +315,8 @@ export async function applyExecutionUpdate({ pool, orderId, brokerOrderId, userI
       await tryCreateQuantNotification(pool, {
         userId: order.user_id,
         type: 'POSITION_CLOSED',
-        title: 'Position closed at Dhan',
-        body: `${order.instrument} exit fill was confirmed by Dhan.`,
+        title: 'Position closed at Angel One',
+        body: `${order.instrument} exit fill was confirmed by Angel One.`,
         data: { orderId: order.id, brokerOrderId: update.brokerOrderId, exitReason: order.metadata.exitReason || null },
       });
     }
@@ -345,7 +351,7 @@ export async function createAndSubmitOrder({
     throw new Error(`KEPWE Quant only supports LIVE execution. Received: ${executionMode}. Paper trading has been completely removed.`);
   }
 
-  // Broker order-API prerequisites (e.g. Dhan static-IP whitelist) are checked
+  // Broker order-API prerequisites (Angel One static-IP requirement) are checked
   // before anything is persisted, so a blocked order never becomes a DB record.
   if (typeof adapter?.assertOrderExecutionReady === 'function') {
     await adapter.assertOrderExecutionReady();
@@ -420,8 +426,8 @@ export async function createAndSubmitOrder({
     await tryCreateQuantNotification(pool, {
       userId,
       type: 'ORDER_SUBMITTED',
-      title: 'Dhan order submitted',
-      body: `${order.side} ${order.instrument} order submitted to Dhan.`,
+      title: 'Angel One order submitted',
+      body: `${order.side} ${order.instrument} order submitted to Angel One.`,
       data: { orderId: order.id, brokerOrderId: brokerResult?.brokerOrderId || brokerResult?.orderId || null },
     });
     return updated.rows[0];
@@ -445,7 +451,7 @@ export async function createAndSubmitOrder({
     await tryCreateQuantNotification(pool, {
       userId,
       type: 'ORDER_REJECTED',
-      title: 'Dhan order rejected',
+      title: 'Angel One order rejected',
       body: serializeError(error),
       data: { orderId: order.id },
     });

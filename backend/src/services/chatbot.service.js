@@ -28,14 +28,9 @@ const FEATURE_LABELS = {
 
 const TOPIC_RESPONSES = [
   {
-    terms: ['angel one', 'angelone'],
-    answer: 'Open Broker Connections from the workspace, choose Angel One, and follow the connection flow. KEPWE keeps broker access user-scoped and does not expose broker credentials in chat.',
-    suggestions: ['How do I connect Dhan?', 'What is Broker Connections?'],
-  },
-  {
-    terms: ['dhan'],
-    answer: 'Open Broker Connections from the workspace, choose Dhan, and follow the connection flow. Live execution remains subject to the existing risk controls, OMS, and deployment gates.',
-    suggestions: ['How do I connect Angel One?', 'What is the Trading Desk?'],
+    terms: ['angel one', 'angelone', 'smartapi'],
+    answer: 'KEPWE Quant supports Angel One SmartAPI. Open Broker Connections from the workspace and connect with your Angel One client code, MPIN and the current TOTP from your authenticator app. Your MPIN and TOTP are never stored, and live execution remains subject to the risk controls, OMS and deployment gates.',
+    suggestions: ['What is Broker Connections?', 'What is the Trading Desk?'],
   },
   {
     terms: ['trial', 'free trial', '7 day', '7-day'],

@@ -22,12 +22,12 @@ async function main() {
            u.email
     FROM broker_accounts ba
     JOIN users u ON ba.user_id = u.id
-    WHERE ba.broker = 'DHAN'
+    WHERE ba.broker = 'ANGEL_ONE'
     ORDER BY ba.updated_at DESC
     LIMIT 5
   `);
 
-  console.log('BROKER_ACCOUNTS (Recent DHAN connections):');
+  console.log('BROKER_ACCOUNTS (Recent Angel One connections):');
   accounts.rows.forEach((row, i) => {
     console.log(`${i+1}. ${row.email} - Status: ${row.status} - Mode: ${row.connection_mode}`);
     console.log(`   Updated: ${row.updated_at?.toISOString()}`);
@@ -38,7 +38,7 @@ async function main() {
   const statusValues = await pool.query(`
     SELECT DISTINCT status, COUNT(*) as count
     FROM broker_accounts 
-    WHERE broker = 'DHAN'
+    WHERE broker = 'ANGEL_ONE'
     GROUP BY status
     ORDER BY count DESC
   `);

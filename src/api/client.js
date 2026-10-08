@@ -89,7 +89,7 @@ let activeRefreshPromise = null;
  * Attaches Bearer token when present.
  * Automatically attempts one refresh when a request returns 401,
  * then retries the original request once.
- * Differentiates USER_AUTH_EXPIRED from DHAN_SESSION_EXPIRED.
+ * Differentiates USER_AUTH_EXPIRED from a broker (Angel One) session expiry.
  */
 export async function apiFetch(path, options = {}) {
   const { method = 'GET', body, headers = {}, auth = true, signal } = options;
@@ -134,9 +134,9 @@ export async function apiFetch(path, options = {}) {
   if (res.status === 401 && auth) {
     let data = await parseBody(res);
 
-    // If this is a broker-specific 401 (e.g. Dhan 24h token expired on DhanHQ),
+    // If this is a broker-specific 401 (the Angel One SmartAPI session expired),
     // do NOT treat it as a user app login failure and do NOT refresh or clear user tokens.
-    if (data?.code === 'DHAN_SESSION_EXPIRED' || data?.broker === 'DHAN') {
+    if (data?.code === 'ANGEL_ONE_SESSION_EXPIRED' || data?.code === 'BROKER_SESSION_EXPIRED' || data?.broker === 'ANGEL_ONE') {
       return { status: res.status, ok: false, data };
     }
 

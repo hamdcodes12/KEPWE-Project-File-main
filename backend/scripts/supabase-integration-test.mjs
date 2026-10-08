@@ -125,11 +125,11 @@ async function testQuantDashboardAccess() {
   console.log(`  Quant dashboard access granted for user ${testUserId}`);
 }
 
-async function testDhanAccountConnection() {
-  // Create broker account (use valid broker name - try 'DHAN' instead of 'dhan')
+async function testBrokerAccountConnection() {
+  // Create broker account (Angel One SmartAPI is the only supported broker)
   const brokerResult = await client.query(
     'INSERT INTO broker_accounts (user_id, broker, client_id, connection_mode, status) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-    [testUserId, 'DHAN', `DHAN${Date.now()}`, 'LIVE', 'CONNECTED']  // Use uppercase values
+    [testUserId, 'ANGEL_ONE', `A${String(Date.now()).slice(-6)}`, 'LIVE', 'CONNECTED']  // Use uppercase values
   );
   
   const brokerAccountId = brokerResult.rows[0].id;
@@ -142,7 +142,7 @@ async function testDhanAccountConnection() {
   
   if (!verify.rows[0]) throw new Error('Broker account not created');
   
-  console.log(`  Dhan account connected: ${brokerAccountId}`);
+  console.log(`  Angel One account stored: ${brokerAccountId}`);
 }
 
 async function testQuantSettings() {
@@ -276,7 +276,7 @@ async function runAllTests() {
     if (await test('Store Quant settings', testQuantSettings)) passed++; else failed++;
     
     console.log('\n--- BROKER INTEGRATION TESTS ---');
-    if (await test('Store Dhan account connection', testDhanAccountConnection)) passed++; else failed++;
+    if (await test('Store Angel One account connection', testBrokerAccountConnection)) passed++; else failed++;
     
     console.log('\n--- NOTIFICATIONS TESTS ---');
     if (await test('Create notifications', testNotifications)) passed++; else failed++;

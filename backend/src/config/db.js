@@ -267,9 +267,15 @@ export async function runAutoMigrations(client) {
       const sql = fs.readFileSync(readinessOmsPath, 'utf-8');
       if (client.exec) await client.exec(sql); else await client.query(sql);
     }
-    const liveFlowHardeningPath = resolve(__dirname, '../../db/migrations/007_dhan_live_flow_hardening.sql');
+    const liveFlowHardeningPath = resolve(__dirname, '../../db/migrations/007_live_flow_hardening.sql');
     if (fs.existsSync(liveFlowHardeningPath)) {
       const sql = fs.readFileSync(liveFlowHardeningPath, 'utf-8');
+      if (client.exec) await client.exec(sql); else await client.query(sql);
+    }
+    // Angel One SmartAPI is the only supported broker (idempotent).
+    const angelOneOnlyPath = resolve(__dirname, '../../db/migrations/009_angel_one_only.sql');
+    if (fs.existsSync(angelOneOnlyPath)) {
+      const sql = fs.readFileSync(angelOneOnlyPath, 'utf-8');
       if (client.exec) await client.exec(sql); else await client.query(sql);
     }
     // Ensure default on expires_at exists

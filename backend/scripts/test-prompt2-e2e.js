@@ -127,15 +127,17 @@ assert.equal(started.data.status, 'ACTIVE');
 const readiness = await request('/broker/readiness', { token });
 expectStatus(readiness, 200, 'broker readiness');
 assert.equal(readiness.data.paper.enabled, true);
-assert.equal(readiness.data.brokers.find((broker) => broker.broker === 'ANGEL_ONE').enabled, false);
-assert.equal(readiness.data.brokers.find((broker) => broker.broker === 'DHAN').capabilities.positions, true);
+assert.deepEqual(readiness.data.supportedBrokers, ['ANGEL_ONE']);
+assert.equal(readiness.data.brokers.length, 1);
+assert.equal(readiness.data.brokers[0].broker, 'ANGEL_ONE');
+assert.equal(readiness.data.brokers[0].capabilities.positions, true);
 
 const unconfiguredLiveConnect = await request('/broker/connect/live', {
   token,
   method: 'POST',
   body: { broker: 'ANGEL_ONE' },
 });
-expectStatus(unconfiguredLiveConnect, 503, 'unconfigured broker fails closed');
+expectStatus(unconfiguredLiveConnect, 410, 'legacy live-connect route is retired; use /broker/angel-one/connect');
 
 const signal = await request('/algo/signal', {
   token,

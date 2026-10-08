@@ -1,19 +1,19 @@
-import { getBrokerAdapter } from '../algo/broker-adapters.js';
-import { decryptBrokerSecret } from './broker-token.service.js';
+import { angelOrderTag } from '../algo/broker-adapters.js';
 import { applyBrokerExecutionUpdate } from './broker-execution.service.js';
 import { tryCreateQuantNotification } from './quant-notification.service.js';
 import { createAndSubmitOrder } from '../algo/oms.js';
+import {
+  adapterFromAngelOneAccount,
+  isAngelOneSessionError,
+  loadUsableAngelOneAccounts,
+  markAngelOneSessionExpired,
+} from './angel-one-session.service.js';
+import { findAngelInstrument, loadAngelInstrumentMaster } from './angel-one-instruments.service.js';
 
+const BROKER = 'ANGEL_ONE';
 const DEFAULT_INTERVAL_MS = 5000;
 let timer = null;
 let running = false;
-
-function extractLtp(payload, exchange, securityId) {
-  const data = payload?.data || payload || {};
-  const quote = data?.[exchange]?.[String(securityId)] || data?.[String(securityId)] || {};
-  const value = Number(quote.last_price ?? quote.ltp);
-  return Number.isFinite(value) && value > 0 ? value : null;
-}
 
 function istMinutes(timestamp = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -29,15 +29,15 @@ function istMinutes(timestamp = new Date()) {
 
 async function reconcileTradeBook(pool, userId, broker, adapter) {
   const trades = await adapter.getTradeBook();
-  if (!Array.isArray(trades)) throw new Error('Dhan trade book response is not an array');
+  if (!Array.isArray(trades)) throw new Error('Angel One trade book response is not an array');
   for (const trade of trades) {
-    const brokerOrderId = trade.orderId || trade.order_id || trade.OrderNo || trade.brokerOrderId;
+    const brokerOrderId = trade.orderId;
     if (!brokerOrderId) continue;
-    const brokerTradeId = trade.tradeId || trade.trade_id || trade.TradeId || trade.exchangeTradeId || null;
-    const executionPrice = Number(trade.tradedPrice ?? trade.TradedPrice ?? trade.averageTradedPrice ?? trade.AvgTradedPrice ?? trade.price);
-    const executionQuantity = Number(trade.tradedQuantity ?? trade.TradedQty ?? trade.quantity ?? trade.qty);
-    const chargesValue = trade.charges ?? trade.totalCharges ?? trade.brokerage;
-    const charges = chargesValue === undefined || chargesValue === null ? null : Number(chargesValue);
+    const brokerTradeId = trade.tradeId || null;
+    const executionPrice = Number(trade.tradedPrice);
+    const executionQuantity = Number(trade.tradedQuantity);
+    // SmartAPI's trade book carries no charges; stored charges are left untouched.
+    const charges = null;
     if (!Number.isFinite(executionPrice) || !Number.isFinite(executionQuantity)) continue;
     await pool.query(
       `UPDATE algo_trades t
@@ -76,9 +76,9 @@ async function monitorProtectiveExits(pool, userId, adapter) {
     const isTimeStop = Number.isFinite(minutesHeld) && minutesHeld >= 20;
     const isEodSquareOff = (istMinutes() || 0) >= (15 * 60 + 10);
     if (!Number.isFinite(Number(position.stop_loss)) && !Number.isFinite(Number(position.target)) && !isTimeStop && !isEodSquareOff) continue;
-    const exchange = position.exchange_segment || 'NSE_FNO';
+    const exchange = position.exchange_segment || 'NFO';
     const quote = await adapter.getMarketData({ exchange, symbolToken: position.security_id });
-    const ltp = extractLtp(quote, exchange, position.security_id);
+    const ltp = Number.isFinite(Number(quote?.ltp)) && Number(quote.ltp) > 0 ? Number(quote.ltp) : null;
     if (!ltp) continue;
     const isLong = position.side === 'BUY';
     const hitStop = Number.isFinite(Number(position.stop_loss)) && (isLong ? ltp <= Number(position.stop_loss) : ltp >= Number(position.stop_loss));
@@ -91,6 +91,9 @@ async function monitorProtectiveExits(pool, userId, adapter) {
     );
     if (pending.rows.length > 0) continue;
     const exitReason = hitStop ? 'STOP_LOSS' : hitTarget ? 'TARGET' : isEodSquareOff ? 'EOD_SQUARE_OFF' : 'TIME_STOP';
+    // Lot size comes from the official instrument master; without it the exit order cannot be validated.
+    const contract = findAngelInstrument(await loadAngelInstrumentMaster(), exchange, position.security_id);
+    if (!contract?.lotSize && exchange !== 'NSE' && exchange !== 'BSE') continue;
     await createAndSubmitOrder({
       pool,
       adapter,
@@ -106,12 +109,15 @@ async function monitorProtectiveExits(pool, userId, adapter) {
       parentOrderId: null,
       isExit: true,
       metadata: {
-        broker: 'DHAN',
+        broker: BROKER,
         securityId: position.security_id,
-        tradingSymbol: position.trading_symbol,
+        symbolToken: position.security_id,
+        tradingSymbol: position.trading_symbol || contract?.tradingSymbol,
+        exchange,
         exchangeSegment: exchange,
         orderType: 'MARKET',
         productType: 'INTRADAY',
+        lotSize: contract?.lotSize || 1,
         exitReason,
         isExit: true,
       },
@@ -176,7 +182,7 @@ async function synchronizePositions(pool, userId, broker, adapter) {
         userId,
         type: 'POSITION_CLOSED',
         title: 'Broker position closed',
-        body: `${row.trading_symbol || row.symbol} is no longer open at Dhan.`,
+        body: `${row.trading_symbol || row.symbol} is no longer open at Angel One.`,
         data: { positionId: row.id, securityId: row.security_id || row.symbol },
       });
     }
@@ -187,56 +193,35 @@ async function pollPendingOrders(pool) {
   if (running) return;
   running = true;
   try {
-    const accounts = await pool.query(
-      `SELECT a.id AS broker_account_id, a.user_id, a.broker, a.client_id,
-              t.access_token_ciphertext, t.refresh_token_ciphertext,
-              t.feed_token_ciphertext, t.token_expires_at
-       FROM broker_accounts a
-       JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
-       WHERE a.status IN ('CONNECTED', 'PARTIALLY_CONNECTED')
-         AND a.connection_mode = 'LIVE'`,
-    );
+    const accounts = await loadUsableAngelOneAccounts(pool);
     const adapters = new Map();
-    for (const row of accounts.rows) {
+    for (const row of accounts) {
       try {
-        const adapter = row.broker === 'DHAN'
-          ? getBrokerAdapter('DHAN', 'LIVE', {
-              dhanClientId: row.client_id,
-              accessToken: decryptBrokerSecret(row.access_token_ciphertext),
-              tokenExpiresAt: row.token_expires_at,
-            })
-          : getBrokerAdapter('ANGEL_ONE', 'LIVE', {
-              angelOneClientCode: row.client_id,
-              jwtToken: decryptBrokerSecret(row.access_token_ciphertext),
-              refreshToken: row.refresh_token_ciphertext ? decryptBrokerSecret(row.refresh_token_ciphertext) : null,
-              feedToken: row.feed_token_ciphertext ? decryptBrokerSecret(row.feed_token_ciphertext) : null,
-              tokenExpiresAt: row.token_expires_at,
-              apiKey: process.env.ANGEL_ONE_API_KEY,
-              totpSecret: process.env.ANGEL_ONE_TOTP_SECRET,
-            });
-        adapter.brokerAccountId = row.broker_account_id;
-        adapters.set(row.broker_account_id, { adapter, row });
-        await synchronizePositions(pool, row.user_id, row.broker, adapter);
-        if (row.broker === 'DHAN') await reconcileTradeBook(pool, row.user_id, row.broker, adapter);
-        if (row.broker === 'DHAN') await monitorProtectiveExits(pool, row.user_id, adapter);
+        const adapter = adapterFromAngelOneAccount(pool, row);
+        adapters.set(row.id, { adapter, row });
+        await synchronizePositions(pool, row.user_id, BROKER, adapter);
+        await reconcileTradeBook(pool, row.user_id, BROKER, adapter);
+        await monitorProtectiveExits(pool, row.user_id, adapter);
       } catch (error) {
+        if (isAngelOneSessionError(error)) {
+          await markAngelOneSessionExpired(pool, row.id);
+          adapters.delete(row.id);
+        }
         await pool.query(
           `INSERT INTO algo_activity_logs (user_id, event_type, message, metadata)
            VALUES ($1, 'BROKER_POSITION_SYNC_FAILED', $2, $3::jsonb)`,
-          [row.user_id, 'Broker position synchronization failed; existing values were retained', JSON.stringify({ broker: row.broker, error: error.message })],
+          [row.user_id, 'Broker position synchronization failed; existing values were retained', JSON.stringify({ broker: BROKER, error: error.message, code: error.code || null })],
         );
       }
     }
 
     const result = await pool.query(
-      `SELECT o.id, o.user_id, o.internal_order_id, o.broker_order_id, a.id AS broker_account_id,
-              a.broker, a.client_id, t.access_token_ciphertext,
-              t.refresh_token_ciphertext, t.feed_token_ciphertext, t.token_expires_at
+      `SELECT o.id, o.user_id, o.internal_order_id, o.broker_order_id, a.id AS broker_account_id, a.broker
        FROM algo_orders o
        JOIN broker_accounts a ON a.id = o.broker_account_id AND a.user_id = o.user_id
-       JOIN broker_oauth_tokens t ON t.broker_account_id = a.id
        WHERE o.execution_mode = 'LIVE'
          AND o.status IN ('RECOVERY_PENDING', 'SUBMITTED', 'PARTIALLY_FILLED')
+         AND a.broker = 'ANGEL_ONE'
          AND a.status IN ('CONNECTED', 'PARTIALLY_CONNECTED')
        ORDER BY o.updated_at ASC
        LIMIT 100`,
@@ -251,33 +236,32 @@ async function pollPendingOrders(pool) {
         if (row.broker_order_id) {
           update = await adapter.getOrderStatus({ brokerOrderId: row.broker_order_id });
         } else {
+          // Submission outcome unknown: find the order by the KEPWE ordertag it was sent with.
           const orderbook = await adapter.getOrderBook();
-          const match = orderbook.find((item) => String(
-            item.correlationId || item.correlation_id || item.tag || item.orderTag || '',
-          ) === String(row.internal_order_id));
+          const tag = angelOrderTag(row.internal_order_id);
+          const match = orderbook.find((item) => tag && String(item.orderTag || item.correlationId || '') === tag);
           if (!match) continue;
-          update = { ...match, brokerOrderId: match.orderId || match.orderid };
+          update = match;
         }
         await applyBrokerExecutionUpdate({
           pool,
-          broker: row.broker,
+          broker: BROKER,
           brokerOrderId: update.brokerOrderId || row.broker_order_id,
           correlationId: row.internal_order_id,
           status: update.status,
           filledQuantity: update.filledQuantity,
           remainingQuantity: update.remainingQuantity,
           averagePrice: update.averagePrice,
-          exchangeOrderId: update.exchangeOrderId,
-          correlationId: update.correlationId,
-          charges: update.charges,
           rejectionReason: update.rejectionReason,
           payload: update.raw || update,
+          // `update` was just read from SmartAPI with the owner's session.
+          authoritativeExecution: update,
         });
       } catch (error) {
         await pool.query(
           `INSERT INTO algo_activity_logs (user_id, event_type, message, metadata)
            VALUES ($1, 'BROKER_EXECUTION_POLL_FAILED', $2, $3::jsonb)`,
-          [row.user_id, 'Broker execution polling failed; order was not retried', JSON.stringify({ broker: row.broker, orderId: row.id, error: error.message })],
+          [row.user_id, 'Broker execution polling failed; order was not retried', JSON.stringify({ broker: BROKER, orderId: row.id, error: error.message, code: error.code || null })],
         );
       }
     }

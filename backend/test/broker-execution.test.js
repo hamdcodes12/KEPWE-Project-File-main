@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { applyExecutionUpdate, normalizeExecutionStatus } from '../src/algo/oms.js';
 import { verifyBrokerWebhookRequest } from '../src/services/broker-execution.service.js';
-import { getStaticIpReadiness } from '../src/services/static-ip.service.js';
+import { clearStaticIpVerificationCache, getStaticIpReadiness } from '../src/services/static-ip.service.js';
 
 function fakePool(initialOrder, initialPosition = null) {
   const state = {
@@ -106,20 +106,48 @@ test('OMS preserves rejection and cancellation without creating trades', async (
   }
 });
 
-test('webhooks fail closed without the configured ingress token', () => {
-  process.env.DHAN_WEBHOOK_TOKEN = 'unit-secret';
-  const request = { get: () => '' };
-  assert.equal(verifyBrokerWebhookRequest(request, 'DHAN'), false);
-  assert.equal(verifyBrokerWebhookRequest({ get: () => 'unit-secret' }, 'DHAN'), true);
+test('Angel One order-book statuses normalize to OMS states', () => {
+  for (const status of ['open', 'open pending', 'validation pending', 'put order req received', 'trigger pending', 'modified', 'modify pending', 'not modified', 'not cancelled', 'cancel pending', 'AMO req received']) {
+    assert.equal(normalizeExecutionStatus(status), 'SUBMITTED', status);
+  }
+  assert.equal(normalizeExecutionStatus('complete'), 'FILLED');
+  assert.equal(normalizeExecutionStatus('rejected'), 'REJECTED');
+  assert.equal(normalizeExecutionStatus('cancelled'), 'CANCELLED');
+  assert.equal(normalizeExecutionStatus('something new'), null);
 });
 
-test('static-IP readiness blocks when outbound infrastructure is unconfirmed', () => {
-  const previous = { DHAN_STATIC_IP: process.env.DHAN_STATIC_IP, OUTBOUND_PUBLIC_IP: process.env.OUTBOUND_PUBLIC_IP };
-  process.env.DHAN_STATIC_IP = '198.51.100.10';
-  delete process.env.OUTBOUND_PUBLIC_IP;
-  const readiness = getStaticIpReadiness('DHAN');
-  assert.equal(readiness.ready, false);
-  assert.equal(readiness.status, 'PENDING_EXTERNAL_CONFIGURATION');
-  if (previous.DHAN_STATIC_IP === undefined) delete process.env.DHAN_STATIC_IP; else process.env.DHAN_STATIC_IP = previous.DHAN_STATIC_IP;
-  if (previous.OUTBOUND_PUBLIC_IP === undefined) delete process.env.OUTBOUND_PUBLIC_IP; else process.env.OUTBOUND_PUBLIC_IP = previous.OUTBOUND_PUBLIC_IP;
+test('webhooks fail closed without the configured ingress token', () => {
+  const previous = process.env.ANGEL_ONE_WEBHOOK_TOKEN;
+  process.env.ANGEL_ONE_WEBHOOK_TOKEN = 'unit-secret';
+  try {
+    assert.equal(verifyBrokerWebhookRequest({ get: () => '', query: {} }, 'ANGEL_ONE'), false);
+    assert.equal(verifyBrokerWebhookRequest({ get: () => 'wrong-secret', query: {} }, 'ANGEL_ONE'), false);
+    assert.equal(verifyBrokerWebhookRequest({ get: () => 'unit-secret', query: {} }, 'ANGEL_ONE'), true);
+    // Angel One posts to the registered URL without custom headers: ?token= is accepted.
+    assert.equal(verifyBrokerWebhookRequest({ get: () => '', query: { token: 'unit-secret' } }, 'ANGEL_ONE'), true);
+    // Removed brokers have no webhook secret and can never authenticate.
+    assert.equal(verifyBrokerWebhookRequest({ get: () => 'unit-secret', query: {} }, 'DHAN'), false);
+    delete process.env.ANGEL_ONE_WEBHOOK_TOKEN;
+    assert.equal(verifyBrokerWebhookRequest({ get: () => 'unit-secret', query: {} }, 'ANGEL_ONE'), false);
+  } finally {
+    if (previous === undefined) delete process.env.ANGEL_ONE_WEBHOOK_TOKEN; else process.env.ANGEL_ONE_WEBHOOK_TOKEN = previous;
+  }
+});
+
+test('static-IP readiness blocks until the outbound IP has been verified', () => {
+  const previous = process.env.ANGEL_ONE_STATIC_IP;
+  clearStaticIpVerificationCache();
+  try {
+    process.env.ANGEL_ONE_STATIC_IP = '198.51.100.10';
+    const pending = getStaticIpReadiness();
+    assert.equal(pending.ready, false);
+    assert.equal(pending.status, 'PENDING_VERIFICATION');
+    delete process.env.ANGEL_ONE_STATIC_IP;
+    const unset = getStaticIpReadiness();
+    assert.equal(unset.ready, false);
+    assert.equal(unset.status, 'NOT_CONFIGURED');
+  } finally {
+    if (previous === undefined) delete process.env.ANGEL_ONE_STATIC_IP; else process.env.ANGEL_ONE_STATIC_IP = previous;
+    clearStaticIpVerificationCache();
+  }
 });
