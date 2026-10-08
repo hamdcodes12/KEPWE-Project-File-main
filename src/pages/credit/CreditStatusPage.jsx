@@ -1,294 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  CheckCircle2, 
-  Clock, 
-  ShieldCheck, 
-  Search, 
-  Phone, 
-  Mail, 
-  Building2, 
-  Calendar, 
-  Sparkles,
-  HelpCircle,
-  FileText,
-  AlertCircle
-} from 'lucide-react';
+import React from 'react';
+import { ArrowLeft, ArrowRight, Activity, Clock, FileText, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import './CreditStatusPage.css';
 
-const CreditStatusPage = () => {
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  // Only pre-fill the search input if a real ?id= param is present in the URL.
-  // Never default to a hardcoded application ID.
-  const initialId = searchParams.get('id') || '';
+const CreditStatusPage = () => (
+  <main className="credit-status-wrapper credit-workspace-page">
+    <nav className="credit-workspace-nav" aria-label="Credit workspace navigation">
+      <Link to="/credit"><ArrowLeft size={16} /> KEPWE Credit</Link>
+      <span><ShieldCheck size={15} /> Your private workspace</span>
+    </nav>
 
-  const [searchId, setSearchId] = useState(initialId);
-  const [appData, setAppData] = useState(null);
+    <div className="credit-workspace-content">
+      <header className="credit-workspace-heading">
+        <div className="credit-workspace-eyebrow"><Activity size={15} /> KEPWE CREDIT</div>
+        <h1>Your Credit workspace</h1>
+        <p>Credit Health is available now. Upload your own report for a private, factor-by-factor analysis. Loan eligibility and offers require verified lender integrations and are not available yet.</p>
+      </header>
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('kepwe_active_loan_application');
-      if (saved) {
-        setAppData(JSON.parse(saved));
-      }
-      // No active application in storage — leave appData as null so the
-      // empty state renders instead of mock/demo values.
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [initialId]);
+      <section className="credit-workspace-cards" aria-label="Credit product status">
+        <article className="credit-workspace-card credit-workspace-health">
+          <div className="credit-workspace-card-icon"><FileText size={22} /></div>
+          <span className="credit-workspace-status">AVAILABLE</span>
+          <h2>Credit Health</h2>
+          <p>Upload a PDF credit report to see the KEPWE Credit Health Score, score factors, extraction warnings, and recommendations.</p>
+          <Link className="credit-workspace-primary-action" to="/credit/consent">Open Credit Health <ArrowRight size={17} /></Link>
+        </article>
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (!searchId.trim()) return;
-    // Keep or refresh data
-  };
-
-  return (
-    <div className="credit-status-wrapper">
-      
-      {/* ── Sub Navigation ── */}
-      <div className="status-subnav">
-        <div className="container subnav-container">
-          <Link to="/credit" className="subnav-back-link">
-            <ArrowLeft size={16} />
-            <span>Kepwe Credit Home</span>
-          </Link>
-          <div className="subnav-brand">
-            <span className="brand-dot" />
-            <span>Application Journey Tracker</span>
-          </div>
-          <div className="subnav-trust-badge">
-            <Clock size={14} color="#214ECF" />
-            <span>Live Status Updates</span>
-          </div>
-          <Link to="/credit/health" className="credit-health-link">
-            <FileText size={15} />
-            <span>Credit Health Score</span>
-          </Link>
-        </div>
-      </div>
-
-      <div className="container status-main-content">
-
-        {/* ── Search Track Bar ── */}
-        <div className="tracker-search-card">
-          <div className="search-info">
-            <h1 className="tracker-headline">Track Your Credit Journey</h1>
-            <p className="tracker-subhead">
-              Enter your Application Tracking ID to inspect real-time verification and lender review progress.
-            </p>
-          </div>
-
-          <form onSubmit={handleSearch} className="tracker-search-form">
-            <div className="track-input-wrap">
-              <Search size={18} color="#214ECF" strokeWidth={2} />
-              <input
-                type="text"
-                placeholder="Enter your Application Tracking ID"
-                value={searchId}
-                onChange={(e) => setSearchId(e.target.value)}
-                className="track-id-input"
-              />
-            </div>
-            <button type="submit" className="btn-track-submit">
-              Track Application
-            </button>
-          </form>
-        </div>
-
-        {/* ── No Active Application State ── */}
-        {!appData && (
-          <div className="credit-empty-state" style={{
-            textAlign: 'center',
-            padding: '48px 24px',
-            background: '#F8FAFC',
-            borderRadius: '16px',
-            border: '1.5px dashed #CBD5E1',
-            marginTop: '24px',
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '14px',
-              background: 'rgba(33, 78, 207, 0.07)',
-              display: 'grid',
-              placeItems: 'center',
-              margin: '0 auto 20px',
-            }}>
-              <AlertCircle size={28} color="#214ECF" />
-            </div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>
-              No Active Application
-            </h2>
-            <p style={{ color: '#64748B', fontSize: '0.97rem', maxWidth: '420px', margin: '0 auto 24px', lineHeight: '1.7' }}>
-              You don't have an active credit application yet. Check your eligibility and apply to see your loan journey here.
-            </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to="/credit/eligibility" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                background: '#214ECF', color: '#fff', padding: '11px 24px',
-                borderRadius: '8px', fontWeight: 700, fontSize: '0.93rem',
-                textDecoration: 'none',
-              }}>
-                Check Eligibility
-              </Link>
-              <Link to="/credit" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                background: '#fff', color: '#214ECF', padding: '11px 24px',
-                borderRadius: '8px', fontWeight: 700, fontSize: '0.93rem',
-                textDecoration: 'none', border: '1.5px solid #214ECF',
-              }}>
-                Kepwe Credit Home
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {appData && (
-          <div className="status-detail-grid animate-fadeIn">
-            
-            {/* Left: Journey Timeline */}
-            <div className="timeline-card">
-              <div className="timeline-head">
-                <div className="t-badge">
-                  <span className="live-indicator-dot" />
-                  <span>ACTIVE JOURNEY</span>
-                </div>
-                <h3 className="t-title">Application Status</h3>
-                <span className="t-sub">Reference ID: <strong>{appData.trackingId}</strong></span>
-              </div>
-
-              <div className="vertical-timeline">
-                
-                {/* Stage 1 */}
-                <div className="timeline-node done">
-                  <div className="node-marker">
-                    <CheckCircle2 size={18} color="#FFFFFF" />
-                  </div>
-                  <div className="node-content">
-                    <h4 className="node-title">01 · Application Received</h4>
-                    <p className="node-desc">Digital submission received and recorded securely.</p>
-                    <span className="node-time">Completed</span>
-                  </div>
-                </div>
-
-                {/* Stage 2 */}
-                <div className="timeline-node done">
-                  <div className="node-marker">
-                    <CheckCircle2 size={18} color="#FFFFFF" />
-                  </div>
-                  <div className="node-content">
-                    <h4 className="node-title">02 · Digital KYC & Verification</h4>
-                    <p className="node-desc">Identity, PAN, and Aadhaar verification successfully processed.</p>
-                    <span className="node-time">Completed</span>
-                  </div>
-                </div>
-
-                {/* Stage 3 */}
-                <div className="timeline-node active">
-                  <div className="node-marker">
-                    <span className="pulse-circle" />
-                  </div>
-                  <div className="node-content">
-                    <h4 className="node-title">03 · Lender Credit Review</h4>
-                    <p className="node-desc">
-                      Underwriter and algorithm evaluating income profile with <strong>{appData.lender}</strong>.
-                    </p>
-                    <span className="node-time text-blue font-bold">In Progress · Expected today</span>
-                  </div>
-                </div>
-
-                {/* Stage 4 */}
-                <div className="timeline-node pending">
-                  <div className="node-marker">
-                    <span className="empty-dot" />
-                  </div>
-                  <div className="node-content">
-                    <h4 className="node-title">04 · Sanction Decision & Terms</h4>
-                    <p className="node-desc">Review your official sanction letter and complete digital agreement.</p>
-                    <span className="node-time">Pending Stage 3</span>
-                  </div>
-                </div>
-
-                {/* Stage 5 */}
-                <div className="timeline-node pending">
-                  <div className="node-marker">
-                    <span className="empty-dot" />
-                  </div>
-                  <div className="node-content">
-                    <h4 className="node-title">05 · Direct Disbursal</h4>
-                    <p className="node-desc">Funds transferred directly into your registered bank account.</p>
-                    <span className="node-time">Final Step</span>
-                  </div>
-                </div>
-
-              </div>
-
-              <div className="timeline-footer-help">
-                <HelpCircle size={16} color="#667085" />
-                <span>
-                  Questions regarding your application? Contact our dedicated priority support desk.
-                </span>
-              </div>
-            </div>
-
-            {/* Right: Loan Application Summary */}
-            <div className="app-summary-card">
-              <div className="sum-head-row">
-                <div>
-                  <span className="sum-tag">LOAN DETAILS</span>
-                  <h3 className="sum-title">₹{appData.loanAmount.toLocaleString('en-IN')}</h3>
-                  <span className="sum-lender-name">{appData.lender}</span>
-                </div>
-                <div className="status-pill-green">Active Review</div>
-              </div>
-
-              <div className="sum-breakdown-list">
-                <div className="b-item">
-                  <span className="b-lbl">Applicant</span>
-                  <span className="b-val">{appData.applicantName}</span>
-                </div>
-                <div className="b-item">
-                  <span className="b-lbl">Tenure</span>
-                  <span className="b-val">{appData.tenure} Months</span>
-                </div>
-                <div className="b-item">
-                  <span className="b-lbl">Interest Rate</span>
-                  <span className="b-val text-blue">{appData.interestRate}% p.a.</span>
-                </div>
-                <div className="b-item highlight">
-                  <span className="b-lbl">Estimated Monthly EMI</span>
-                  <span className="b-val text-blue">₹{appData.emi.toLocaleString('en-IN')}/mo</span>
-                </div>
-                <div className="b-item">
-                  <span className="b-lbl">Loan Purpose</span>
-                  <span className="b-val">{appData.purpose}</span>
-                </div>
-              </div>
-
-              <div className="support-quick-box">
-                <h4 className="sup-title">Need Immediate Help?</h4>
-                <div className="sup-channels">
-                  <a href="tel:+918001234567" className="sup-channel-btn">
-                    <Phone size={15} /> Call Support
-                  </a>
-                  <Link to="/contact" className="sup-channel-btn">
-                    <Mail size={15} /> Message Desk
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-      </div>
-
+        <article className="credit-workspace-card credit-workspace-lending">
+          <div className="credit-workspace-card-icon"><Clock size={22} /></div>
+          <span className="credit-workspace-status">INTEGRATION PENDING</span>
+          <h2>Loan eligibility</h2>
+          <p>Eligibility checks, applications, and offers will be available after verified RBI-regulated lender integrations are configured. No loan decision or offer is available now.</p>
+          <Link className="credit-workspace-secondary-action" to="/credit#loan-integration-pending">Loan Eligibility — Coming Soon <ArrowRight size={17} /></Link>
+        </article>
+      </section>
     </div>
-  );
-};
+  </main>
+);
 
 export default CreditStatusPage;

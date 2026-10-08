@@ -468,3 +468,154 @@
     width: 100%;
   }
 }
+
+.credit-workspace-page {
+  padding-bottom: 80px;
+}
+
+.credit-workspace-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 64px;
+  padding: 0 max(24px, calc((100vw - 1120px) / 2));
+  border-bottom: 1px solid #E2E8F0;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.credit-workspace-nav a,
+.credit-workspace-nav span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.credit-workspace-nav a:hover { color: #214ECF; }
+.credit-workspace-nav span { color: #214ECF; }
+
+.credit-workspace-content {
+  width: min(100% - 40px, 1120px);
+  margin: 0 auto;
+}
+
+.credit-workspace-heading {
+  max-width: 760px;
+  margin: 60px auto 36px;
+  text-align: center;
+}
+
+.credit-workspace-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #214ECF;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.credit-workspace-heading h1 {
+  margin: 14px 0 12px;
+  color: #0F172A;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.credit-workspace-heading p {
+  margin: 0;
+  color: #475569;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.credit-workspace-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.credit-workspace-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(24px, 4vw, 36px);
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.04);
+}
+
+.credit-workspace-health { border-top: 3px solid #214ECF; }
+.credit-workspace-lending { border-top: 3px solid #94A3B8; }
+
+.credit-workspace-card-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 20px;
+  place-items: center;
+  border-radius: 14px;
+  background: #EFF4FF;
+  color: #214ECF;
+}
+
+.credit-workspace-lending .credit-workspace-card-icon {
+  background: #F1F5F9;
+  color: #64748B;
+}
+
+.credit-workspace-status {
+  color: #214ECF;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.credit-workspace-lending .credit-workspace-status { color: #64748B; }
+
+.credit-workspace-card h2 {
+  margin: 8px 0 9px;
+  color: #0F172A;
+  font-size: 1.45rem;
+  letter-spacing: -0.02em;
+}
+
+.credit-workspace-card p {
+  flex: 1;
+  margin: 0 0 24px;
+  color: #475569;
+  line-height: 1.65;
+}
+
+.credit-workspace-primary-action,
+.credit-workspace-secondary-action {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 17px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.credit-workspace-primary-action { background: #214ECF; color: #fff; }
+.credit-workspace-primary-action:hover { background: #173A9F; }
+.credit-workspace-secondary-action { border: 1px solid #CBD5E1; color: #475569; background: #F8FAFC; }
+.credit-workspace-secondary-action:hover { border-color: #94A3B8; background: #F1F5F9; }
+
+@media (max-width: 700px) {
+  .credit-workspace-nav { padding: 0 20px; }
+  .credit-workspace-nav span { font-size: 0; }
+  .credit-workspace-content { width: calc(100% - 32px); }
+  .credit-workspace-heading { margin-top: 42px; }
+  .credit-workspace-cards { grid-template-columns: 1fr; }
+}
