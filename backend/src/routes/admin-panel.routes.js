@@ -91,6 +91,7 @@ function mapCreditAdminApplication(row) {
     purpose: row.purpose,
     businessName: row.business_name,
     annualTurnover: row.annual_turnover,
+    applicationDetails: row.application_details || {},
     status: row.status,
     submittedAt: row.submitted_at,
     reviewedAt: row.reviewed_at,
@@ -772,7 +773,7 @@ router.get('/admin/credit-applications/:id', requireAdminAuth, async (req, res, 
     if (!parsedId.success) return res.status(404).json({ error: 'Credit application not found.' });
     const detail = await withCreditAdminContext(req.adminId, async (client) => {
       const result = await client.query(
-        `SELECT ${creditApplicationFields}, au.display_name AS reviewer_name
+        `SELECT ${creditApplicationFields}, a.application_details, au.display_name AS reviewer_name
          FROM credit_loan_applications a LEFT JOIN admin_users au ON au.id = a.reviewed_by
          WHERE a.id = $1`, [parsedId.data]
       );
@@ -816,10 +817,11 @@ router.get('/admin/credit-applications/:id/documents/:documentId', requireAdminA
     });
     if (!document) return res.status(404).json({ error: 'Document not found.' });
     const filename = String(document.original_filename || 'application-document').replace(/[\\"\r\n]/g, '_');
+    const inline = req.query.preview === 'true';
     res.set({
       'Content-Type': document.mime_type,
       'Content-Length': String(document.file_size_bytes),
-      'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       'Cache-Control': 'private, no-store',
       'X-Content-Type-Options': 'nosniff',
     });

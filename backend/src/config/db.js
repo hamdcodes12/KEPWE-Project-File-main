@@ -383,6 +383,21 @@ export async function runAutoMigrations(client) {
         const sql = fs.readFileSync(applicationsPath, 'utf-8');
         if (client.exec) await client.exec(sql); else await client.query(sql);
       }
+    } else {
+      await client.query(`
+        ALTER TABLE credit_loan_applications
+          ADD COLUMN IF NOT EXISTS application_details JSONB NOT NULL DEFAULT '{}'::jsonb;
+        ALTER TABLE credit_loan_applications
+          DROP CONSTRAINT IF EXISTS credit_loan_applications_loan_type_check;
+        ALTER TABLE credit_loan_applications
+          ADD CONSTRAINT credit_loan_applications_loan_type_check
+          CHECK (loan_type IN ('working_capital', 'term_loan', 'invoice_discounting', 'equipment_finance', 'personal_loan', 'other'));
+        ALTER TABLE credit_loan_application_documents
+          DROP CONSTRAINT IF EXISTS credit_loan_application_documents_mime_type_check;
+        ALTER TABLE credit_loan_application_documents
+          ADD CONSTRAINT credit_loan_application_documents_mime_type_check
+          CHECK (mime_type IN ('application/pdf', 'image/jpeg', 'image/png', 'image/webp'));
+      `);
     }
 
     // Check if QA user exists

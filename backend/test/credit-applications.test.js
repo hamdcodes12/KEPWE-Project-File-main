@@ -93,6 +93,9 @@ try {
   assert.equal(downloaded.status, 200);
   assert.match(downloaded.headers.get('content-disposition'), /attachment/);
   assert.equal((await downloaded.arrayBuffer()).byteLength, Buffer.byteLength('%PDF-1.4\nKEPWE Credit application support document\n%%EOF'));
+  const previewed = await api(`/admin/credit-applications/${applicationId}/documents/${documentId}?preview=true`, adminToken);
+  assert.equal(previewed.status, 200);
+  assert.match(previewed.headers.get('content-disposition'), /inline/);
 
   const approve = await api(`/admin/credit-applications/${applicationId}/status`, adminToken, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -134,6 +137,49 @@ try {
   assert.equal(rejected.status, 200);
   assert.equal((await (await api(`/credit/applications/${second.data.application.id}`, userTokens[1])).json()).application.status, 'rejected');
 
+  const eligibilityDetails = {
+    requirement: { amount: 200000, customAmount: null },
+    purpose: 'Home Expenses',
+    employment: { type: 'salaried', monthlyIncome: 65000 },
+    personal: {
+      fullName: users[0].fullName, panNumber: 'ABCDE1234F', mobile: '9876500000',
+      email: users[0].email, state: 'Maharashtra', city: 'Mumbai', pincode: '',
+    },
+    kyc: {
+      verified: true, maskedAadhaar: 'XXXX XXXX 1234', verifiedName: users[0].fullName,
+      verifiedDob: '1990-01-01', verifiedAt: new Date().toISOString(),
+      frontDocumentName: 'front.webp', backDocumentName: 'back.webp',
+    },
+  };
+  const pngBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
+  const submitEligibility = async (token, verifiedUserId) => {
+    const form = new FormData();
+    form.append('loanType', 'personal_loan');
+    form.append('requestedAmount', '200000');
+    form.append('purpose', 'Personal loan for Home Expenses; salaried applicant.');
+    form.append('applicationDetails', JSON.stringify(eligibilityDetails));
+    form.append('verificationToken', jwt.sign({
+      sub: `tx_${crypto.randomUUID()}`, type: 'aadhaar_kyc_verified', userId: verifiedUserId,
+      applicantName: eligibilityDetails.personal.fullName,
+      maskedAadhaar: eligibilityDetails.kyc.maskedAadhaar,
+    }, 'credit-applications-test-secret', { expiresIn: '24h' }));
+    form.append('documents', new Blob([pngBytes], { type: 'image/png' }), 'aadhaar-front.png');
+    form.append('documents', new Blob([pngBytes], { type: 'image/png' }), 'aadhaar-back.png');
+    const response = await api('/credit/applications', token, { method: 'POST', body: form });
+    return { response, data: await response.json() };
+  };
+  const wrongOwnerEligibility = await submitEligibility(userTokens[0], users[1].id);
+  assert.equal(wrongOwnerEligibility.response.status, 400);
+  const eligibility = await submitEligibility(userTokens[0], users[0].id);
+  assert.equal(eligibility.response.status, 201);
+  assert.equal(eligibility.data.application.loanType, 'personal_loan');
+  assert.equal(eligibility.data.application.applicationDetails.personal.panNumber, 'ABCDE1234F');
+  assert.equal(eligibility.data.documentCount, 2);
+  const eligibilityAdminDetail = await (await api(`/admin/credit-applications/${eligibility.data.application.id}`, adminToken)).json();
+  assert.equal(eligibilityAdminDetail.documents.length, 2);
+  assert.equal(eligibilityAdminDetail.application.applicationDetails.kyc.maskedAadhaar, 'XXXX XXXX 1234');
+  assert.equal('verificationToken' in eligibilityAdminDetail.application.applicationDetails, false);
+
   const invalidDocumentForm = new FormData();
   invalidDocumentForm.append('loanType', 'working_capital');
   invalidDocumentForm.append('requestedAmount', '10000');
@@ -141,7 +187,7 @@ try {
   invalidDocumentForm.append('documents', new Blob(['not a pdf'], { type: 'application/pdf' }), 'fake.pdf');
   const invalidDocument = await api('/credit/applications', userTokens[0], { method: 'POST', body: invalidDocumentForm });
   assert.equal(invalidDocument.status, 400);
-  assert.equal((await (await api('/credit/applications', userTokens[0])).json()).applications.length, 1);
+  assert.equal((await (await api('/credit/applications', userTokens[0])).json()).applications.length, 2);
 
   console.log('Credit applications authenticated submission, secure documents, owner isolation, decisions, timeline, audit, and rejection checks passed.');
 } finally {

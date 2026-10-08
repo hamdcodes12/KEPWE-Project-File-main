@@ -84,7 +84,7 @@ export default function CreditApplicationStatusPage() {
             {(data?.events || []).map((event, index) => (
               <li key={`${event.created_at}-${index}`} className={`credit-application-timeline-event ${index === data.events.length - 1 ? 'is-current' : ''}`}>
                 <span className="credit-application-timeline-dot">{event.to_status === 'approved' ? <CheckCircle2 size={15} /> : event.to_status === 'rejected' ? <XCircle size={15} /> : <Clock size={15} />}</span>
-                <div><strong>{STATUS_LABEL[event.to_status] || 'Application submitted'}</strong><time>{formatDate(event.created_at)}</time></div>
+                <div><strong>{index === 0 ? 'Submitted' : STATUS_LABEL[event.to_status] || 'Application submitted'}</strong><time>{formatDate(event.created_at)}</time></div>
               </li>
             ))}
             {!submittedEvent && <li className="credit-application-timeline-empty">No timeline events are available.</li>}

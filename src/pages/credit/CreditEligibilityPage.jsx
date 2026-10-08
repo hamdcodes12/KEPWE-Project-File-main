@@ -123,6 +123,7 @@ const CreditEligibilityPage = () => {
   const location = useLocation();
   const [step, setStep] = useState(location.pathname === '/credit/results' ? 6 : 1);
   const [loadingResults, setLoadingResults] = useState(false);
+  const [applicationSubmitError, setApplicationSubmitError] = useState('');
   const [selectedOptionModal, setSelectedOptionModal] = useState(null);
 
   // Form State (Step 1-4)
@@ -571,7 +572,7 @@ const CreditEligibilityPage = () => {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < 5) {
       setStep(step + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -599,13 +600,53 @@ const CreditEligibilityPage = () => {
           return;
         }
 
-        // Step 5 Completed -> Trigger engine evaluation
+        // Step 5 completed: save the verified application and open its status dashboard.
+        setApplicationSubmitError('');
         setLoadingResults(true);
-        setTimeout(() => {
+        const applicationDetails = {
+          requirement: { amount, customAmount: customAmount || null },
+          purpose: PURPOSES.find((item) => item.id === purpose)?.label || purpose,
+          employment: { type: employmentType, monthlyIncome },
+          personal: {
+            fullName: personalDetails.fullName.trim(),
+            panNumber: personalDetails.panNumber.trim().toUpperCase(),
+            mobile: personalDetails.mobile.trim(),
+            email: personalDetails.email.trim(),
+            state: personalDetails.state,
+            city: personalDetails.city,
+            pincode: personalDetails.pincode,
+          },
+          kyc: {
+            verified: true,
+            maskedAadhaar: aadhaarData.maskedAadhaar,
+            verifiedName: aadhaarData.verifiedName,
+            verifiedDob: aadhaarData.verifiedDob,
+            verifiedAt: aadhaarData.verifiedAt,
+            frontDocumentName: aadhaarData.frontImageName,
+            backDocumentName: aadhaarData.backImageName,
+          },
+        };
+        const body = new FormData();
+        body.append('loanType', 'personal_loan');
+        body.append('requestedAmount', String(amount));
+        body.append('purpose', `Personal loan for ${applicationDetails.purpose}; ${employmentType} applicant.`);
+        body.append('businessName', '');
+        body.append('annualTurnover', '');
+        body.append('applicationDetails', JSON.stringify(applicationDetails));
+        body.append('verificationToken', aadhaarData.verificationToken);
+        if (aadhaarData.frontImage) body.append('documents', aadhaarData.frontImage, `aadhaar-front-${aadhaarData.frontImageName}`);
+        if (aadhaarData.backImage) body.append('documents', aadhaarData.backImage, `aadhaar-back-${aadhaarData.backImageName}`);
+
+        try {
+          const response = await apiFetch('/credit/applications', { method: 'POST', body });
+          if (!response.ok || !response.data?.application?.id) {
+            throw new Error(response.data?.error || 'Could not submit your application. Please try again.');
+          }
+          navigate(`/credit/application/status/${response.data.application.id}`, { replace: true });
+        } catch (error) {
+          setApplicationSubmitError(error.message || 'Could not submit your application. Please try again.');
           setLoadingResults(false);
-          setStep(6); // Step 6 = Results View
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 1600);
+        }
       }
     }
   };
@@ -630,32 +671,7 @@ const CreditEligibilityPage = () => {
     }
   };
 
-  const handleSelectLoanOption = (option) => {
-    // Save selection in session/localStorage for the application step
-    const applicationDraft = {
-      loanAmount: amount,
-      purpose,
-      employmentType,
-      monthlyIncome,
-      personalDetails,
-      aadhaarData: {
-        aadhaarNumber: aadhaarData.aadhaarNumber,
-        dob: aadhaarData.dob,
-        gender: aadhaarData.gender,
-        frontImageName: aadhaarData.frontImageName,
-        backImageName: aadhaarData.backImageName,
-        otpVerified: aadhaarData.otpVerified
-      },
-      selectedOption: option,
-      createdAt: new Date().toISOString()
-    };
-    try {
-      localStorage.setItem('kepwe_credit_draft', JSON.stringify(applicationDraft));
-    } catch (e) {
-      console.warn('Storage failed', e);
-    }
-    navigate('/credit/apply');
-  };
+  const handleSelectLoanOption = () => navigate('/credit#loan-integration-pending');
 
   return (
     <div className="credit-eligibility-wrapper">
@@ -1555,6 +1571,7 @@ const CreditEligibilityPage = () => {
                   <p className="kyc-success-desc">
                     Your PAN and Aadhaar identity credentials and uploaded documents have been server-verified with authorized paperless e-KYC.
                   </p>
+                  {applicationSubmitError && <span role="alert" className="field-error-msg">{applicationSubmitError}</span>}
 
                   <div className="kyc-verified-details-grid">
                     <div className="v-card">
@@ -1606,19 +1623,19 @@ const CreditEligibilityPage = () => {
         {loadingResults && (
           <div className="results-loading-card animate-fadeIn">
             <div className="loading-spinner-ring" />
-            <h2 className="loading-title">We're checking your options...</h2>
+            <h2 className="loading-title">Submitting your application...</h2>
             <p className="loading-desc">
-              Matching your requirement of <strong>₹{amount.toLocaleString('en-IN')}</strong> across partner lending institutions.
+              Securely recording your verified application and documents.
             </p>
             <div className="loading-checklist">
               <div className="chk-item active">
-                <CheckCircle2 size={16} color="#12B76A" /> Income & Debt Ratio evaluation
+                <CheckCircle2 size={16} color="#12B76A" /> Application details
               </div>
               <div className="chk-item active">
-                <CheckCircle2 size={16} color="#12B76A" /> Partner eligibility criteria check
+                <CheckCircle2 size={16} color="#12B76A" /> Verified identity documents
               </div>
               <div className="chk-item pulsing">
-                <Sparkles size={16} color="#214ECF" /> Curating lowest interest rate offers...
+                <Sparkles size={16} color="#214ECF" /> Creating your application record...
               </div>
             </div>
           </div>

@@ -22,8 +22,8 @@ import LoansPage from './pages/solutions/LoansPage';
 import CreditStatusPage from './pages/credit/CreditStatusPage';
 import CreditHealthPage from './pages/credit/CreditHealthPage';
 import CreditHealthConsentPage, { CreditHealthConsentGate } from './pages/credit/CreditHealthConsentPage';
-import CreditApplicationPage from './pages/credit/CreditApplicationPage';
 import CreditApplicationStatusPage from './pages/credit/CreditApplicationStatusPage';
+import CreditEligibilityPage from './pages/credit/CreditEligibilityPage';
 import IndustryPages from './pages/business/IndustryPages';
 import BusinessOnboardingPage from './pages/business/BusinessOnboardingPage';
 import ComplianceCalendarPage from './pages/resources/ComplianceCalendarPage';
@@ -344,10 +344,10 @@ function App() {
             <Route path="/credit" element={<LoansPage />} />
             <Route path="/credit/consent" element={<ProtectedCreditRoute><CreditHealthConsentPage /></ProtectedCreditRoute>} />
             <Route path="/credit/workspace" element={<ProtectedCreditRoute><CreditStatusPage /></ProtectedCreditRoute>} />
-            <Route path="/credit/apply" element={<ProtectedCreditRoute><CreditApplicationPage /></ProtectedCreditRoute>} />
+            <Route path="/credit/apply" element={<Navigate to="/credit/eligibility" replace />} />
             <Route path="/credit/application/status/:applicationId" element={<ProtectedCreditRoute><CreditApplicationStatusPage /></ProtectedCreditRoute>} />
             <Route path="/credit/health" element={<ProtectedCreditRoute><CreditHealthConsentGate><CreditHealthPage /></CreditHealthConsentGate></ProtectedCreditRoute>} />
-            <Route path="/credit/eligibility" element={<Navigate to="/credit#loan-integration-pending" replace />} />
+            <Route path="/credit/eligibility" element={<ProtectedCreditRoute><CreditEligibilityPage /></ProtectedCreditRoute>} />
             <Route path="/credit/results" element={<Navigate to="/credit#loan-integration-pending" replace />} />
             <Route path="/credit/status" element={<Navigate to="/credit/workspace" replace />} />
             <Route path="/credit/application/status" element={<Navigate to="/credit/workspace" replace />} />

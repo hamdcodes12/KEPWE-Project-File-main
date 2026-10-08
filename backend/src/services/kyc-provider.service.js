@@ -252,7 +252,7 @@ class KYCProviderService {
   /**
    * Verify Aadhaar OTP and Cross-Validate Identity Server-Side
    */
-  async verifyAadhaarOtp({ transactionId, otp, applicantName, dob }) {
+  async verifyAadhaarOtp({ transactionId, otp, applicantName, dob, userId }) {
     if (!transactionId) {
       throw new Error('Transaction ID is required');
     }
@@ -317,6 +317,8 @@ class KYCProviderService {
         {
           sub: record.transactionId,
           type: 'aadhaar_kyc_verified',
+          userId: userId || null,
+          applicantName: cleanName,
           aadhaarHash: record.aadhaarHash,
           maskedAadhaar: record.maskedAadhaar,
           verifiedName: record.applicantName,
@@ -387,6 +389,8 @@ class KYCProviderService {
         {
           sub: transactionId,
           type: 'aadhaar_kyc_verified',
+          userId: userId || null,
+          applicantName: (applicantName || '').trim(),
           maskedAadhaar: resData.masked_aadhaar || `XXXX XXXX ${transactionId.slice(-4)}`,
           verifiedName,
           verifiedDob,

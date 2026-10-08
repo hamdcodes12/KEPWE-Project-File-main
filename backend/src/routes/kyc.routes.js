@@ -224,6 +224,7 @@ router.post('/aadhaar/verify-otp', otpVerifyLimiter, optionalAuth, validateBody(
       otp,
       applicantName,
       dob,
+      userId: req.userId || null,
     });
 
     // Update DB record

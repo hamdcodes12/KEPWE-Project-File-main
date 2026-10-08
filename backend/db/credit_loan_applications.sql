@@ -8,11 +8,12 @@ CREATE TABLE IF NOT EXISTS credit_loan_applications (
   applicant_name VARCHAR(255) NOT NULL,
   applicant_email VARCHAR(320) NOT NULL,
   applicant_mobile VARCHAR(32),
-  loan_type VARCHAR(40) NOT NULL CHECK (loan_type IN ('working_capital', 'term_loan', 'invoice_discounting', 'equipment_finance', 'other')),
+  loan_type VARCHAR(40) NOT NULL CHECK (loan_type IN ('working_capital', 'term_loan', 'invoice_discounting', 'equipment_finance', 'personal_loan', 'other')),
   requested_amount NUMERIC(14,2) NOT NULL CHECK (requested_amount > 0),
   purpose TEXT NOT NULL,
   business_name VARCHAR(255),
   annual_turnover NUMERIC(14,2) CHECK (annual_turnover IS NULL OR annual_turnover >= 0),
+  application_details JSONB NOT NULL DEFAULT '{}'::jsonb,
   status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   reviewed_at TIMESTAMPTZ,
@@ -20,6 +21,14 @@ CREATE TABLE IF NOT EXISTS credit_loan_applications (
   decision_remarks TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE credit_loan_applications
+  ADD COLUMN IF NOT EXISTS application_details JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE credit_loan_applications
+  DROP CONSTRAINT IF EXISTS credit_loan_applications_loan_type_check;
+ALTER TABLE credit_loan_applications
+  ADD CONSTRAINT credit_loan_applications_loan_type_check
+  CHECK (loan_type IN ('working_capital', 'term_loan', 'invoice_discounting', 'equipment_finance', 'personal_loan', 'other'));
 
 CREATE INDEX IF NOT EXISTS idx_credit_applications_user_submitted
   ON credit_loan_applications (user_id, submitted_at DESC);
@@ -30,11 +39,17 @@ CREATE TABLE IF NOT EXISTS credit_loan_application_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id UUID NOT NULL REFERENCES credit_loan_applications(id) ON DELETE CASCADE,
   original_filename VARCHAR(255) NOT NULL,
-  mime_type VARCHAR(100) NOT NULL CHECK (mime_type IN ('application/pdf', 'image/jpeg', 'image/png')),
+  mime_type VARCHAR(100) NOT NULL CHECK (mime_type IN ('application/pdf', 'image/jpeg', 'image/png', 'image/webp')),
   file_size_bytes INTEGER NOT NULL CHECK (file_size_bytes > 0),
   file_content BYTEA NOT NULL,
   uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE credit_loan_application_documents
+  DROP CONSTRAINT IF EXISTS credit_loan_application_documents_mime_type_check;
+ALTER TABLE credit_loan_application_documents
+  ADD CONSTRAINT credit_loan_application_documents_mime_type_check
+  CHECK (mime_type IN ('application/pdf', 'image/jpeg', 'image/png', 'image/webp'));
 
 CREATE INDEX IF NOT EXISTS idx_credit_application_documents_application
   ON credit_loan_application_documents (application_id, uploaded_at);

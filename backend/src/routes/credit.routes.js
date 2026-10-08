@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireProductAccess } from '../middleware/product-auth.js';
 import multer from 'multer';
 import { randomUUID } from 'node:crypto';
+import jwt from 'jsonwebtoken';
 import { pool, withRLSContext } from '../config/db.js';
 import { processCreditReportPdf } from '../services/credit-report.service.js';
 
@@ -51,7 +52,8 @@ function validateApplicationDocument(file) {
   const isPdf = file.mimetype === 'application/pdf' && bytes.subarray(0, 5).toString() === '%PDF-';
   const isPng = file.mimetype === 'image/png' && bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   const isJpeg = file.mimetype === 'image/jpeg' && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  return isPdf || isPng || isJpeg;
+  const isWebp = file.mimetype === 'image/webp' && bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP';
+  return isPdf || isPng || isJpeg || isWebp;
 }
 
 function mapApplication(row) {
@@ -69,6 +71,7 @@ function mapApplication(row) {
     applicantName: row.applicant_name,
     applicantEmail: row.applicant_email,
     applicantMobile: row.applicant_mobile,
+    applicationDetails: row.application_details || {},
   };
 }
 
@@ -170,11 +173,37 @@ router.get('/workspace', async (req, res, next) => {
 });
 
 const applicationSchema = z.object({
-  loanType: z.enum(['working_capital', 'term_loan', 'invoice_discounting', 'equipment_finance', 'other']),
+  loanType: z.enum(['working_capital', 'term_loan', 'invoice_discounting', 'equipment_finance', 'personal_loan', 'other']),
   requestedAmount: z.coerce.number().positive().max(100_000_000),
   purpose: z.string().trim().min(10).max(2000),
   businessName: z.preprocess((value) => value === '' ? null : value, z.string().trim().max(255).nullable().optional()),
   annualTurnover: z.preprocess((value) => value === '' || value === undefined ? null : value, z.coerce.number().nonnegative().max(1_000_000_000_000).nullable().optional()),
+  applicationDetails: z.string().max(40_000).optional(),
+  verificationToken: z.string().max(10_000).optional(),
+});
+
+const eligibilityDetailsSchema = z.object({
+  requirement: z.object({ amount: z.coerce.number().positive().max(100_000_000), customAmount: z.string().nullable().optional() }),
+  purpose: z.string().min(1).max(100),
+  employment: z.object({ type: z.enum(['salaried', 'self-employed', 'business', 'other']), monthlyIncome: z.coerce.number().nonnegative().max(1_000_000_000) }),
+  personal: z.object({
+    fullName: z.string().trim().min(2).max(255),
+    panNumber: z.string().trim().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/i),
+    mobile: z.string().trim().regex(/^[6-9][0-9]{9}$/),
+    email: z.string().trim().email().max(320),
+    state: z.string().min(1).max(100),
+    city: z.string().min(1).max(100),
+    pincode: z.string().max(12).optional().default(''),
+  }),
+  kyc: z.object({
+    verified: z.literal(true),
+    maskedAadhaar: z.string().min(4).max(24),
+    verifiedName: z.string().min(2).max(255),
+    verifiedDob: z.string().min(4).max(20),
+    verifiedAt: z.string().min(4).max(40),
+    frontDocumentName: z.string().min(1).max(255),
+    backDocumentName: z.string().min(1).max(255),
+  }),
 });
 
 /** List only applications owned by the authenticated Credit user. */
@@ -198,28 +227,55 @@ router.post('/applications', handleApplicationDocuments, async (req, res, next) 
   try {
     const parsed = applicationSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Check the application details and try again.', issues: parsed.error.issues });
+    const data = parsed.data;
+    let applicationDetails = {};
+    let applicantSnapshot = null;
+    let verificationClaims = null;
+    if (data.applicationDetails) {
+      let decoded;
+      try { decoded = JSON.parse(data.applicationDetails); }
+      catch { return res.status(400).json({ error: 'Application details are invalid.' }); }
+      const detailsResult = eligibilityDetailsSchema.safeParse(decoded);
+      if (!detailsResult.success) return res.status(400).json({ error: 'Complete all eligibility and KYC steps before submitting.' });
+      applicationDetails = detailsResult.data;
+      applicantSnapshot = applicationDetails.personal;
+      if (!data.verificationToken) return res.status(400).json({ error: 'Complete Aadhaar e-KYC before submitting.' });
+      try {
+        verificationClaims = jwt.verify(data.verificationToken, process.env.JWT_SECRET || process.env.SESSION_SECRET || 'kepwe_kyc_secret_token_key_12345');
+      } catch {
+        return res.status(400).json({ error: 'Aadhaar verification has expired. Please complete Step 5 again.' });
+      }
+      if (verificationClaims?.type !== 'aadhaar_kyc_verified'
+        || verificationClaims?.userId !== req.userId
+        || String(verificationClaims?.applicantName || '').trim().toUpperCase() !== applicantSnapshot.fullName.trim().toUpperCase()
+        || verificationClaims?.maskedAadhaar !== applicationDetails.kyc.maskedAadhaar) {
+        return res.status(400).json({ error: 'Aadhaar verification could not be confirmed. Please complete Step 5 again.' });
+      }
+    }
     const files = req.files || [];
     if (files.some((file) => !validateApplicationDocument(file))) {
-      return res.status(400).json({ error: 'Documents must be valid PDF, JPG, or PNG files.' });
+      return res.status(400).json({ error: 'Documents must be valid PDF, JPG, PNG, or WEBP files.' });
     }
     if (files.reduce((total, file) => total + file.size, 0) > 25 * 1024 * 1024) {
       return res.status(413).json({ error: 'Combined document size must be 25 MB or less.' });
     }
-    const data = parsed.data;
     const user = req.user;
-    if (!user?.full_name || !user?.email) return res.status(400).json({ error: 'Complete your account profile before applying.' });
+    if (!applicantSnapshot && (!user?.full_name || !user?.email)) return res.status(400).json({ error: 'Complete your account profile before applying.' });
+    if (applicantSnapshot && files.length !== 2) return res.status(400).json({ error: 'Upload both verified Aadhaar documents before submitting.' });
     const applicationNumber = `KCA-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase()}`;
     const application = await withRLSContext(req.userId, async (client) => {
       const inserted = await client.query(
         `INSERT INTO credit_loan_applications
           (application_number, user_id, applicant_name, applicant_email, applicant_mobile,
-           loan_type, requested_amount, purpose, business_name, annual_turnover)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+           loan_type, requested_amount, purpose, business_name, annual_turnover, application_details)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)
          RETURNING id, application_number, status, submitted_at, reviewed_at, loan_type,
                    requested_amount, purpose, business_name, annual_turnover,
-                   applicant_name, applicant_email, applicant_mobile`,
-        [applicationNumber, req.userId, user.full_name, user.email, user.mobile, data.loanType,
-          data.requestedAmount, data.purpose, data.businessName || null, data.annualTurnover ?? null]
+                   applicant_name, applicant_email, applicant_mobile, application_details`,
+        [applicationNumber, req.userId, applicantSnapshot?.fullName || user.full_name,
+          applicantSnapshot?.email || user.email, applicantSnapshot?.mobile || user.mobile, data.loanType,
+          data.requestedAmount, data.purpose, data.businessName || null, data.annualTurnover ?? null,
+          JSON.stringify(applicationDetails)]
       );
       const row = inserted.rows[0];
       for (const file of files) {
@@ -239,6 +295,7 @@ router.post('/applications', handleApplicationDocuments, async (req, res, next) 
     });
     return res.status(201).json({ application: mapApplication(application), documentCount: files.length });
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
     next(err);
   }
 });
@@ -252,7 +309,7 @@ router.get('/applications/:applicationId', async (req, res, next) => {
       const result = await client.query(
         `SELECT id, application_number, status, submitted_at, reviewed_at, loan_type,
                 requested_amount, purpose, business_name, annual_turnover,
-                applicant_name, applicant_email, applicant_mobile
+                applicant_name, applicant_email, applicant_mobile, application_details
          FROM credit_loan_applications WHERE id = $1 AND user_id = $2`,
         [id.data, req.userId]
       );
