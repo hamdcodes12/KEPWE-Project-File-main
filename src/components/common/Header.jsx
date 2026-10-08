@@ -118,6 +118,9 @@ const Header = () => {
   const isDarkHeader = isHomePage && !isPastHero;
 
   const getPortalLink = (productKey, destination) => {
+    if (productKey === 'credit') {
+      return isLoggedIn ? destination : '/credit/login';
+    }
     if (isLoggedIn && Array.isArray(authState?.user?.memberships) && authState.user.memberships.includes(productKey)) {
       return destination;
     }

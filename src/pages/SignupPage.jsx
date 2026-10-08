@@ -21,7 +21,7 @@ import { PRODUCT_CONFIG } from './LoginPage';
 import './SignupPage.css';
 
 const SignupPage = ({ product: propProduct }) => {
-  const { requestEmailOtp, verifyEmailOtp } = useApp();
+  const { authState, requestEmailOtp, verifyEmailOtp } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -36,15 +36,21 @@ const SignupPage = ({ product: propProduct }) => {
   else if (pathParts[0] === 'quant') pathProduct = 'quant';
 
   const queryProduct = (searchParams.get('product') || '').trim().toLowerCase();
-  const detectedProduct = (propProduct || pathProduct || queryProduct || '').trim().toLowerCase();
+  const returnToRaw = (searchParams.get('returnTo') || '').trim();
+  let returnToProduct = '';
+  if (returnToRaw.startsWith('/credit')) returnToProduct = 'credit';
+  else if (returnToRaw.startsWith('/ledger')) returnToProduct = 'ledger';
+  else if (returnToRaw.startsWith('/quant')) returnToProduct = 'quant';
+
+  const detectedProduct = (propProduct || pathProduct || queryProduct || returnToProduct || '').trim().toLowerCase();
   const canonicalProduct = detectedProduct === 'portal' ? 'customer-portal' : detectedProduct;
   const productConfig = PRODUCT_CONFIG[canonicalProduct] || null;
   const activeProductKey = productConfig ? productConfig.productKey : null;
 
   const selectedPlan = searchParams.get('plan')?.trim() || '';
   const preservedAuthQuery = location.search || '';
-  const defaultDest = productConfig ? productConfig.defaultPath : '/quant/dashboard';
-  const redirectPath = getSafeReturnPath(searchParams.get('returnTo'), defaultDest);
+  const defaultDest = productConfig ? productConfig.defaultPath : (returnToRaw.startsWith('/quant') ? '/quant/dashboard' : returnToRaw.startsWith('/credit') ? '/credit/workspace' : '/');
+  const redirectPath = getSafeReturnPath(returnToRaw, defaultDest);
 
   const [form, setForm] = useState({ name: '', email: '', mobile: '', otp: '', termsAccepted: false, challengeId: '' });
   const [otpStep, setOtpStep] = useState(false);
@@ -52,6 +58,12 @@ const SignupPage = ({ product: propProduct }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [resendIn, setResendIn] = useState(0);
+
+  React.useEffect(() => {
+    if (!authState?.isLoading && authState?.isLoggedIn) {
+      navigate(redirectPath, { replace: true });
+    }
+  }, [authState?.isLoading, authState?.isLoggedIn, navigate, redirectPath]);
 
   React.useEffect(() => {
     if (!resendIn) return undefined;

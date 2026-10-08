@@ -16,7 +16,18 @@ export function getSafeReturnPath(value, fallback = '/') {
 
   // Prevent redirect loops back to login/signup
   const normalized = value.split('?')[0].split('#')[0].toLowerCase();
-  if (['/login', '/signup', '/admin-login', '/404'].includes(normalized)) {
+  if ([
+    '/login',
+    '/signup',
+    '/admin-login',
+    '/404',
+    '/credit/login',
+    '/credit/signup',
+    '/ledger/login',
+    '/ledger/signup',
+    '/quant/login',
+    '/quant/signup',
+  ].includes(normalized)) {
     return fallback;
   }
 

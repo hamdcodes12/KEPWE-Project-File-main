@@ -10,7 +10,7 @@ export const VALID_PRODUCTS = [
 
 // These workspaces share the website's single customer identity and session.
 // Membership remains an authorization record, not a second login system.
-export const GLOBAL_DASHBOARD_PRODUCTS = ['ledger', 'crm', 'quant'];
+export const GLOBAL_DASHBOARD_PRODUCTS = ['ledger', 'crm', 'quant', 'credit'];
 
 export function canonicalizeProduct(product) {
   if (!product) return null;

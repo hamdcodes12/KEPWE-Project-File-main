@@ -119,6 +119,9 @@ const ProtectedRoute = ({ children, product = null, productName = 'This workspac
 
   if (!authState.isLoggedIn) {
     const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    if (product === 'credit') {
+      return <Navigate to={`/credit/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
+    }
     return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
 
@@ -136,6 +139,14 @@ function QuantAuthRedirect({ signup = false }) {
   const params = new URLSearchParams(location.search);
   params.set('product', 'quant');
   if (!params.get('returnTo')) params.set('returnTo', '/quant/dashboard');
+  return <Navigate to={`${signup ? '/signup' : '/login'}?${params.toString()}`} replace />;
+}
+
+function CreditAuthRedirect({ signup = false }) {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set('product', 'credit');
+  if (!params.get('returnTo')) params.set('returnTo', '/credit/workspace');
   return <Navigate to={`${signup ? '/signup' : '/login'}?${params.toString()}`} replace />;
 }
 
@@ -196,7 +207,7 @@ const ProductAccessRequired = ({ product, productName, isDark = false }) => {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <Link
-            to="/signup"
+            to={product === 'credit' ? '/credit/signup' : '/signup'}
             style={{
               display: 'block',
               padding: '12px 18px',
@@ -212,7 +223,7 @@ const ProductAccessRequired = ({ product, productName, isDark = false }) => {
           </Link>
 
           <Link
-            to="/login"
+            to={product === 'credit' ? '/credit/login' : '/login'}
             style={{
               display: 'block',
               padding: '11px 18px',
@@ -274,8 +285,8 @@ function App() {
             <Route path="/crm/signup" element={<Navigate to="/signup" replace />} />
             <Route path="/ledger/login" element={<Navigate to="/login?product=ledger&returnTo=%2Fledger%2Fapp" replace />} />
             <Route path="/ledger/signup" element={<Navigate to="/signup?product=ledger&returnTo=%2Fledger%2Fapp" replace />} />
-            <Route path="/credit/login" element={<Navigate to="/login" replace />} />
-            <Route path="/credit/signup" element={<Navigate to="/signup" replace />} />
+            <Route path="/credit/login" element={<CreditAuthRedirect />} />
+            <Route path="/credit/signup" element={<CreditAuthRedirect signup />} />
             <Route path="/quant/login" element={<QuantAuthRedirect />} />
             <Route path="/quant/signup" element={<QuantAuthRedirect signup />} />
 

@@ -49,7 +49,7 @@ export const AppProvider = ({ children }) => {
               email: u.email,
               plan: u.subscription?.plan || u.plan || 'Free Trial',
               role: u.role,
-              memberships: u.memberships || [],
+              memberships: Array.from(new Set([...(u.memberships || []), 'credit'])),
               avatarUrl: formatAvatarUrl(u.avatarUrl, currentToken),
             },
             rememberMe: true,
@@ -120,7 +120,7 @@ export const AppProvider = ({ children }) => {
           email: u.email,
           plan: u.subscription?.plan || u.plan || 'Free Trial',
           role: u.role,
-          memberships: u.memberships || [],
+          memberships: Array.from(new Set([...(u.memberships || []), 'credit'])),
           avatarUrl: formatAvatarUrl(u.avatarUrl, res.data.accessToken),
         };
         setAuthState({ isLoggedIn: true, user, rememberMe, isLoading: false });
@@ -153,7 +153,7 @@ export const AppProvider = ({ children }) => {
       email: u.email,
       plan: u.subscription?.plan || u.plan || 'Free Trial',
       role: u.role,
-      memberships: u.memberships || [],
+      memberships: Array.from(new Set([...(u.memberships || []), 'credit'])),
       avatarUrl: formatAvatarUrl(u.avatarUrl, res.data.accessToken),
     };
     setAuthState({ isLoggedIn: true, user, rememberMe: Boolean(data.rememberMe), isLoading: false });
@@ -176,7 +176,7 @@ export const AppProvider = ({ children }) => {
           email: u.email,
           plan: u.subscription?.plan || u.plan || 'Free Trial',
           role: u.role,
-          memberships: u.memberships || [],
+          memberships: Array.from(new Set([...(u.memberships || []), 'credit'])),
           avatarUrl: formatAvatarUrl(u.avatarUrl, res.data.accessToken),
         };
         setAuthState({ isLoggedIn: true, user, rememberMe: false, isLoading: false });
@@ -668,9 +668,11 @@ export const AppProvider = ({ children }) => {
       ? 'crm'
       : raw === 'ledger-workspace' || raw === 'ledger'
       ? 'ledger'
+      : raw === 'credit-workspace' || raw === 'credit'
+      ? 'credit'
       : raw;
     const memberships = Array.isArray(authState.user.memberships) ? authState.user.memberships : [];
-    return memberships.includes(canonical);
+    return canonical === 'credit' || memberships.includes(canonical);
   }, [authState.isLoggedIn, authState.user]);
 
   return (
