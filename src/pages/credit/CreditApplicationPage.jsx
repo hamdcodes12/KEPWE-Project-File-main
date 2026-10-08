@@ -126,18 +126,27 @@ const CreditApplicationPage = () => {
       setSubmitting(false);
       // Generate a unique application reference number
       const trackingId = 'KC-' + Math.floor(100000 + Math.random() * 900000);
+      // Only write the record if we have real data from the application flow.
+      // No hardcoded fallbacks — missing draft data is a fatal submission error,
+      // not something to paper over with demo values.
+      if (!draft?.loanAmount || !draft?.selectedOption?.lenderName || !draft?.personalDetails?.fullName) {
+        console.error('Credit application submitted with incomplete draft data — aborting record write.');
+        setSubmitting(false);
+        return;
+      }
+
       const applicationRecord = {
         trackingId,
         submittedAt: new Date().toISOString(),
-        loanAmount: draft?.loanAmount || 200000,
-        purpose: draft?.purpose || 'Home Expenses',
-        lender: draft?.selectedOption?.lenderName || 'Axis Finance Partner',
-        tenure: draft?.selectedOption?.tenure || 24,
-        emi: draft?.selectedOption?.emi || 11590,
-        interestRate: draft?.selectedOption?.interestRate || 10.49,
-        applicantName: draft?.personalDetails?.fullName || 'Your name',
-        mobile: draft?.personalDetails?.mobile || '93347XXXXX',
-        email: draft?.personalDetails?.email || 'NaviXXXX@gmail.com',
+        loanAmount: draft.loanAmount,
+        purpose: draft.purpose,
+        lender: draft.selectedOption.lenderName,
+        tenure: draft.selectedOption.tenure,
+        emi: draft.selectedOption.emi,
+        interestRate: draft.selectedOption.interestRate,
+        applicantName: draft.personalDetails.fullName,
+        mobile: draft.personalDetails.mobile,
+        email: draft.personalDetails.email,
         currentStage: 3, // Stage 3: Lender Review
         statusHistory: [
           { stage: 1, title: 'Application Received', timestamp: 'Just now', completed: true },
@@ -538,8 +547,8 @@ const CreditApplicationPage = () => {
             <div className="summary-sticky-card">
               <div className="sum-head">
                 <span className="sum-label-tag">SELECTED OFFER</span>
-                <h3 className="sum-lender">{draft?.selectedOption?.lenderName || 'Axis Finance Partner'}</h3>
-                <span className="sum-plan">{draft?.selectedOption?.planName || 'Flexi Personal Credit'}</span>
+                <h3 className="sum-lender">{draft?.selectedOption?.lenderName ?? '—'}</h3>
+                <span className="sum-plan">{draft?.selectedOption?.planName ?? '—'}</span>
               </div>
 
               <div className="sum-metrics-box">
@@ -547,20 +556,20 @@ const CreditApplicationPage = () => {
                   <span className="lbl">Loan Amount</span>
                   <div className="val money-display">
                     <span className="money-curr">₹</span>
-                    <span className="money-val">{(draft?.loanAmount || 200000).toLocaleString('en-IN')}</span>
+                    <span className="money-val">{draft?.loanAmount ? draft.loanAmount.toLocaleString('en-IN') : '—'}</span>
                   </div>
                 </div>
                 <div className="s-metric">
                   <span className="lbl">Tenure</span>
                   <div className="val money-display">
-                    <span className="money-val">{draft?.selectedOption?.tenure || 24}</span>
+                    <span className="money-val">{draft?.selectedOption?.tenure ?? '—'}</span>
                     <span className="money-unit">Months</span>
                   </div>
                 </div>
                 <div className="s-metric">
                   <span className="lbl">Interest Rate</span>
                   <div className="val text-blue money-display">
-                    <span className="money-val">{draft?.selectedOption?.interestRate || 10.49}%</span>
+                    <span className="money-val">{draft?.selectedOption?.interestRate ?? '—'}{draft?.selectedOption?.interestRate ? '%' : ''}</span>
                     <span className="money-unit">p.a.</span>
                   </div>
                 </div>
@@ -570,8 +579,8 @@ const CreditApplicationPage = () => {
                 <div className="s-metric highlight">
                   <span className="lbl">Monthly EMI</span>
                   <div className="val text-blue money-display">
-                    <span className="money-curr">₹</span>
-                    <span className="money-val">{(draft?.selectedOption?.emi || 11590).toLocaleString('en-IN')}</span>
+                    <span className="money-curr">{draft?.selectedOption?.emi ? '₹' : ''}</span>
+                    <span className="money-val">{draft?.selectedOption?.emi ? draft.selectedOption.emi.toLocaleString('en-IN') : '—'}</span>
                     <span className="money-unit">/mo</span>
                   </div>
                 </div>

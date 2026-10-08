@@ -12,14 +12,17 @@ import {
   Calendar, 
   Sparkles,
   HelpCircle,
-  FileText
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 import './CreditStatusPage.css';
 
 const CreditStatusPage = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const initialId = searchParams.get('id') || 'KC-849201';
+  // Only pre-fill the search input if a real ?id= param is present in the URL.
+  // Never default to a hardcoded application ID.
+  const initialId = searchParams.get('id') || '';
 
   const [searchId, setSearchId] = useState(initialId);
   const [appData, setAppData] = useState(null);
@@ -29,29 +32,9 @@ const CreditStatusPage = () => {
       const saved = localStorage.getItem('kepwe_active_loan_application');
       if (saved) {
         setAppData(JSON.parse(saved));
-      } else {
-        // Sample default data if direct visit
-        setAppData({
-          trackingId: initialId,
-          submittedAt: '23 Aug 2026, 02:30 PM',
-          loanAmount: 250000,
-          purpose: 'Home Expenses',
-          lender: 'Axis Finance Partner',
-          tenure: 24,
-          emi: 11590,
-          interestRate: 10.49,
-          applicantName: 'Your name',
-          mobile: '933477XXXX',
-          currentStage: 3,
-          statusHistory: [
-            { stage: 1, title: 'Application Received', timestamp: '23 Aug 2026, 02:30 PM', completed: true },
-            { stage: 2, title: 'Digital KYC & Income Verification', timestamp: '23 Aug 2026, 02:32 PM', completed: true },
-            { stage: 3, title: 'Lender Credit Assessment', timestamp: 'In Progress (Expected by 06:00 PM)', active: true },
-            { stage: 4, title: 'Sanction Letter & e-Agreement', timestamp: 'Upcoming', pending: true },
-            { stage: 5, title: 'Direct Bank Disbursal', timestamp: 'Upcoming', pending: true }
-          ]
-        });
       }
+      // No active application in storage — leave appData as null so the
+      // empty state renders instead of mock/demo values.
     } catch (e) {
       console.warn(e);
     }
@@ -104,7 +87,7 @@ const CreditStatusPage = () => {
               <Search size={18} color="#214ECF" strokeWidth={2} />
               <input
                 type="text"
-                placeholder="e.g. KC-849201"
+                placeholder="Enter your Application Tracking ID"
                 value={searchId}
                 onChange={(e) => setSearchId(e.target.value)}
                 className="track-id-input"
@@ -115,6 +98,54 @@ const CreditStatusPage = () => {
             </button>
           </form>
         </div>
+
+        {/* ── No Active Application State ── */}
+        {!appData && (
+          <div className="credit-empty-state" style={{
+            textAlign: 'center',
+            padding: '48px 24px',
+            background: '#F8FAFC',
+            borderRadius: '16px',
+            border: '1.5px dashed #CBD5E1',
+            marginTop: '24px',
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '14px',
+              background: 'rgba(33, 78, 207, 0.07)',
+              display: 'grid',
+              placeItems: 'center',
+              margin: '0 auto 20px',
+            }}>
+              <AlertCircle size={28} color="#214ECF" />
+            </div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>
+              No Active Application
+            </h2>
+            <p style={{ color: '#64748B', fontSize: '0.97rem', maxWidth: '420px', margin: '0 auto 24px', lineHeight: '1.7' }}>
+              You don't have an active credit application yet. Check your eligibility and apply to see your loan journey here.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link to="/credit/eligibility" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                background: '#214ECF', color: '#fff', padding: '11px 24px',
+                borderRadius: '8px', fontWeight: 700, fontSize: '0.93rem',
+                textDecoration: 'none',
+              }}>
+                Check Eligibility
+              </Link>
+              <Link to="/credit" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                background: '#fff', color: '#214ECF', padding: '11px 24px',
+                borderRadius: '8px', fontWeight: 700, fontSize: '0.93rem',
+                textDecoration: 'none', border: '1.5px solid #214ECF',
+              }}>
+                Kepwe Credit Home
+              </Link>
+            </div>
+          </div>
+        )}
 
         {appData && (
           <div className="status-detail-grid animate-fadeIn">

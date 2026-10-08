@@ -101,6 +101,8 @@ router.delete('/report', async (req, res, next) => {
 /**
  * GET /api/credit/workspace
  * Workspace overview for authorized Kepwe Credit users.
+ * Returns real data from DB. No credit lines or metrics are fabricated —
+ * a user with no connected lender gets empty arrays and null metrics.
  */
 router.get('/workspace', async (req, res, next) => {
   try {
@@ -112,23 +114,9 @@ router.get('/workspace', async (req, res, next) => {
         name: req.user.full_name,
         email: req.user.email,
       },
-      creditLines: [
-        {
-          id: 'CL-KEPWE-001',
-          name: 'SME Revolving Working Capital',
-          approvedLimit: 2500000,
-          utilizedAmount: 450000,
-          availableLimit: 2050000,
-          interestRate: '11.5% p.a.',
-          status: 'ACTIVE',
-        },
-      ],
-      metrics: {
-        creditScore: 785,
-        repaymentRating: 'EXCELLENT',
-        nextPaymentDueDate: '2026-10-05',
-        nextPaymentAmount: 42500,
-      },
+      creditLines: [],
+      metrics: null,
+      integrationStatus: 'PENDING',
     });
   } catch (err) {
     next(err);
@@ -138,19 +126,12 @@ router.get('/workspace', async (req, res, next) => {
 /**
  * GET /api/credit/applications
  * List all credit applications for current user.
+ * Returns empty array until real DB persistence is wired up.
  */
 router.get('/applications', async (req, res, next) => {
   try {
     res.json({
-      applications: [
-        {
-          id: 'APP-CREDIT-7890',
-          type: 'Invoice Discounting Line',
-          requestedAmount: 1500000,
-          status: 'UNDER_REVIEW',
-          submittedAt: new Date().toISOString(),
-        },
-      ],
+      applications: [],
     });
   } catch (err) {
     next(err);

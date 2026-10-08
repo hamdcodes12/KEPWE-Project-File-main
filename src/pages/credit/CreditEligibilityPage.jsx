@@ -75,56 +75,12 @@ const EMPLOYMENT_TYPES = [
   { id: 'other', label: 'Other Profile', desc: 'Freelancer / Independent Contractor', icon: Sparkles }
 ];
 
-const SAMPLE_LOAN_OPTIONS = [
-  {
-    id: 'opt-1',
-    lenderName: 'Axis Finance Partner',
-    planName: 'Flexi Personal Credit',
-    tag: 'Lowest Interest',
-    tagType: 'badge-blue',
-    amount: 250000,
-    tenure: 24,
-    interestRate: 10.49,
-    emi: 11590,
-    processingFee: '1.25% + GST',
-    prepaymentTerms: 'Zero penalty after 6 months',
-    apr: '11.2%',
-    features: ['Instant digital in-principle approval', 'Flexible tenure up to 48 months', 'Minimal documentation'],
-    disbursalTime: '24 - 48 Hours'
-  },
-  {
-    id: 'opt-2',
-    lenderName: 'HDFC Lending Ecosystem',
-    planName: 'Express Credit Line',
-    tag: 'Fastest Disbursal',
-    tagType: 'badge-green',
-    amount: 250000,
-    tenure: 24,
-    interestRate: 10.99,
-    emi: 11650,
-    processingFee: '0.99% + GST',
-    prepaymentTerms: 'Part-payment allowed at no cost',
-    apr: '11.5%',
-    features: ['Paperless KYC verification', 'Zero foreclosure fee on closing', 'Transparent fixed rate'],
-    disbursalTime: 'Same Day Digital'
-  },
-  {
-    id: 'opt-3',
-    lenderName: 'Tata Capital Ecosystem',
-    planName: 'Custom Term Loan',
-    tag: 'Flexible Tenure',
-    tagType: 'badge-purple',
-    amount: 250000,
-    tenure: 36,
-    interestRate: 11.25,
-    emi: 8215,
-    processingFee: '1.5% + GST',
-    prepaymentTerms: 'Standard partner terms apply',
-    apr: '11.9%',
-    features: ['Low monthly EMI burden', 'No hidden charges', 'Option to top-up later'],
-    disbursalTime: '1 - 2 Business Days'
-  }
-];
+// NOTE: No real lender integration is active. SAMPLE_LOAN_OPTIONS is intentionally
+// empty. When a real lending API is connected, this should be replaced with a live
+// fetch from the backend (e.g. GET /api/credit/loan-options?amount=X&tenure=Y).
+// Rendering this empty prevents fake lender names, rates, and EMI figures from
+// appearing to real users as if they are genuine offers.
+const SAMPLE_LOAN_OPTIONS = [];
 
 const INDIAN_STATES_CITIES = {
   'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Kurnool', 'Rajahmundry', 'Tirupati', 'Kakinada', 'Anantapur', 'Kadapa', 'Other'],
@@ -1721,7 +1677,30 @@ const CreditEligibilityPage = () => {
 
             {/* Results Cards List */}
             <div className="options-cards-grid">
-              {SAMPLE_LOAN_OPTIONS.map((opt) => (
+              {SAMPLE_LOAN_OPTIONS.length === 0 ? (
+                <div style={{
+                  gridColumn: '1 / -1',
+                  textAlign: 'center',
+                  padding: '48px 24px',
+                  background: '#F8FAFC',
+                  borderRadius: '16px',
+                  border: '1.5px dashed #CBD5E1',
+                }}>
+                  <div style={{
+                    width: '52px', height: '52px', borderRadius: '12px',
+                    background: 'rgba(33,78,207,0.07)', display: 'grid',
+                    placeItems: 'center', margin: '0 auto 16px',
+                  }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#214ECF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  </div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+                    Lender Integration Pending
+                  </h3>
+                  <p style={{ color: '#64748B', fontSize: '0.95rem', maxWidth: '400px', margin: '0 auto', lineHeight: '1.7' }}>
+                    Live lender offers are not yet available. Our lending partner integrations are being configured. Please check back shortly or contact support.
+                  </p>
+                </div>
+              ) : SAMPLE_LOAN_OPTIONS.map((opt) => (
                 <div key={opt.id} className="loan-product-card">
                   <div className="card-top-content">
                     <div className="card-top-header">
@@ -1830,7 +1809,13 @@ const CreditEligibilityPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {SAMPLE_LOAN_OPTIONS.map((opt) => (
+                    {SAMPLE_LOAN_OPTIONS.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: '#94A3B8', fontStyle: 'italic' }}>
+                          Lender integration pending — no offers available yet.
+                        </td>
+                      </tr>
+                    ) : SAMPLE_LOAN_OPTIONS.map((opt) => (
                       <tr key={opt.id}>
                         <td>
                           <strong>{opt.lenderName}</strong>
