@@ -1,26 +1,16 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const brandFacts = [
-  { label: 'Brand', value: 'Kepwe' },
+  { label: 'Brand', value: 'KEPWE QUANT' },
   { label: 'Parent ecosystem', value: 'Healweal Corp' },
   { label: 'Core philosophy', value: 'Build Better' },
-  { label: 'Positioning', value: 'Financial Technology' },
-  { label: 'Core products', value: 'Kepwe Ledger • Kepwe Credit • Kepwe Quant' }
+  { label: 'Positioning', value: 'Algorithmic Trading Technology' },
+  { label: 'Core product', value: 'Kepwe Quant' }
 ];
 
 const productCards = [
-  {
-    name: 'Kepwe Ledger',
-    headline: 'Manage Better.',
-    description: 'Business accounting and financial technology designed to simplify financial operations, records, reporting and connected workflows.'
-  },
-  {
-    name: 'Kepwe Credit',
-    headline: 'Access Better.',
-    description: 'Technology-enabled credit discovery and application workflows designed to make credit journeys simpler and more transparent.'
-  },
   {
     name: 'Kepwe Quant',
     headline: 'Trade Smarter.',
@@ -49,27 +39,26 @@ const principles = [
 
 const AboutPage = () => {
   const navigate = useNavigate();
-
   return (
     <div style={{ background: '#F8FAFC', color: '#0F172A', minHeight: '100vh', padding: '76px 20px 100px', fontFamily: "'Inter', sans-serif" }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <section style={{ textAlign: 'center', maxWidth: '900px', margin: '0 auto 52px' }}>
           <span style={{ background: '#E0E7FF', color: '#214ECF', fontSize: '0.82rem', fontWeight: 800, padding: '7px 16px', borderRadius: '9999px', letterSpacing: '0.08em', display: 'inline-block', textTransform: 'uppercase' }}>
-            KEPWE
+            KEPWE QUANT
           </span>
           <h1 style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 900, lineHeight: '1.05', margin: '18px 0 18px', color: '#0F172A', WebkitTextFillColor: '#0F172A' }}>
-            Build Better. Finance Smarter.
+            Systematic Trading. Clearly Managed.
           </h1>
           <p style={{ color: '#475569', fontSize: '1.12rem', lineHeight: '1.75', maxWidth: '760px', margin: '0 auto' }}>
-            Kepwe builds intelligent financial technology that helps individuals and businesses manage, access, understand and automate finance.
+            Kepwe Quant is our flagship algorithmic trading platform for researching strategies, automating execution, connecting brokers, and managing risk.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', marginTop: '28px' }}>
-            <button onClick={() => navigate('/')} style={{ background: '#214ECF', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '14px 24px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-              Explore Kepwe <ArrowRight size={16} />
-            </button>
-            <button onClick={() => navigate('/products')} style={{ background: 'transparent', color: '#0F172A', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '14px 24px', fontWeight: 700, cursor: 'pointer' }}>
-              Explore our Products
-            </button>
+            <a href="/quant" style={{ background: '#214ECF', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '14px 24px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+              Explore Kepwe Quant <ArrowRight size={16} />
+            </a>
+            <a href="/signup?product=quant&demo=24h" style={{ background: 'transparent', color: '#0F172A', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '14px 24px', fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              Start 24-Hour Free Demo
+              </a>
           </div>
 
         </section>
@@ -87,13 +76,13 @@ const AboutPage = () => {
 
         <section style={{ marginBottom: '72px' }}>
           <div style={{ textAlign: 'center', marginBottom: '26px' }}>
-            <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>Financial Technology • Built Better</span>
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, margin: '14px 0 12px', lineHeight: '1.1' }}>Finance Is Complex. Technology Should Make It Simple.</h2>
+            <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>KEPWE QUANT • SYSTEMATIC TRADING</span>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, margin: '14px 0 12px', lineHeight: '1.1' }}>Systematic Trading Should Be Clear and Controlled.</h2>
           </div>
           <p style={{ maxWidth: '880px', margin: '0 auto', color: '#475569', fontSize: '1.08rem', lineHeight: '1.8', textAlign: 'center' }}>
-            Financial systems are becoming increasingly connected, data-driven and technology-enabled. But complexity continues to stand between people and better financial decisions.
+            Trading strategies need a disciplined path from research to live execution, with clear performance data and risk controls at every step.
             <br /><br />
-            Kepwe exists to remove that complexity. We combine technology, automation, data and financial intelligence to create products that make financial workflows simpler, smarter and more accessible.
+            Kepwe Quant brings strategy research, historical backtesting, automated execution, broker connectivity, and risk controls into one focused workspace.
             <br /><br />
             <strong style={{ color: '#0F172A' }}>We don't build technology for technology's sake. We build to solve real problems.</strong>
           </p>
@@ -105,7 +94,7 @@ const AboutPage = () => {
             <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Built on the Philosophy of Build Better.</h2>
           </div>
           <p style={{ color: '#475569', fontSize: '1.06rem', lineHeight: '1.8', maxWidth: '860px', margin: '0 auto 20px', textAlign: 'center' }}>
-            Kepwe is part of the Healweal ecosystem and carries forward a simple philosophy: Build Better.
+            Kepwe Quant is developed by Kepwe, part of the Healweal ecosystem, with a focus on clear and responsible trading technology.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', maxWidth: '840px', margin: '0 auto' }}>
             {['Better products.', 'Better technology.', 'Better experiences.', 'Better systems.'].map((item) => (
@@ -129,31 +118,31 @@ const AboutPage = () => {
             <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 12px' }}>From Problems to Products.</h2>
           </div>
           <p style={{ maxWidth: '900px', margin: '0 auto 20px', color: '#475569', fontSize: '1.06rem', lineHeight: '1.8', textAlign: 'center' }}>
-            Kepwe was created around a simple observation: financial technology is powerful, but often unnecessarily complicated.
+            Kepwe Quant was created around a simple observation: algorithmic trading technology is powerful, but often unnecessarily complicated.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px', maxWidth: '980px', margin: '0 auto 20px' }}>
             {[
-              'Businesses struggle with fragmented financial operations.',
-              'Consumers face complex credit journeys.',
-              'Investors deal with enormous amounts of market information.',
-              'Traders need sophisticated technology that can be difficult to access.'
+              'Strategy research can be spread across disconnected tools.',
+              'Backtests need realistic market and cost assumptions.',
+              'Manual execution makes consistent rules harder to follow.',
+              'Risk controls should be part of every automated strategy.'
             ].map((item) => (
               <div key={item} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px 16px', color: '#475569', lineHeight: '1.6', fontWeight: 500 }}>{item}</div>
             ))}
           </div>
           <p style={{ maxWidth: '900px', margin: '0 auto', color: '#475569', fontSize: '1.06rem', lineHeight: '1.8', textAlign: 'center' }}>
-            Kepwe brings these opportunities together under one technology ecosystem. Today, Kepwe is building three core product categories:
+            Kepwe Quant brings these trading workflows together in one platform:
             <br /><br />
-            <strong style={{ color: '#214ECF', fontSize: '1.2rem' }}>Ledger → Credit → Quant</strong>
+            <strong style={{ color: '#214ECF', fontSize: '1.2rem' }}>Kepwe Quant</strong>
             <br /><br />
-            Each solves a different financial problem. Together, they represent our larger vision: <strong>One Financial Technology Ecosystem.</strong>
+            <strong>One flagship platform for systematic trading.</strong>
           </p>
         </section>
 
         <section style={{ marginBottom: '72px', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '20px', padding: '38px 24px' }}>
           <div style={{ textAlign: 'center', marginBottom: '26px' }}>
             <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>What We Build</span>
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 8px' }}>Three Products. One Vision.</h2>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 8px' }}>KEPWE QUANT. One Trading Workspace.</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '18px' }}>
             {productCards.map((product) => (
@@ -169,37 +158,37 @@ const AboutPage = () => {
         <section style={{ marginBottom: '72px' }}>
           <div style={{ textAlign: 'center', marginBottom: '22px' }}>
             <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>Our Ecosystem</span>
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Manage → Access → Understand → Automate</h2>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Research → Backtest → Automate → Manage Risk</h2>
           </div>
           <div style={{ textAlign: 'center', fontSize: '1.2rem', fontWeight: 800, letterSpacing: '0.06em', color: '#0F172A', marginTop: '8px' }}>
-            LEDGER → CREDIT → QUANT
+            KEPWE QUANT
           </div>
           <p style={{ maxWidth: '820px', margin: '22px auto 0', color: '#475569', textAlign: 'center', fontSize: '1.08rem', lineHeight: '1.8' }}>
-            Together, these products form Kepwe's vision of a connected financial technology ecosystem.
+            Kepwe Quant connects each step of a systematic trading workflow, from strategy design through broker execution and ongoing risk management.
           </p>
         </section>
 
         <section style={{ marginBottom: '72px', background: 'linear-gradient(135deg, #0F172A 0%, #162B5A 100%)', color: '#FFFFFF', borderRadius: '22px', padding: '32px 24px' }}>
           <div style={{ textAlign: 'center', marginBottom: '18px' }}>
             <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#BFDBFE', fontWeight: 800 }}>Our Vision</span>
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px', color: '#FFFFFF', WebkitTextFillColor: '#FFFFFF' }}>To Build Better Financial Technology for Everyone.</h2>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px', color: '#FFFFFF', WebkitTextFillColor: '#FFFFFF' }}>To Make Systematic Trading More Accessible and Disciplined.</h2>
           </div>
           <p style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center', color: '#E2E8F0', fontSize: '1.08rem', lineHeight: '1.8' }}>
-            We envision a future where financial technology is accessible, intelligent, connected and transparent. Our long-term ambition is to build financial technology infrastructure that helps people and businesses operate better, decide better and grow better.
+            We build tools that help traders research ideas, validate them with historical data, connect supported brokers, and apply risk controls to automated execution.
           </p>
         </section>
 
         <section style={{ marginBottom: '72px', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '20px', padding: '38px 24px' }}>
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
             <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>Our Mission</span>
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Make Finance Simpler Through Technology.</h2>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Make Trading Workflows Simpler Through Technology.</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', maxWidth: '960px', margin: '0 auto' }}>
             {[
-              ['Technology', 'Powerful infrastructure and modern software.'],
-              ['Data', 'Information that helps users understand their financial environment.'],
-              ['Automation', 'Reducing repetitive and inefficient processes.'],
-              ['Financial Intelligence', 'Turning complexity into useful information and workflows.']
+              ['Strategy Tools', 'Build and refine systematic trading rules.'],
+              ['Market Data', 'Review historical performance and trading signals.'],
+              ['Automation', 'Execute configured strategies through supported brokers.'],
+              ['Risk Controls', 'Apply loss limits and safeguards to each workflow.']
             ].map(([title, text]) => (
               <div key={title} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px 16px' }}>
                 <div style={{ fontWeight: 900, color: '#0F172A', marginBottom: '8px', fontSize: '1.05rem' }}>{title}</div>
@@ -258,10 +247,10 @@ const AboutPage = () => {
         <section style={{ marginBottom: '72px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '20px', padding: '38px 24px' }}>
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>Our Technology</span>
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Built for the Modern Financial World.</h2>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Built for Modern Algorithmic Trading.</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', maxWidth: '1000px', margin: '0 auto' }}>
-            {['Artificial Intelligence & Machine Learning', 'Cloud Infrastructure', 'APIs & Financial Integrations', 'Automation', 'Data Engineering', 'Analytics', 'Algorithmic Technology', 'Security', 'Scalable Architecture'].map((item) => (
+            {['Strategy Research', 'Historical Backtesting', 'Broker Connectivity', 'Automated Execution', 'Market Analytics', 'Risk Management', 'Security', 'Execution Monitoring', 'Scalable Architecture'].map((item) => (
               <div key={item} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px', textAlign: 'center', color: '#475569', fontWeight: 600 }}>{item}</div>
             ))}
           </div>
@@ -272,14 +261,14 @@ const AboutPage = () => {
 
         <section style={{ marginBottom: '72px' }}>
           <div style={{ textAlign: 'center', marginBottom: '26px' }}>
-            <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>Kepwe for Businesses</span>
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Helping Businesses Build Better Financial Operations.</h2>
+            <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>Systematic Trading</span>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>A Disciplined Workflow from Research to Execution.</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', maxWidth: '900px', margin: '0 auto 18px' }}>
             {[
-              ['Automate', 'Reduce repetitive financial workflows.'],
-              ['Connect', 'Bring financial information together.'],
-              ['Understand', 'Turn financial data into actionable information.']
+              ['Research', 'Develop systematic trading strategies.'],
+              ['Connect', 'Link a supported broker account.'],
+              ['Manage Risk', 'Set safeguards and monitor execution.']
             ].map(([title, text]) => (
               <div key={title} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px 16px' }}>
                 <div style={{ fontWeight: 900, color: '#0F172A', marginBottom: '8px', fontSize: '1.06rem' }}>{title}</div>
@@ -288,22 +277,19 @@ const AboutPage = () => {
             ))}
           </div>
           <div style={{ textAlign: 'center' }}>
-            <button onClick={() => navigate('/ledger')} style={{ background: 'transparent', color: '#214ECF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '12px 18px', fontWeight: 800, cursor: 'pointer' }}>
-              Explore Kepwe Ledger →
-            </button>
           </div>
         </section>
 
         <section style={{ marginBottom: '72px' }}>
           <div style={{ textAlign: 'center', marginBottom: '26px' }}>
-            <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>Kepwe for Individuals</span>
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Better Access. Better Information. Better Tools.</h2>
+            <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>KEPWE QUANT</span>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Research, Backtest, Automate, and Monitor.</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', maxWidth: '900px', margin: '0 auto 18px' }}>
             {[
-              ['Access', 'Discover financial opportunities.'],
-              ['Understand', 'Make sense of financial and market information.'],
-              ['Automate', 'Use technology for systematic workflows.']
+              ['Backtest', 'Validate strategy behavior against historical data.'],
+              ['Automate', 'Connect and run configured trading strategies.'],
+              ['Manage Risk', 'Monitor exposure and apply defined safeguards.']
             ].map(([title, text]) => (
               <div key={title} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px 16px' }}>
                 <div style={{ fontWeight: 900, color: '#0F172A', marginBottom: '8px', fontSize: '1.06rem' }}>{title}</div>
@@ -313,7 +299,7 @@ const AboutPage = () => {
           </div>
           <div style={{ textAlign: 'center' }}>
             <button onClick={() => navigate('/products')} style={{ background: '#214ECF', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '12px 18px', fontWeight: 800, cursor: 'pointer' }}>
-              Explore Products →
+              Explore KEPWE QUANT →
             </button>
           </div>
         </section>
@@ -332,25 +318,12 @@ const AboutPage = () => {
 
         <section style={{ marginBottom: '72px' }}>
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>Healweal Ecosystem</span>
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>One Philosophy. Multiple Businesses.</h2>
+            <span style={{ fontSize: '0.78rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#214ECF', fontWeight: 800 }}>Company</span>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>Kepwe Quant, Built by Kepwe.</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px', maxWidth: '980px', margin: '0 auto' }}>
-            {[
-              ['Kepwe', 'Financial Technology'],
-              ['Thinkatic', 'AI & Technology'],
-              ['Zelevos', 'Commerce & Supply Chain'],
-              ['Hapdax', 'Health Technology'],
-              ['HBS', 'Education']
-            ].map(([name, focus]) => (
-              <div key={name} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px 16px', textAlign: 'center' }}>
-                <div style={{ fontWeight: 900, color: '#0F172A', marginBottom: '6px' }}>{name}</div>
-                <div style={{ color: '#475569', fontSize: '0.92rem' }}>{focus}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '20px', fontWeight: 900, fontSize: '1.4rem', color: '#0F172A' }}>Different industries. One philosophy.</div>
-          <div style={{ textAlign: 'center', marginTop: '12px', fontWeight: 900, fontSize: '2.2rem', color: '#214ECF' }}>Build Better.</div>
+          <p style={{ maxWidth: '840px', margin: '0 auto', color: '#475569', textAlign: 'center', lineHeight: '1.8' }}>
+            Kepwe is part of Healweal Corp. Its flagship product is KEPWE QUANT, an algorithmic trading workspace for strategy research, automation, broker connectivity, and risk management.
+          </p>
         </section>
 
         <section style={{ marginBottom: '72px' }}>
@@ -359,7 +332,7 @@ const AboutPage = () => {
             <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: 900, margin: '14px 0 10px' }}>We're Just Getting Started.</h2>
           </div>
           <p style={{ maxWidth: '860px', margin: '0 auto', color: '#475569', lineHeight: '1.8', textAlign: 'center', fontSize: '1.08rem' }}>
-            Kepwe's current products are only the beginning. As technology evolves, we intend to continue exploring new ways to make financial infrastructure smarter, faster, more connected and more accessible.
+            We continue improving Kepwe Quant with better research tools, broker connectivity, execution visibility, and risk controls.
             <br /><br />
             Our roadmap will continue to evolve around one question:
             <br /><br />
@@ -370,11 +343,11 @@ const AboutPage = () => {
         <section style={{ marginBottom: '72px', background: 'linear-gradient(135deg, #0F172A 0%, #1D4ED8 100%)', color: '#FFFFFF', borderRadius: '22px', padding: '40px 24px', textAlign: 'center' }}>
           <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 900, margin: '0 0 18px', color: '#FFFFFF' }}>Let's Build Better.</h2>
           <p style={{ maxWidth: '860px', margin: '0 auto', color: '#E2E8F0', lineHeight: '1.8', fontSize: '1.08rem' }}>
-            Whether you're managing a business, exploring financial products, analysing markets or looking for smarter financial technology—Kepwe is building for you.
+            If you want to research, backtest, and automate a trading strategy with clear risk controls, Kepwe Quant is built for you.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', marginTop: '26px' }}>
             <button onClick={() => navigate('/')} style={{ background: '#FFFFFF', color: '#0F172A', border: 'none', borderRadius: '10px', padding: '14px 22px', fontWeight: 800, cursor: 'pointer' }}>
-              Explore Kepwe
+              Explore Kepwe Quant
             </button>
             <button onClick={() => navigate('/contact')} style={{ background: 'transparent', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.35)', borderRadius: '10px', padding: '14px 22px', fontWeight: 800, cursor: 'pointer' }}>
               Talk to Us
@@ -389,11 +362,11 @@ const AboutPage = () => {
           <div style={{ maxWidth: '900px', margin: '0 auto', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '18px', padding: '28px 22px' }}>
             <div style={{ marginBottom: '20px' }}>
               <div style={{ color: '#475569', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.08em', fontSize: '0.78rem', marginBottom: '8px' }}>Primary brand line</div>
-              <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0F172A' }}>Build Better. Finance Smarter.</div>
+              <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0F172A' }}>Systematic Trading. Clearly Managed.</div>
             </div>
             <div style={{ marginBottom: '20px' }}>
               <div style={{ color: '#475569', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.08em', fontSize: '0.78rem', marginBottom: '8px' }}>Supporting line</div>
-              <div style={{ color: '#475569', fontSize: '1.08rem', lineHeight: '1.8' }}>Financial technology designed to simplify how you manage, access, understand and automate finance.</div>
+              <div style={{ color: '#475569', fontSize: '1.08rem', lineHeight: '1.8' }}>Algorithmic trading software for strategy research, automation, broker connectivity, and risk management.</div>
             </div>
             <div style={{ marginBottom: '12px' }}>
               <div style={{ color: '#475569', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.08em', fontSize: '0.78rem', marginBottom: '8px' }}>Brand philosophy</div>
@@ -401,14 +374,14 @@ const AboutPage = () => {
             </div>
             <div>
               <div style={{ color: '#475569', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.08em', fontSize: '0.78rem', marginBottom: '8px' }}>Brand promise</div>
-              <div style={{ color: '#475569', fontSize: '1.08rem', lineHeight: '1.8' }}>Better Products. Better Technology. Better Experiences. Better Financial Infrastructure.</div>
+              <div style={{ color: '#475569', fontSize: '1.08rem', lineHeight: '1.8' }}>Research strategies. Automate execution. Manage risk with Kepwe Quant.</div>
             </div>
           </div>
         </section>
 
         <section style={{ marginTop: '30px', paddingTop: '30px', borderTop: '1px solid #E2E8F0' }}>
           <p style={{ textAlign: 'center', color: '#475569', fontSize: '1.05rem', lineHeight: '1.8', maxWidth: '980px', margin: '0 auto' }}>
-            Every Kepwe page should reinforce the same strategic idea: technology should make finance simpler—not make financial technology more complicated. The products may evolve. The technology may change. The ecosystem may expand. But the philosophy remains constant:
+            Kepwe Quant brings strategy research, automated execution, broker connectivity, and risk management into one focused workspace. Our aim is to make systematic trading workflows clearer and easier to manage:
             <br /><br />
             <strong style={{ color: '#214ECF', fontSize: '1.7rem' }}>Build Better.</strong>
           </p>

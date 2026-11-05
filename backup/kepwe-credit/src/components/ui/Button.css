@@ -1,0 +1,98 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-family-sans);
+  font-weight: 600;
+  border-radius: 10px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-accent-blue);
+  outline-offset: 2px;
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* Sizes */
+.btn-sm {
+  height: 38px;
+  padding: 0 14px;
+  font-size: 0.8125rem;
+}
+
+.btn-md {
+  height: 46px;
+  padding: 0 20px;
+  font-size: 0.875rem;
+}
+
+.btn-lg {
+  height: 52px;
+  padding: 0 26px;
+  font-size: 0.9375rem;
+}
+
+/* Primary Variant */
+.btn-primary {
+  background: #214ECF;
+  color: #FFFFFF;
+  border-color: #214ECF;
+  box-shadow: 0 4px 14px rgba(33, 78, 207, 0.2);
+}
+
+.btn-primary:hover {
+  background: #1A3EB4;
+  border-color: #1A3EB4;
+  box-shadow: 0 6px 18px rgba(33, 78, 207, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Secondary Variant (PDF Section 12) */
+.btn-secondary {
+  background: #FFFFFF;
+  color: #111827;
+  border-color: #E4E7EC;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+}
+
+.btn-secondary:hover {
+  background: #F7F9FC;
+  color: #111827;
+  border-color: #D0D5DD;
+  transform: translateY(-2px);
+}
+
+/* Outline Variant */
+.btn-outline {
+  background: transparent;
+  color: #111827;
+  border-color: #E4E7EC;
+}
+
+.btn-outline:hover {
+  background: #F7F9FC;
+  border-color: #214ECF;
+  color: #214ECF;
+  transform: translateY(-2px);
+}
+
+/* Ghost Variant */
+.btn-ghost {
+  background: transparent;
+  color: #667085;
+}
+
+.btn-ghost:hover {
+  color: #111827;
+  background: #F7F9FC;
+}

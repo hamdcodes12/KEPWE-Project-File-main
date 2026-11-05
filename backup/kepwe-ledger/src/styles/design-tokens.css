@@ -1,0 +1,202 @@
+:root {
+  /* Kepwe Brand & UI Design Tokens (PDF Section 02 & 22) */
+  --color-primary: #214ECF;
+  --color-primary-hover: #1A3EB4;
+  --color-bg-white: #FFFFFF;
+  --color-surface-light: #F7F9FC;
+  --color-border-light: #E4E7EC;
+  
+  --color-text-main: #111827;
+  --color-text-secondary: #667085;
+  --color-text-tertiary: #98A2B3;
+  
+  --color-status-success: #12B76A;
+  --color-status-warning: #F79009;
+  --color-status-error: #F04438;
+
+  /* Legacy & Semantic Mapping */
+  --color-bg-dark: #F7F9FC;
+  --color-surface-dark: #FFFFFF;
+  --color-surface-elevated: #F7F9FC;
+  
+  --color-teal-primary: #14B8A6;
+  --color-teal-accent: #0FD6B5;
+  --color-teal-head: #0F766E;
+  --color-purple-accent: #6366F1;
+  --color-border-dark: #E4E7EC;
+
+  /* Kepwe Business Platform Palette */
+  --color-biz-primary: #214ECF;
+  --color-biz-dark: #1A3EB4;
+  --color-biz-ink: #111827;
+  --color-biz-muted: #667085;
+  --color-biz-soft-bg: #F7F9FC;
+  --color-biz-border: #E4E7EC;
+
+  /* Typography Fonts - Primary: Inter (PDF Section 04) */
+  --font-ui: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Liberation Mono', 'Roboto Mono', 'DejaVu Sans Mono', Consolas, Courier, monospace;
+
+  /* Layout Constants */
+  --header-height: 72px;
+  --bottom-nav-height: 64px;
+}
+
+/* Reset & Base System */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+  background-color: #FFFFFF;
+  color: #0F172A;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.title-accent {
+  background: linear-gradient(135deg, #2563EB 0%, #0284C7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+/* Shared Monospace Class for Financial Data */
+.font-mono, .data-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2563EB;
+}
+
+/* Glass & Card Components */
+.glass-card {
+  background: #FFFFFF;
+  backdrop-filter: blur(12px);
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+}
+
+.glow-teal {
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.12);
+}
+
+.glow-trade {
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.12);
+}
+
+.glow-no-trade {
+  box-shadow: 0 8px 24px rgba(225, 29, 72, 0.12);
+}
+
+/* ── Responsive Focus States ──────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-teal-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Reduced Motion ────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── App Layout: Left Rail + Top Nav + Content ─── */
+.app-left-rail {
+  display: flex;
+}
+.app-bottom-nav {
+  display: none !important;
+}
+@media (max-width: 768px) {
+  .app-left-rail {
+    display: none !important;
+  }
+  .app-content {
+    padding-bottom: 24px;
+  }
+}
+
+/* ── Header: Mobile menu toggle ───────────────────── */
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none !important;
+  }
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+}
+
+/* ── DEMO Data badge utility ───────────────────────── */
+.demo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(251,191,36,0.10);
+  border: 1px solid rgba(251,191,36,0.3);
+  color: #FBBF24;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 5px;
+  letter-spacing: 0.08em;
+}
+
+/* ── Safe Grid: no minmax overflow on mobile ──────── */
+.safe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* ── Option Chain: horizontal scroll only inside ──── */
+.chain-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+.chain-table-wrapper table {
+  min-width: 640px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ── Business site color override ────────────────── */
+.biz-page {
+  background-color: #FFFFFF;
+  color: #0F172A;
+}
+

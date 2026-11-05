@@ -10,8 +10,6 @@ const LegalPages = () => {
     : doc === 'privacy' ? 'Privacy Policy'
     : doc === 'refunds' ? 'Refund & Cancellation Policy'
     : doc === 'grievance' ? 'Grievance Redressal'
-    : doc === 'lending-disclosure' ? 'Lending & Credit Disclosure'
-    : doc === 'partner-disclosure' ? 'Lender & LSP Partner Disclosure'
     : 'Legal Hub';
 
   return (
@@ -35,8 +33,6 @@ const LegalPages = () => {
           {[
             { path: 'terms', label: 'Terms & Conditions' },
             { path: 'privacy', label: 'Privacy Policy' },
-            { path: 'lending-disclosure', label: 'Lending Disclosure' },
-            { path: 'partner-disclosure', label: 'Lender/LSP Partners' },
             { path: 'risk-disclosure', label: 'Risk Disclosure' },
             { path: 'refunds', label: 'Refund Policy' },
             { path: 'grievance', label: 'Grievance Redressal' },
@@ -76,37 +72,6 @@ const LegalPages = () => {
             </div>
           )}
 
-          {doc === 'lending-disclosure' && (
-            <div>
-              <h3 style={{ color: '#111827', fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px' }}>
-                Lending & Credit Discovery Disclosure
-              </h3>
-              <p style={{ marginBottom: '16px', color: '#475467' }}>
-                Kepwe Credit acts strictly as a digital interface facilitating access to credit opportunities offered by regulated banks and Non-Banking Financial Companies (NBFCs). Kepwe is not a lender or banking entity.
-              </p>
-              <p style={{ marginBottom: '16px', color: '#475467' }}>
-                All loan sanctioning, interest rate determination (Annual Percentage Rate), processing fees, loan agreements, repayment schedules, and loan recovery processes are governed strictly by the respective partner lending institutions in full compliance with Reserve Bank of India (RBI) Digital Lending Guidelines.
-              </p>
-            </div>
-          )}
-
-          {doc === 'partner-disclosure' && (
-            <div>
-              <h3 style={{ color: '#111827', fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px' }}>
-                Lending Service Provider (LSP) & Partner Disclosures
-              </h3>
-              <p style={{ marginBottom: '16px', color: '#475467' }}>
-                In accordance with RBI circulars on Digital Lending and Lending Service Providers (LSP):
-              </p>
-              <ul style={{ paddingLeft: '20px', marginBottom: '16px', color: '#475467' }}>
-                <li style={{ marginBottom: '8px' }}>Partner Lenders: Regulated Scheduled Commercial Banks and RBI-Registered NBFCs.</li>
-                <li style={{ marginBottom: '8px' }}>Key Fact Statement (KFS): Provided directly to the borrower before loan agreement execution.</li>
-                <li style={{ marginBottom: '8px' }}>Cooling-off / Look-up Period: Borrowers are entitled to exit loan contracts within the designated cooling-off window without penalty.</li>
-                <li style={{ marginBottom: '8px' }}>Data Privacy: Storage of biometric and persistent contact data is prohibited; data accessed strictly with explicit borrower consent.</li>
-              </ul>
-            </div>
-          )}
-
           {doc === 'terms' && (
             <div style={{ color: '#1F2937' }}>
               <h3 style={{ color: '#111827', fontSize: '1.45rem', fontWeight: 800, marginBottom: '8px' }}>
@@ -117,7 +82,7 @@ const LegalPages = () => {
               </h4>
 
               <p style={{ marginBottom: '16px' }}>
-                <strong>For Kepwe Ledger • Kepwe Credit • Kepwe Quant</strong>
+                <strong>For Kepwe Quant</strong>
               </p>
 
               <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '18px 20px', marginBottom: '24px' }}>
@@ -151,7 +116,7 @@ const LegalPages = () => {
                 <strong>Version: 1.0 | Effective: 1 September 2026</strong>
               </p>
               <p style={{ marginBottom: '16px' }}>
-                These Terms of Service (“Terms”) constitute a legally binding agreement between you and Kepwe Private Limited governing access to and use of the Kepwe website, applications, APIs, dashboards, software, content and services, including Kepwe Ledger, Kepwe Credit and Kepwe Quant (collectively, the “Services”).
+                These Terms of Service (“Terms”) constitute a legally binding agreement between you and Kepwe Private Limited governing access to and use of the Kepwe website, applications, APIs, dashboards, software, content and services, including Kepwe Quant (collectively, the “Services”).
               </p>
 
               <h5 style={{ color: '#111827', fontSize: '1rem', fontWeight: 800, marginBottom: '8px' }}>1. Acceptance and eligibility</h5>
@@ -170,14 +135,12 @@ const LegalPages = () => {
                 Kepwe provides technology, workflow, information, analytics, automation and/or marketplace facilitation services. The precise role of Kepwe differs by product and transaction.
               </p>
               <ul style={{ paddingLeft: '20px', marginBottom: '16px' }}>
-                <li>Kepwe Ledger is a business accounting, bookkeeping, compliance-workflow and financial-record technology platform. It does not by itself constitute a statutory audit, tax opinion, legal opinion, chartered accountant engagement or government filing guarantee.</li>
-                <li>Kepwe Credit is a technology-enabled credit discovery/application/intermediation interface. Unless expressly stated in the applicable loan agreement, Kepwe is not the lender and does not independently approve, sanction, disburse, price, restructure or recover loans.</li>
                 <li>Kepwe Quant is an algorithmic/automation technology product intended to assist users with strategy configuration, testing, execution workflows and/or connectivity to third-party brokers. Market orders and strategies remain subject to market conditions, exchange/broker systems, API permissions, risk controls and applicable law.</li>
               </ul>
 
               <h5 style={{ color: '#111827', fontSize: '1rem', fontWeight: 800, marginBottom: '8px' }}>3. No guaranteed outcome</h5>
               <p style={{ marginBottom: '16px' }}>
-                Kepwe makes no representation that any Service will increase revenue, reduce taxes, obtain credit, improve a credit score, generate trading profits, outperform an index, avoid losses, execute every instruction, remain continuously available, or achieve any particular financial result.
+                Kepwe makes no representation that any Service will increase revenue, reduce taxes, generate trading profits, outperform an index, avoid losses, execute every instruction, remain continuously available, or achieve any particular financial result.
               </p>
               <p style={{ marginBottom: '16px' }}>
                 Past performance, simulated results, backtests, examples, projections, testimonials and hypothetical calculations are illustrative only. They do not establish a promise, warranty or expectation of future performance.
@@ -215,13 +178,10 @@ const LegalPages = () => {
 
               <h5 style={{ color: '#111827', fontSize: '1rem', fontWeight: 800, marginBottom: '8px' }}>7. Fees, subscriptions and taxes</h5>
               <p style={{ marginBottom: '16px' }}>
-                Fees, brokerage, platform charges, lender charges, interest, processing fees, subscription charges, API charges, taxes and other amounts will be disclosed through the applicable checkout, agreement, order form, loan documents or partner disclosure. GST and other statutory taxes may apply.
+                Fees, brokerage, platform charges, subscription charges, API charges, taxes and other amounts will be disclosed through the applicable checkout, agreement or order form. GST and other statutory taxes may apply.
               </p>
               <p style={{ marginBottom: '16px' }}>
                 Unless mandatory law provides otherwise, payments for consumed digital services are non-refundable. Any refund, cancellation or chargeback rights will be governed by the applicable plan and law.
-              </p>
-              <p style={{ marginBottom: '16px' }}>
-                For credit products, the borrower must rely on the lender's Key Fact Statement, sanction letter and loan agreement for the legally operative financial terms.
               </p>
 
               <h5 style={{ color: '#111827', fontSize: '1rem', fontWeight: 800, marginBottom: '8px' }}>8. Intellectual property</h5>
@@ -332,13 +292,8 @@ const LegalPages = () => {
                     </tr>
                     <tr>
                       <td style={{ padding: '10px 12px', border: '1px solid #E2E8F0' }}>Financial</td>
-                      <td style={{ padding: '10px 12px', border: '1px solid #E2E8F0' }}>Income, bank details, statements, transaction information, credit/application information</td>
-                      <td style={{ padding: '10px 12px', border: '1px solid #E2E8F0' }}>Credit intermediation, payments, accounting, risk/fraud checks where authorised</td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '10px 12px', border: '1px solid #E2E8F0' }}>Business/accounting</td>
-                      <td style={{ padding: '10px 12px', border: '1px solid #E2E8F0' }}>Invoices, ledger entries, GST-related information, expenses, customer/vendor information</td>
-                      <td style={{ padding: '10px 12px', border: '1px solid #E2E8F0' }}>Kepwe Ledger functionality</td>
+                      <td style={{ padding: '10px 12px', border: '1px solid #E2E8F0' }}>Income, bank details, statements, transaction information</td>
+                      <td style={{ padding: '10px 12px', border: '1px solid #E2E8F0' }}>Payments and risk/fraud checks where authorised</td>
                     </tr>
                     <tr>
                       <td style={{ padding: '10px 12px', border: '1px solid #E2E8F0' }}>Trading/investment</td>
@@ -356,7 +311,7 @@ const LegalPages = () => {
 
               <h4 style={{ color: '#111827', fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px' }}>3. Sources</h4>
               <p style={{ marginBottom: '16px' }}>
-                Information may come directly from you; from an authorised business administrator; from your connected bank, broker, lender, payment provider or other third party; from public or legally accessible sources; or automatically from your device/browser. Kepwe will not represent that third-party data is independently verified merely because it is received through an integration.
+                Information may come directly from you; from an authorised administrator; from a connected broker, payment provider or other third party; from public or legally accessible sources; or automatically from your device/browser. Kepwe will not represent that third-party data is independently verified merely because it is received through an integration.
               </p>
 
               <h4 style={{ color: '#111827', fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px' }}>4. Purposes of processing</h4>
@@ -365,8 +320,6 @@ const LegalPages = () => {
                 <li>Provision and personalisation of the Services.</li>
                 <li>Billing, payment processing and subscription management.</li>
                 <li>KYC, AML/fraud prevention and compliance where applicable.</li>
-                <li>Credit application routing, document collection and lender/partner workflows for Kepwe Credit.</li>
-                <li>Accounting, reconciliation, GST workflow and reporting functions for Kepwe Ledger.</li>
                 <li>Analytics, research, strategy configuration, testing and execution support for Quant.</li>
                 <li>Security monitoring, incident response, audit trails and abuse prevention.</li>
                 <li>Legal claims, dispute resolution, regulatory requests and statutory recordkeeping.</li>
@@ -385,15 +338,10 @@ const LegalPages = () => {
 
               <h4 style={{ color: '#111827', fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px' }}>7. Sharing and disclosure</h4>
               <p style={{ marginBottom: '16px' }}>
-                Kepwe may disclose information to the following categories where necessary and lawful: regulated lenders and their LSP ecosystem; stock brokers and exchange/depository-connected service providers; KYC and verification providers; payment processors; accounting/GST providers; cloud and infrastructure providers; customer support vendors; auditors and professional advisers; fraud/security providers; government/regulatory authorities; and successor entities in a merger, restructuring or asset transfer.
+                Kepwe may disclose information to the following categories where necessary and lawful: stock brokers and exchange/depository-connected service providers; KYC and verification providers; payment processors; cloud and infrastructure providers; customer support vendors; auditors and professional advisers; fraud/security providers; government/regulatory authorities; and successor entities in a merger, restructuring or asset transfer.
               </p>
               <p style={{ marginBottom: '16px' }}>
                 Kepwe does not sell personal information as a general business model. Where a partner uses data for its own independent purposes, that partner's privacy notice may also apply.
-              </p>
-
-              <h4 style={{ color: '#111827', fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px' }}>8. Credit data and consent</h4>
-              <p style={{ marginBottom: '16px' }}>
-                For Kepwe Credit, data may be collected only to the extent necessary for the relevant application and lawful purpose. Where a lender or regulated entity requires information, the applicable consent, lender disclosure, privacy notice and loan documentation govern.
               </p>
 
               <h4 style={{ color: '#111827', fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px' }}>9. Security</h4>

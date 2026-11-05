@@ -1,0 +1,34 @@
+.credit-application-page { min-height: 100vh; padding: 0 20px 80px; background: #F6F8FC; color: #0F172A; font-family: var(--font-ui, Inter, system-ui, sans-serif); }
+.credit-application-shell { width: min(100%, 820px); margin: 0 auto; }
+.credit-application-nav { min-height: 64px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; }
+.credit-application-nav a, .credit-application-nav span { display: inline-flex; align-items: center; gap: 8px; color: #475569; font-size: .86rem; font-weight: 700; text-decoration: none; }
+.credit-application-nav a:hover { color: #214ECF; }
+.credit-application-nav span { color: #214ECF; }
+.credit-application-heading { max-width: 680px; margin: 48px auto 28px; text-align: center; }
+.credit-application-eyebrow { color: #214ECF; font-size: .76rem; font-weight: 800; letter-spacing: .1em; }
+.credit-application-heading h1 { margin: 12px 0; font-size: clamp(2rem, 5vw, 2.8rem); letter-spacing: -.04em; line-height: 1.12; }
+.credit-application-heading p { margin: 0; color: #475569; line-height: 1.65; }
+.credit-application-form { padding: clamp(20px, 4vw, 36px); border: 1px solid #E2E8F0; border-radius: 18px; background: #fff; box-shadow: 0 16px 40px rgba(15, 23, 42, .06); }
+.credit-application-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.credit-application-field-grid label { display: grid; gap: 7px; color: #334155; font-size: .88rem; font-weight: 700; }
+.credit-application-field-grid label span { color: #64748B; font-size: .78rem; font-weight: 500; }
+.credit-application-field-grid input, .credit-application-field-grid select, .credit-application-field-grid textarea { width: 100%; box-sizing: border-box; border: 1px solid #CBD5E1; border-radius: 9px; padding: 11px 12px; color: #0F172A; background: #fff; font: inherit; font-weight: 500; }
+.credit-application-field-grid textarea { resize: vertical; }
+.credit-application-field-grid input:focus, .credit-application-field-grid select:focus, .credit-application-field-grid textarea:focus { outline: 3px solid rgba(33, 78, 207, .14); border-color: #214ECF; }
+.credit-application-full-width { grid-column: 1 / -1; }
+.credit-application-document-picker { display: flex; align-items: center; gap: 13px; margin-top: 22px; padding: 16px; border: 1px dashed #94A3B8; border-radius: 12px; color: #214ECF; cursor: pointer; }
+.credit-application-document-picker span { display: grid; gap: 4px; }
+.credit-application-document-picker strong { color: #0F172A; font-size: .9rem; }
+.credit-application-document-picker small { color: #64748B; font-size: .78rem; }
+.credit-application-document-picker input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.credit-application-document-list { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; color: #475569; font-size: .82rem; }
+.credit-application-document-list li { display: flex; align-items: center; gap: 7px; }
+.credit-application-consent { display: flex; align-items: flex-start; gap: 11px; margin-top: 22px; padding: 14px; border: 1px solid #CBD5E1; border-radius: 10px; color: #334155; font-size: .84rem; line-height: 1.55; cursor: pointer; }
+.credit-application-consent input { margin-top: 3px; accent-color: #214ECF; }
+.credit-application-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; }
+.credit-application-actions a { color: #64748B; font-size: .88rem; font-weight: 700; text-decoration: none; }
+.credit-application-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; padding: 0 18px; border: 0; border-radius: 9px; background: #214ECF; color: #fff; font: inherit; font-size: .9rem; font-weight: 800; cursor: pointer; }
+.credit-application-actions button:disabled { background: #94A3B8; cursor: not-allowed; }
+.credit-application-privacy { display: flex; align-items: center; gap: 7px; margin: 18px 0 0; color: #64748B; font-size: .78rem; line-height: 1.5; }
+.credit-application-error { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; padding: 12px; border: 1px solid #FECACA; border-radius: 9px; background: #FEF2F2; color: #B91C1C; font-size: .84rem; }
+@media (max-width: 640px) { .credit-application-nav span { font-size: 0; } .credit-application-field-grid { grid-template-columns: 1fr; } .credit-application-full-width { grid-column: auto; } .credit-application-actions { align-items: stretch; flex-direction: column-reverse; } .credit-application-actions button { width: 100%; } }

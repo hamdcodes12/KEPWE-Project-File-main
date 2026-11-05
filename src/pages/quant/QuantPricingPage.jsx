@@ -127,7 +127,7 @@ function PlanCard({
           {isTrialPlan ? (
             <div>
               <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>FREE</div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>7 days · No card required</div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>24 hours · No card required</div>
             </div>
           ) : (
             <div>

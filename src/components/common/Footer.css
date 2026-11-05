@@ -61,6 +61,18 @@
   max-width: 320px;
 }
 
+.quant-footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #FFFFFF;
+  font-size: 1.18rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.quant-footer-brand strong { color: #7FA0FF; }
+
 /* 4 COLUMN GRID */
 .kepwe-footer-grid {
   flex: 1;

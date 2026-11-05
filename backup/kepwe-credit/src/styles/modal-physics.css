@@ -1,0 +1,138 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   PHYSICAL GRAVITY / INERTIAL DISMISSAL MODAL ANIMATIONS
+   - Anchors temporarily at top-left pivot point
+   - Right/lower side loses support and falls downward
+   - Card rotates clockwise and accelerates diagonally down into gravity
+   - Smoothly fades opacity to 0
+   - Curve: cubic-bezier(0.55, 0, 1, 0.45)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --modal-pivot-x: 15%;
+  --modal-pivot-y: 10%;
+  --modal-dismiss-duration: 520ms;
+}
+
+/* Modal Overlay Container */
+.physics-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+  box-sizing: border-box;
+  animation: physicsModalOverlayFadeIn 280ms ease-out forwards;
+}
+
+.physics-modal-overlay.is-closing {
+  pointer-events: none;
+  animation: physicsModalOverlayFadeOut var(--modal-dismiss-duration) cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+/* Modal Window Base */
+.physics-modal-card {
+  max-width: 1080px;
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
+  box-sizing: border-box;
+  transform-origin: var(--modal-pivot-x) var(--modal-pivot-y);
+  animation: physicsModalCardEnter 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Dismiss / Close Physical Gravity Animation */
+.physics-modal-card.is-closing {
+  pointer-events: none;
+  animation: modalFallingPaperDismiss var(--modal-dismiss-duration) cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────────────── */
+
+/* 1. Modal Entrance */
+@keyframes physicsModalCardEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 2. Physical Gravity Dismissal (Falling from upper-left anchored pivot) */
+@keyframes modalFallingPaperDismiss {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  20% {
+    opacity: 0.95;
+    /* Upper-left stays anchored, right side starts falling clockwise */
+    transform: translate3d(12px, 18px, 0) rotate(4deg) scale(0.98);
+  }
+  50% {
+    opacity: 0.75;
+    /* Loss of support, accelerates downward and diagonally to the right */
+    transform: translate3d(55px, 110px, 0) rotate(12deg) scale(0.95);
+  }
+  80% {
+    opacity: 0.35;
+    /* Heavy gravity fall */
+    transform: translate3d(115px, 260px, 0) rotate(20deg) scale(0.90);
+  }
+  100% {
+    opacity: 0;
+    /* Fully dropped away out of sight */
+    transform: translate3d(170px, 420px, 0) rotate(26deg) scale(0.85);
+  }
+}
+
+/* 3. Backdrop Fade In / Out */
+@keyframes physicsModalOverlayFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes physicsModalOverlayFadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ── Mobile Modal Viewports ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .physics-modal-overlay {
+    padding: 8px;
+    align-items: flex-start;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .physics-modal-card {
+    padding: 20px 14px;
+    margin: 8px auto;
+    max-height: calc(100vh - 20px);
+    overflow-y: auto;
+    border-radius: 14px;
+  }
+}

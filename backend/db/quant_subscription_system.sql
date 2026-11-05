@@ -18,7 +18,8 @@ BEGIN;
 
 DO $$ BEGIN
   CREATE TYPE quant_subscription_status AS ENUM (
-    'trial',       -- free 7-day trial active
+    'not_started', -- eligible; demo timer has not begun
+    'trial',       -- free 24-hour trial active
     'active',      -- paid subscription active
     'expired',     -- trial expired, no paid plan
     'cancelled',   -- user cancelled paid subscription
@@ -72,7 +73,7 @@ CREATE TABLE IF NOT EXISTS user_subscriptions (
   id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id                 UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   plan_id                 UUID NOT NULL REFERENCES subscription_plans(id),
-  status                  quant_subscription_status NOT NULL DEFAULT 'trial',
+  status                  quant_subscription_status NOT NULL DEFAULT 'not_started',
 
   -- Trial window (populated for every new user)
   trial_start_at          TIMESTAMPTZ,
@@ -342,7 +343,7 @@ BEGIN
   SET status = 'expired', updated_at = NOW()
   WHERE status = 'trial'
     AND trial_end_at IS NOT NULL
-    AND trial_end_at < NOW();
+    AND trial_end_at <= NOW();
 
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RETURN v_count;
@@ -388,11 +389,11 @@ VALUES
 (
   'TRIAL',
   'Free Trial',
-  '7-Day Free Trial',
-  'Get started with KEPWE Quant — no credit card required. Full access to core features for 7 days.',
+  '24-Hour Free Demo',
+  'Activate one free 24-hour KEPWE Quant demo at a time of your choosing.',
   0,
   'trial',
-  7,
+  1,
   '{
     "dashboard": true,
     "markets": true,
@@ -574,17 +575,13 @@ ON CONFLICT (plan_code) DO UPDATE SET
   updated_at     = NOW();
 
 -- ============================================================================
--- MIGRATE EXISTING USERS: give them a subscription record
--- New eligible users → trial
+-- MIGRATE EXISTING USERS: create eligibility records without starting a trial
 -- Users with existing paid plan record → active
 -- This is additive and only touches users with no user_subscriptions row yet.
 -- ============================================================================
 
--- Step 1: Insert TRIAL subscription for users who have no subscription yet
--- and were created recently (within 7 days) — they get a fresh trial.
--- Existing older users without a subscription also get trial but their
--- trial_end_at is set based on account creation date + 7 days,
--- which may already be in the past (expired), protecting against abuse.
+-- Legacy Free Trial subscriptions count as used. Other eligible users receive
+-- NOT_STARTED, and no clock starts until explicit dashboard activation.
 INSERT INTO user_subscriptions (
   user_id, plan_id, status,
   trial_start_at, trial_end_at, is_trial_used
@@ -592,15 +589,20 @@ INSERT INTO user_subscriptions (
 SELECT
   u.id,
   sp.id,
-  CASE
-    WHEN u.created_at + INTERVAL '7 days' > NOW() THEN 'trial'::quant_subscription_status
-    ELSE 'expired'::quant_subscription_status
-  END,
-  u.created_at,
-  u.created_at + INTERVAL '7 days',
-  TRUE
+  CASE WHEN legacy_trial.created_at IS NULL THEN 'not_started'::quant_subscription_status ELSE 'expired'::quant_subscription_status END,
+  legacy_trial.created_at,
+  CASE WHEN legacy_trial.created_at IS NULL THEN NULL ELSE legacy_trial.created_at + INTERVAL '24 hours' END,
+  legacy_trial.created_at IS NOT NULL
 FROM users u
 CROSS JOIN subscription_plans sp
+LEFT JOIN LATERAL (
+  SELECT s.created_at
+  FROM subscriptions s
+  JOIN plans old_plan ON old_plan.id = s.plan_id
+  WHERE s.user_id = u.id AND old_plan.name = 'Free Trial'
+  ORDER BY s.created_at ASC
+  LIMIT 1
+) AS legacy_trial ON TRUE
 WHERE sp.plan_code = 'TRIAL'
   AND NOT EXISTS (
     SELECT 1 FROM user_subscriptions us WHERE us.user_id = u.id

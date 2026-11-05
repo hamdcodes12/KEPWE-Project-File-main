@@ -104,12 +104,16 @@ export async function requireActiveSubscription(req, res, next) {
     
     if (!subscription.isActive) {
       return res.status(403).json({
-        error: 'SUBSCRIPTION_EXPIRED',
-        message: subscription.status === 'trial' 
-          ? 'Your free trial has expired. Upgrade to continue using KEPWE Quant.'
-          : 'Your subscription has expired. Renew to continue.',
+        error: subscription.status === 'not_started' ? 'TRIAL_NOT_STARTED' : 'SUBSCRIPTION_EXPIRED',
+        message: subscription.status === 'not_started'
+          ? 'Activate your one-time 24-hour free demo from the Quant dashboard to continue.'
+          : subscription.status === 'trial' || subscription.status === 'expired'
+            ? 'Your 24-hour free trial has expired. Upgrade to continue using KEPWE Quant.'
+            : 'Your subscription has expired. Renew to continue.',
         subscriptionStatus: subscription.status,
-        expiredAt: subscription.status === 'trial' ? subscription.trial_end_at : subscription.subscription_end_at
+        expiredAt: subscription.plan_code === 'TRIAL' || subscription.status === 'trial'
+          ? subscription.trial_end_at
+          : subscription.subscription_end_at
       });
     }
     

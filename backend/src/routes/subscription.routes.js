@@ -14,7 +14,8 @@ import {
   reactivateSubscription,
   getUserFeatures,
   getUserLimits,
-  getSubscriptionAuditLog
+  getSubscriptionAuditLog,
+  activateFreeTrial,
 } from '../services/subscription.service.js';
 import {
   createPaymentOrder,
@@ -110,6 +111,39 @@ router.get('/plans/:code', async (req, res) => {
 // ============================================================================
 
 /**
+ * POST /api/subscription/trial/activate
+ * Start a user's one-time 24-hour Quant demo on explicit action.
+ */
+router.post('/trial/activate', requireAuth, async (req, res) => {
+  try {
+    const activation = await activateFreeTrial(req.userId);
+    if (!activation) {
+      const current = await getUserSubscription(req.userId);
+      return res.status(409).json({
+        success: false,
+        error: 'TRIAL_ALREADY_USED',
+        message: current?.status === 'trial' && current.isActive
+          ? 'Your free demo is already active.'
+          : current?.status === 'active' && current.isActive
+            ? 'An active paid plan already gives you access.'
+            : 'This account is not eligible for another free demo.',
+        subscription: current ? {
+          status: current.status,
+          trialStartAt: current.trial_start_at,
+          trialEndAt: current.trial_end_at,
+          isActive: current.isActive,
+        } : null,
+      });
+    }
+    const subscription = await getUserSubscription(req.userId);
+    return res.status(201).json({ success: true, subscription });
+  } catch (error) {
+    console.error('[subscription] Trial activation failed:', error);
+    return res.status(500).json({ success: false, error: 'TRIAL_ACTIVATION_FAILED', message: 'Could not activate the free demo.' });
+  }
+});
+
+/**
  * GET /api/subscription/status
  * Get current user's subscription status
  */
@@ -134,6 +168,7 @@ router.get('/status', requireAuth, async (req, res) => {
         planName: subscription.plan_name,
         displayName: subscription.display_name,
         status: subscription.status,
+        trialStatus: subscription.trial_status,
         isActive: subscription.isActive,
         
         // Trial information
@@ -150,6 +185,7 @@ router.get('/status', requireAuth, async (req, res) => {
         // Time remaining
         daysRemaining: subscription.daysRemaining,
         timeRemaining: subscription.timeRemaining,
+        serverNow: subscription.serverNow,
         
         // Billing
         price: parseFloat(subscription.price_inr),

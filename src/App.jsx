@@ -17,13 +17,6 @@ import FreeComplianceCheckPage from './pages/business/FreeComplianceCheckPage';
 import CustomerPortalPage from './pages/business/CustomerPortalPage';
 import SalesCRMPage from './pages/business/SalesCRMPage';
 import { NewCompanyPage, GSTLandingPage, VirtualCFOPage } from './pages/business/BusinessLandingPages';
-import AccountingPage from './pages/solutions/AccountingPage';
-import LoansPage from './pages/solutions/LoansPage';
-import CreditStatusPage from './pages/credit/CreditStatusPage';
-import CreditHealthPage from './pages/credit/CreditHealthPage';
-import CreditHealthConsentPage, { CreditHealthConsentGate } from './pages/credit/CreditHealthConsentPage';
-import CreditApplicationStatusPage from './pages/credit/CreditApplicationStatusPage';
-import CreditEligibilityPage from './pages/credit/CreditEligibilityPage';
 import IndustryPages from './pages/business/IndustryPages';
 import BusinessOnboardingPage from './pages/business/BusinessOnboardingPage';
 import ComplianceCalendarPage from './pages/resources/ComplianceCalendarPage';
@@ -64,13 +57,11 @@ import {
   AdminRevenueAnalyticsPage,
   AdminQuantSubscriptionsPage,
 } from './pages/admin/AdminOperationsPages';
-import AdminCreditApplicationsPage from './pages/admin/AdminCreditApplicationsPage';
 
 // Marketing & Product Landing Pages
 import QuantMarketingPage from './pages/quant/QuantMarketingPage';
-import LedgerMarketingPage from './pages/ledger/LedgerMarketingPage';
-import QuantDashboardPage from './pages/quant/QuantDashboardPage';
-import LedgerDashboardPage from './pages/ledger/LedgerDashboardPage';
+import QuantTrialGate from './pages/quant/QuantTrialGate';
+import LearnPlatformPage from './pages/learn/LearnPlatformPage';
 
 // ─── Scroll To Top (with hash anchor support) ───────────────────────────────
 const ScrollToTop = () => {
@@ -121,9 +112,6 @@ const ProtectedRoute = ({ children, product = null, productName = 'This workspac
 
   if (!authState.isLoggedIn) {
     const returnTo = `${location.pathname}${location.search}${location.hash}`;
-    if (product === 'credit') {
-      return <Navigate to={`/credit/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
-    }
     return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
 
@@ -141,14 +129,6 @@ function QuantAuthRedirect({ signup = false }) {
   const params = new URLSearchParams(location.search);
   params.set('product', 'quant');
   if (!params.get('returnTo')) params.set('returnTo', '/quant/dashboard');
-  return <Navigate to={`${signup ? '/signup' : '/login'}?${params.toString()}`} replace />;
-}
-
-function CreditAuthRedirect({ signup = false }) {
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  params.set('product', 'credit');
-  if (!params.get('returnTo')) params.set('returnTo', '/credit/consent');
   return <Navigate to={`${signup ? '/signup' : '/login'}?${params.toString()}`} replace />;
 }
 
@@ -209,7 +189,7 @@ const ProductAccessRequired = ({ product, productName, isDark = false }) => {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <Link
-            to={product === 'credit' ? '/credit/signup' : '/signup'}
+            to="/signup"
             style={{
               display: 'block',
               padding: '12px 18px',
@@ -225,7 +205,7 @@ const ProductAccessRequired = ({ product, productName, isDark = false }) => {
           </Link>
 
           <Link
-            to={product === 'credit' ? '/credit/login' : '/login'}
+            to="/login"
             style={{
               display: 'block',
               padding: '11px 18px',
@@ -259,10 +239,8 @@ const ProductAccessRequired = ({ product, productName, isDark = false }) => {
 };
 
 const ProtectedCustomerPortalRoute = ({ children }) => <ProtectedRoute product="customer-portal" productName="Customer Portal">{children}</ProtectedRoute>;
-const ProtectedLedgerRoute = ({ children }) => <ProtectedRoute product="ledger" productName="Kepwe Ledger">{children}</ProtectedRoute>;
 const ProtectedCrmRoute = ({ children }) => <ProtectedRoute product="crm" productName="Sales CRM">{children}</ProtectedRoute>;
-const ProtectedQuantRoute = () => <ProtectedRoute product="quant" productName="Kepwe Quant"><QuantDashboardPage /></ProtectedRoute>;
-const ProtectedCreditRoute = ({ children }) => <ProtectedRoute product="credit" productName="Kepwe Credit">{children}</ProtectedRoute>;
+const ProtectedQuantRoute = () => <ProtectedRoute product="quant" productName="Kepwe Quant"><QuantTrialGate /></ProtectedRoute>;
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 function App() {
@@ -285,10 +263,6 @@ function App() {
             <Route path="/customer-portal/signup" element={<Navigate to="/signup" replace />} />
             <Route path="/crm/login" element={<Navigate to="/login" replace />} />
             <Route path="/crm/signup" element={<Navigate to="/signup" replace />} />
-            <Route path="/ledger/login" element={<Navigate to="/login?product=ledger&returnTo=%2Fledger%2Fapp" replace />} />
-            <Route path="/ledger/signup" element={<Navigate to="/signup?product=ledger&returnTo=%2Fledger%2Fapp" replace />} />
-            <Route path="/credit/login" element={<CreditAuthRedirect />} />
-            <Route path="/credit/signup" element={<CreditAuthRedirect signup />} />
             <Route path="/quant/login" element={<QuantAuthRedirect />} />
             <Route path="/quant/signup" element={<QuantAuthRedirect signup />} />
 
@@ -302,18 +276,10 @@ function App() {
           <Route path="/quant/dashboard" element={<ProtectedQuantRoute />} />
           <Route path="/quant/dashboard/:section" element={<ProtectedQuantRoute />} />
 
-          {/* ── KEPWE LEDGER workspace (Authenticated) ─────────────── */}
-          <Route path="/ledger/app" element={<ProtectedLedgerRoute><LedgerDashboardPage /></ProtectedLedgerRoute>} />
-          <Route path="/ledger/pricing" element={<ProtectedLedgerRoute><LedgerDashboardPage /></ProtectedLedgerRoute>} />
-          <Route path="/ledger/workspace" element={<Navigate to="/ledger/app" replace />} />
-          <Route path="/ledger-workspace" element={<Navigate to="/ledger/app" replace />} />
-          <Route path="/dashboard" element={<Navigate to="/ledger/app" replace />} />
-          <Route path="/solutions/accounting" element={<ProtectedLedgerRoute><LedgerDashboardPage /></ProtectedLedgerRoute>} />
 
           {/* ── Admin Panel Routes (protected) ───────────────── */}
           <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
           <Route path="/admin/users" element={<AdminLayout><AdminUsersPage /></AdminLayout>} />
-          <Route path="/admin/credit-applications" element={<AdminLayout><AdminCreditApplicationsPage /></AdminLayout>} />
           <Route path="/admin/subscriptions" element={<AdminLayout><AdminSubscriptionsPage /></AdminLayout>} />
           <Route path="/admin/quant-subscriptions" element={<AdminLayout><AdminQuantSubscriptionsPage /></AdminLayout>} />
           <Route path="/admin/plans" element={<AdminLayout><AdminPlansPage /></AdminLayout>} />
@@ -334,24 +300,14 @@ function App() {
             <Route path="/crm" element={<ProtectedCrmRoute><SalesCRMPage /></ProtectedCrmRoute>} />
             <Route path="/sales-crm" element={<Navigate to="/crm" replace />} />
             <Route path="/quant" element={<QuantMarketingPage />} />
-            <Route path="/ledger" element={<LedgerMarketingPage />} />
+            <Route path="/learn" element={<LearnPlatformPage />} />
+            <Route path="/learn/:articleSlug" element={<LearnPlatformPage />} />
             <Route path="/free-compliance-check" element={<FreeComplianceCheckPage />} />
             <Route path="/customer-portal" element={<ProtectedCustomerPortalRoute><CustomerPortalPage /></ProtectedCustomerPortalRoute>} />
             <Route path="/portal" element={<Navigate to="/customer-portal" replace />} />
             <Route path="/portal/customer" element={<Navigate to="/customer-portal" replace />} />
             <Route path="/portal/compliance-portal" element={<Navigate to="/customer-portal" replace />} />
             <Route path="/portal/onboarding-checklist" element={<ProtectedCustomerPortalRoute><CustomerOnboardingChecklistPage /></ProtectedCustomerPortalRoute>} />
-            <Route path="/credit" element={<LoansPage />} />
-            <Route path="/credit/consent" element={<ProtectedCreditRoute><CreditHealthConsentPage /></ProtectedCreditRoute>} />
-            <Route path="/credit/workspace" element={<ProtectedCreditRoute><CreditStatusPage /></ProtectedCreditRoute>} />
-            <Route path="/credit/apply" element={<Navigate to="/credit/eligibility" replace />} />
-            <Route path="/credit/application/status/:applicationId" element={<ProtectedCreditRoute><CreditApplicationStatusPage /></ProtectedCreditRoute>} />
-            <Route path="/credit/health" element={<ProtectedCreditRoute><CreditHealthConsentGate><CreditHealthPage /></CreditHealthConsentGate></ProtectedCreditRoute>} />
-            <Route path="/credit/eligibility" element={<ProtectedCreditRoute><CreditEligibilityPage /></ProtectedCreditRoute>} />
-            <Route path="/credit/results" element={<Navigate to="/credit#loan-integration-pending" replace />} />
-            <Route path="/credit/status" element={<Navigate to="/credit/workspace" replace />} />
-            <Route path="/credit/application/status" element={<Navigate to="/credit/workspace" replace />} />
-            <Route path="/solutions/loans" element={<LoansPage />} />
             <Route path="/solutions/:type" element={<HomePage />} />
             <Route path="/industries/:type" element={<IndustryPages />} />
             <Route path="/resources/calendar" element={<ComplianceCalendarPage />} />

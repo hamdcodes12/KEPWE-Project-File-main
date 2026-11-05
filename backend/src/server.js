@@ -6,7 +6,7 @@ import { pool, testConnection } from './config/db.js';
 import { validateRuntimeEnvironment } from './config/env.js';
 import { startAlgoRunner } from './algo/runner.js';
 import { startBrokerExecutionWorker } from './services/broker-execution.worker.js';
-import { expireTrials, expireSubscriptions } from './services/subscription.service.js';
+import { expireSubscriptions, startTrialExpiryScheduler } from './services/subscription.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,23 +22,16 @@ const PORT = process.env.PORT || 3001;
 // service unreachable from Render's routing layer).
 const HOST = '0.0.0.0';
 
-// ── Subscription expiry cron ────────────────────────────────────────────────
-// Runs every 15 minutes. The underlying stored functions are idempotent and
-// safe to call concurrently. If this process restarts mid-run the next tick
-// will pick up any missed expirations.
+// Paid subscription cleanup runs on a coarse interval; free trial expiration
+// is scheduled against the next database deadline by startTrialExpiryScheduler.
 const EXPIRY_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 
 function startSubscriptionExpiryCron() {
   const runExpiry = async () => {
     try {
-      const [trialCount, subCount] = await Promise.all([
-        expireTrials(),
-        expireSubscriptions(),
-      ]);
-      if (trialCount > 0 || subCount > 0) {
-        console.log(
-          `[cron] Subscription expiry: ${trialCount} trial(s), ${subCount} paid subscription(s) expired`
-        );
+      const subCount = await expireSubscriptions();
+      if (subCount > 0) {
+        console.log(`[cron] Subscription expiry: ${subCount} paid subscription(s) expired`);
       }
     } catch (err) {
       // Non-fatal — log and continue; will retry on next tick
@@ -62,6 +55,7 @@ async function start() {
     console.log(`[server] API base: /api`);
     startAlgoRunner();
     startBrokerExecutionWorker(pool);
+    startTrialExpiryScheduler();
     startSubscriptionExpiryCron();
   });
 }

@@ -115,7 +115,6 @@ export function AdminQuantSubscriptionsPage() {
   const [detail, setDetail]       = useState(null);      // { subscription, auditLog, payments }
   const [actionErr, setActionErr] = useState('');
   const [actionOk, setActionOk]   = useState('');
-  const [extendDays, setExtendDays] = useState(7);
   const [suspendReason, setSuspendReason] = useState('');
 
   const loadStats = useCallback(async () => {
@@ -153,17 +152,6 @@ export function AdminQuantSubscriptionsPage() {
     });
     if (res.ok) { setActionOk(`Plan changed to ${planCode}.`); await openDetail(userId); load(); }
     else setActionErr(res.data?.error || 'Plan change failed.');
-  };
-
-  const extendTrial = async (userId) => {
-    setActionErr(''); setActionOk('');
-    const days = Number(extendDays);
-    if (!days || days < 1) return setActionErr('Enter a valid number of days.');
-    const res = await adminFetch(`/admin/quant-subscriptions/user/${userId}/extend-trial`, {
-      method: 'PATCH', body: { extraDays: days },
-    });
-    if (res.ok) { setActionOk(`Trial extended by ${days} day(s).`); await openDetail(userId); load(); }
-    else setActionErr(res.data?.error || 'Could not extend trial.');
   };
 
   const suspend = async (userId) => {
@@ -322,7 +310,7 @@ export function AdminQuantSubscriptionsPage() {
             <section style={{ padding: 14, border: '1px solid #e2e8f0', borderRadius: 10 }}>
               <div style={{ fontWeight: 700, fontSize: '.84rem', marginBottom: 10 }}>Change Plan</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {['TRIAL', 'BASIC', 'PRO', 'ELITE'].map(code => (
+                {['BASIC', 'PRO', 'ELITE'].map(code => (
                   <button
                     key={code}
                     style={{ ...button, background: detail.subscription?.plan_code === code ? '#214ecf' : '#fff', color: detail.subscription?.plan_code === code ? '#fff' : '#172033' }}
@@ -331,23 +319,6 @@ export function AdminQuantSubscriptionsPage() {
                     {code}
                   </button>
                 ))}
-              </div>
-            </section>
-
-            {/* Extend trial */}
-            <section style={{ padding: 14, border: '1px solid #e2e8f0', borderRadius: 10 }}>
-              <div style={{ fontWeight: 700, fontSize: '.84rem', marginBottom: 10 }}>Extend Trial</div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input
-                  type="number" min={1} max={365}
-                  value={extendDays}
-                  onChange={e => setExtendDays(e.target.value)}
-                  style={{ ...input, width: 80 }}
-                />
-                <span style={{ fontSize: '.82rem', color: '#64748b' }}>days</span>
-                <button style={primary} onClick={() => extendTrial(detail.subscription.user_id)}>
-                  Extend
-                </button>
               </div>
             </section>
 

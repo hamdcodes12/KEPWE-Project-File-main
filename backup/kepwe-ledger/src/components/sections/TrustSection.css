@@ -1,0 +1,96 @@
+/* TRUST SECTION STYLES (PHASE 6) */
+
+.trust-pillars-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.trust-header {
+  margin-bottom: 56px;
+}
+
+.trust-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.trust-subtitle {
+  font-size: 1.05rem;
+  color: #667085;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.trust-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.trust-pillar-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EC;
+  border-radius: 14px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.02);
+}
+
+.trust-pillar-card:hover {
+  transform: translateY(-3px);
+  border-color: #D0D5DD;
+  box-shadow: 0 12px 24px -4px rgba(16, 24, 40, 0.06);
+}
+
+.trust-pillar-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: #F0F4FE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.trust-pillar-heading {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+}
+
+.trust-pillar-desc {
+  font-size: 0.875rem;
+  color: #667085;
+  line-height: 1.55;
+}
+
+/* RESPONSIVE MEDIA QUERIES */
+@media (max-width: 1024px) {
+  .trust-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .trust-title {
+    font-size: 2rem;
+  }
+
+  .trust-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trust-pillar-card {
+    padding: 24px;
+  }
+}

@@ -5,6 +5,8 @@ import { Router } from 'express';
 import { createHash, randomBytes } from 'crypto';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
+import { requireActiveSubscription } from '../middleware/feature-gate.js';
+import { getUserSubscription } from '../services/subscription.service.js';
 import { pool } from '../config/db.js';
 import { ANGEL_ONE, ANGEL_ONE_PUBLISHER_LOGIN_URL, AngelOneAdapter } from '../algo/broker-adapters.js';
 import { storeBrokerTokens } from '../services/broker-token.service.js';
@@ -233,7 +235,7 @@ async function persistAndVerifyConnection({ userId, adapter, clientCode, userApi
  * current TOTP (and their SmartAPI key when the server has none). The login is
  * performed against SmartAPI immediately; the MPIN and TOTP are never stored.
  */
-router.post('/broker/angel-one/connect', requireAuth, requireBrokerFeatures, async (req, res, next) => {
+router.post('/broker/angel-one/connect', requireAuth, requireActiveSubscription, requireBrokerFeatures, async (req, res, next) => {
   const parsed = connectSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid parameters', code: 'INVALID_PARAMETERS' });
@@ -344,7 +346,7 @@ router.post('/broker/angel-one/connect', requireAuth, requireBrokerFeatures, asy
  * own page and Angel One redirects back with session tokens. Requires the
  * server SmartAPI key and its registered redirect URL.
  */
-router.post('/broker/angel-one/oauth/start', requireAuth, requireBrokerFeatures, async (req, res, next) => {
+router.post('/broker/angel-one/oauth/start', requireAuth, requireActiveSubscription, requireBrokerFeatures, async (req, res, next) => {
   try {
     const apiKey = String(process.env.ANGEL_ONE_API_KEY || '').trim();
     if (!apiKey) {
@@ -386,6 +388,11 @@ router.get(['/broker/angel-one/callback', '/angel-one/callback'], async (req, re
     session = await claimOAuthSession(callbackStates);
     if (!session) {
       return res.status(400).json({ error: 'Invalid or expired Angel One login session. Start the connection again from KEPWE Quant.' });
+    }
+    const subscription = await getUserSubscription(session.user_id);
+    if (!subscription?.isActive) {
+      await failOAuthSession(session.id, 'QUANT_SUBSCRIPTION_INACTIVE');
+      return res.status(403).json({ error: 'Your Quant plan is no longer active. Upgrade to continue.', code: 'SUBSCRIPTION_EXPIRED' });
     }
     if (error || !authToken) {
       await failOAuthSession(session.id, 'PROVIDER_AUTHORIZATION_DENIED');
@@ -480,7 +487,7 @@ router.post(['/broker/angel-one/callback', '/angel-one/callback', '/angel-one/po
  * outcome. Sessions are also renewed automatically whenever SmartAPI reports
  * an expired token.
  */
-router.post('/broker/angel-one/refresh', requireAuth, requireBrokerFeatures, async (req, res, next) => {
+router.post('/broker/angel-one/refresh', requireAuth, requireActiveSubscription, requireBrokerFeatures, async (req, res, next) => {
   try {
     const row = await loadAngelOneAccount(pool, req.userId);
     if (!row?.access_token_ciphertext) {

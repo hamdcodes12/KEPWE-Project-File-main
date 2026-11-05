@@ -13,8 +13,7 @@ const tables = [
   'user_subscriptions', 'algo_settings', 'algo_strategies', 'algo_orders',
   'algo_positions', 'algo_trades', 'execution_events', 'broker_accounts',
   'broker_oauth_tokens', 'risk_profiles', 'risk_events', 'notifications',
-  'payments', 'support_tickets', 'crm_leads', 'ledger_accounts',
-  'ledger_transactions', 'ledger_receivables', 'ledger_payables',
+  'payments', 'support_tickets', 'crm_leads',
 ];
 
 try {

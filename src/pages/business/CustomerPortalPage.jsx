@@ -259,7 +259,7 @@ const CustomerPortalPage = () => {
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: '0 0 6px', color: '#0F172A', fontSize: '1.05rem' }}>Set up your company workspace</h3>
                 <p style={{ margin: '0 0 16px', color: '#64748B', fontSize: '0.86rem', lineHeight: 1.5 }}>
-                  Add your company name to create the database-backed Ledger workspace and onboarding checklist.
+                  Add your company name to create your workspace and onboarding checklist.
                 </p>
                 <form onSubmit={handleCreateCompany} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <input

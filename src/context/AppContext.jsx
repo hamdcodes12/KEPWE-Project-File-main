@@ -49,7 +49,7 @@ export const AppProvider = ({ children }) => {
               email: u.email,
               plan: u.subscription?.plan || u.plan || 'Free Trial',
               role: u.role,
-              memberships: Array.from(new Set([...(u.memberships || []), 'credit'])),
+              memberships: u.memberships || [],
               avatarUrl: formatAvatarUrl(u.avatarUrl, currentToken),
             },
             rememberMe: true,
@@ -120,7 +120,7 @@ export const AppProvider = ({ children }) => {
           email: u.email,
           plan: u.subscription?.plan || u.plan || 'Free Trial',
           role: u.role,
-          memberships: Array.from(new Set([...(u.memberships || []), 'credit'])),
+          memberships: u.memberships || [],
           avatarUrl: formatAvatarUrl(u.avatarUrl, res.data.accessToken),
         };
         setAuthState({ isLoggedIn: true, user, rememberMe, isLoading: false });
@@ -153,7 +153,7 @@ export const AppProvider = ({ children }) => {
       email: u.email,
       plan: u.subscription?.plan || u.plan || 'Free Trial',
       role: u.role,
-      memberships: Array.from(new Set([...(u.memberships || []), 'credit'])),
+      memberships: u.memberships || [],
       avatarUrl: formatAvatarUrl(u.avatarUrl, res.data.accessToken),
     };
     setAuthState({ isLoggedIn: true, user, rememberMe: Boolean(data.rememberMe), isLoading: false });
@@ -176,7 +176,7 @@ export const AppProvider = ({ children }) => {
           email: u.email,
           plan: u.subscription?.plan || u.plan || 'Free Trial',
           role: u.role,
-          memberships: Array.from(new Set([...(u.memberships || []), 'credit'])),
+          memberships: u.memberships || [],
           avatarUrl: formatAvatarUrl(u.avatarUrl, res.data.accessToken),
         };
         setAuthState({ isLoggedIn: true, user, rememberMe: false, isLoading: false });
@@ -544,7 +544,7 @@ export const AppProvider = ({ children }) => {
       const objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = objectUrl;
-      anchor.download = match?.[1] || 'kepwe-ledger-document';
+      anchor.download = match?.[1] || 'kepwe-document';
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
@@ -666,13 +666,9 @@ export const AppProvider = ({ children }) => {
       ? 'customer-portal'
       : raw === 'sales-crm' || raw === 'crm'
       ? 'crm'
-      : raw === 'ledger-workspace' || raw === 'ledger'
-      ? 'ledger'
-      : raw === 'credit-workspace' || raw === 'credit'
-      ? 'credit'
       : raw;
     const memberships = Array.isArray(authState.user.memberships) ? authState.user.memberships : [];
-    return canonical === 'credit' || memberships.includes(canonical);
+    return memberships.includes(canonical);
   }, [authState.isLoggedIn, authState.user]);
 
   return (

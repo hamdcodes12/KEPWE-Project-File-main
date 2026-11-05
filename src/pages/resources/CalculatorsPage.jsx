@@ -459,7 +459,7 @@ const CalculatorsPage = () => {
             {/* Contextual CTA */}
             <div className="calc-cta-strip">
               <span className="calc-cta-message">Check how much loan eligibility you have across our network of top RBI lenders.</span>
-              <Link to="/credit/eligibility" className="calc-cta-button">
+              <Link to="/quant" className="calc-cta-button">
                 <span>Check Loan Eligibility</span>
                 <ArrowRight size={16} />
               </Link>
@@ -558,7 +558,7 @@ const CalculatorsPage = () => {
             {/* Contextual CTA */}
             <div className="calc-cta-strip">
               <span className="calc-cta-message">Need working capital, machinery loans, or invoice discounting?</span>
-              <Link to="/credit/eligibility" className="calc-cta-button">
+              <Link to="/quant" className="calc-cta-button">
                 <span>Check Loan Eligibility</span>
                 <ArrowRight size={16} />
               </Link>

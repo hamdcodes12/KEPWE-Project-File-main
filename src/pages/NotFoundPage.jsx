@@ -119,7 +119,7 @@ const NotFoundPage = () => {
       </div>
 
       <p style={{ marginTop: '24px', color: '#5B6478', fontSize: '0.8rem' }}>
-        Error code 404 · KEPWE Platform
+        Error code 404 · KEPWE QUANT
       </p>
     </div>
   );

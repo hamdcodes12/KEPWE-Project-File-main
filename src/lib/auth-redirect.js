@@ -21,10 +21,6 @@ export function getSafeReturnPath(value, fallback = '/') {
     '/signup',
     '/admin-login',
     '/404',
-    '/credit/login',
-    '/credit/signup',
-    '/ledger/login',
-    '/ledger/signup',
     '/quant/login',
     '/quant/signup',
   ].includes(normalized)) {

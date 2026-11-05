@@ -1,0 +1,119 @@
+.responsible-trust-section {
+  padding: 96px 0;
+  background-color: #FFFFFF;
+  position: relative;
+}
+
+.trust-header {
+  max-width: 720px;
+  margin: 0 auto 52px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.trust-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #EFF4FF;
+  border: 1px solid rgba(33, 78, 207, 0.18);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #214ECF;
+}
+
+.trust-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #214ECF;
+}
+
+.trust-title {
+  font-size: clamp(2rem, 3.8vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #111827;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.trust-subtitle {
+  font-size: clamp(0.96rem, 1.3vw, 1.12rem);
+  color: #667085;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* 4 Cards Grid */
+.trust-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.trust-card {
+  background-color: #F8FAFC;
+  border: 1px solid #E4E7EC;
+  border-radius: 16px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.25s ease;
+}
+
+.trust-card:hover {
+  background-color: #FFFFFF;
+  border-color: #214ECF;
+  box-shadow: 0 12px 30px -6px rgba(33, 78, 207, 0.08);
+  transform: translateY(-3px);
+}
+
+.trust-card-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: #EFF4FF;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+}
+
+.trust-card-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.trust-card-desc {
+  font-size: 0.88rem;
+  color: #667085;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .trust-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .trust-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .responsible-trust-section {
+    padding: 64px 0;
+  }
+}

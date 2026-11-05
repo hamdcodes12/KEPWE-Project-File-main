@@ -1,0 +1,610 @@
+/* ==========================================================================
+   AI CFO & FINANCIAL INTELLIGENCE VIEW STYLES (PHASE 7)
+   ========================================================================== */
+
+.cfo-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header & Command Bar */
+.cfo-header-card {
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  border-radius: 16px;
+  padding: 24px 28px;
+  color: #FFFFFF;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.cfo-header-info {
+  max-width: 580px;
+}
+
+.cfo-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(33, 78, 207, 0.3);
+  color: #93C5FD;
+  border: 1px solid rgba(147, 197, 253, 0.3);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cfo-header-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0 0 6px 0;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+}
+
+.cfo-header-desc {
+  font-size: 0.88rem;
+  color: #94A3B8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cfo-header-metrics {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.cfo-dial-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 18px;
+  text-align: center;
+  min-width: 120px;
+}
+
+.cfo-dial-val {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cfo-dial-val.healthy { color: #10B981; }
+.cfo-dial-val.moderate { color: #F59E0B; }
+.cfo-dial-val.critical { color: #EF4444; }
+
+.cfo-dial-label {
+  font-size: 0.72rem;
+  color: #94A3B8;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+/* Nav Tabs */
+.cfo-nav-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 8px;
+  overflow-x: auto;
+}
+
+.cfo-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.cfo-tab-btn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.cfo-tab-btn.active {
+  background: #214ECF;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(33, 78, 207, 0.25);
+}
+
+/* Section Cards */
+.cfo-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cfo-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.cfo-card-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Reduction Opportunities Grid */
+.reduction-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.reduction-card {
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 18px;
+  background: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.reduction-card.high {
+  border-left: 4px solid #EF4444;
+}
+
+.reduction-card.medium {
+  border-left: 4px solid #F59E0B;
+}
+
+.reduction-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.reduction-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+}
+
+.savings-tag {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.reduction-desc {
+  font-size: 0.82rem;
+  color: #475569;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.reduction-items {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  color: #64748B;
+  margin-bottom: 12px;
+}
+
+.reduction-rec {
+  font-size: 0.78rem;
+  color: #214ECF;
+  background: rgba(33, 78, 207, 0.05);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* Surplus Waterfall */
+.surplus-waterfall {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.waterfall-step {
+  text-align: center;
+}
+
+.waterfall-label {
+  font-size: 0.72rem;
+  color: #64748B;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.waterfall-val {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin-top: 4px;
+}
+
+.waterfall-op {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #94A3B8;
+}
+
+.waterfall-step.surplus .waterfall-val {
+  color: #059669;
+  font-size: 1.25rem;
+}
+
+/* Allocation Roadmap */
+.allocation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.allocation-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  background: #FFFFFF;
+}
+
+.allocation-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #EFF6FF;
+  color: #214ECF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.allocation-details {
+  flex: 1;
+}
+
+.allocation-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.allocation-bucket {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.allocation-amount {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #214ECF;
+}
+
+.allocation-rationale {
+  font-size: 0.8rem;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+/* Affordability Simulator */
+.simulator-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .simulator-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.simulator-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.sim-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: #FFFFFF;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.sim-input:focus {
+  outline: none;
+  border-color: #214ECF;
+  box-shadow: 0 0 0 3px rgba(33, 78, 207, 0.1);
+}
+
+.emi-toggle-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.verdict-card {
+  border-radius: 14px;
+  padding: 24px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.verdict-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.verdict-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.verdict-badge.affordable {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+.verdict-badge.caution {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.verdict-badge.unaffordable {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+
+.verdict-reason {
+  font-size: 0.92rem;
+  color: #1E293B;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.verdict-metrics-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background: #FFFFFF;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+}
+
+.verdict-metric-item {
+  text-align: center;
+}
+
+.verdict-metric-label {
+  font-size: 0.72rem;
+  color: #64748B;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.verdict-metric-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin-top: 4px;
+}
+
+.opportunity-cost-banner {
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 0.82rem;
+  color: #1E40AF;
+  line-height: 1.5;
+}
+
+/* Chat Assistant */
+.cfo-chat-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prompt-chips-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.prompt-chip {
+  padding: 8px 14px;
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.prompt-chip:hover {
+  background: #214ECF;
+  color: #FFFFFF;
+  border-color: #214ECF;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  box-sizing: border-box;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: #214ECF;
+  box-shadow: 0 0 0 3px rgba(33, 78, 207, 0.1);
+}
+
+.chat-response-card {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 18px 22px;
+  animation: fadeIn 0.2s ease;
+}
+
+.chat-question-label {
+  font-size: 0.8rem;
+  color: #64748B;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.chat-headline {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 10px 0;
+}
+
+.chat-answer-body {
+  font-size: 0.9rem;
+  color: #334155;
+  line-height: 1.6;
+}
+
+/* Alerts List */
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid;
+}
+
+.alert-item.warning {
+  background: #FFFBEB;
+  border-color: #FDE68A;
+  color: #92400E;
+}
+
+.alert-item.info {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1E40AF;
+}
+
+.alert-item.success {
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+  color: #065F46;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-headline {
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.alert-message {
+  font-size: 0.8rem;
+  line-height: 1.4;
+}

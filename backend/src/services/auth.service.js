@@ -128,42 +128,20 @@ export async function registerUser({ name, email, password, mobile, emailVerifie
       [newUser.id]
     );
 
-    // ── QUANT SUBSCRIPTION SYSTEM: Activate 7-day free trial ──────────────
-    // This is the authoritative trial record used by all feature-gate checks.
-    // trial_end_at is calculated server-side — never from the client.
+    // Every registered Quant user starts with trial eligibility only. The
+    // 24-hour clock begins exclusively in the authenticated activation route.
     await client.query(
       `INSERT INTO user_subscriptions (
-         user_id, plan_id, status,
-         trial_start_at, trial_end_at, is_trial_used
+         user_id, plan_id, status, is_trial_used
        )
        SELECT
          $1,
          sp.id,
-         'trial'::quant_subscription_status,
-         NOW(),
-         NOW() + (sp.trial_days * INTERVAL '1 day'),
-         TRUE
+         'not_started'::quant_subscription_status,
+         FALSE
        FROM subscription_plans sp
        WHERE sp.plan_code = 'TRIAL' AND sp.is_active = TRUE
        ON CONFLICT (user_id) DO NOTHING`,
-      [newUser.id]
-    );
-
-    // Audit the trial activation
-    await client.query(
-      `INSERT INTO subscription_audit_log (
-         user_id, event_type, event_description, new_status, new_plan_code, performed_by, metadata
-       )
-       SELECT
-         $1,
-         'trial_activated',
-         '7-day free trial automatically activated on registration',
-         'trial',
-         'TRIAL',
-         'system',
-         jsonb_build_object('trialDays', sp.trial_days, 'activatedAt', NOW())
-       FROM subscription_plans sp
-       WHERE sp.plan_code = 'TRIAL'`,
       [newUser.id]
     );
 

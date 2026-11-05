@@ -1,381 +1,142 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, ArrowRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { 
-  Building2, 
-  Activity, 
-  TrendingUp, 
-  BookOpen, 
-  CreditCard, 
-  Layers,
-  Menu, 
-  X, 
-  ArrowRight, 
-  ChevronDown, 
-  ChevronRight, 
-  MoreVertical
-} from 'lucide-react';
-import kepweLogo from '../../assets/kepwe-logo.png';
 import UserMenu from './UserMenu';
 import './Header.css';
 
-const Header = () => {
+const navItems = [
+  { label: 'Home', to: '/' },
+  { label: 'Platform', to: '/#how-it-works' },
+  { label: 'Brokers', to: '/#brokers' },
+  { label: 'Kepwe Learn', to: '/learn' },
+  { label: 'Pricing', to: '/#pricing' },
+];
+
+export default function Header() {
   const { authState } = useApp();
-  const isLoggedIn = authState?.isLoggedIn;
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileExpandedSection, setMobileExpandedSection] = useState(null);
-  const [productsDropdownOpen, setProductsDropdownOpen] = useState(false);
-  const [resourcesDropdownOpen, setResourcesDropdownOpen] = useState(false);
-  const [portalsDropdownOpen, setPortalsDropdownOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [isPastHero, setIsPastHero] = useState(false);
   const location = useLocation();
-  const isHomePage = location.pathname === '/';
-  const headerRef = useRef(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(() => typeof window !== 'undefined' && window.scrollY > 8);
+  const mobileMenuButtonRef = useRef(null);
+  const mobileDrawerRef = useRef(null);
+  const demoLink = '/signup?product=quant&demo=24h';
 
-  const toggleMobileSection = (sectionKey) => {
-    setMobileExpandedSection((prev) => (prev === sectionKey ? null : sectionKey));
-  };
+  useEffect(() => setMobileMenuOpen(false), [location.pathname, location.search, location.hash]);
 
-  const closeAllDropdowns = () => {
-    setProductsDropdownOpen(false);
-    setResourcesDropdownOpen(false);
-    setPortalsDropdownOpen(false);
-  };
-
-  // Close dropdowns on outside click or Escape key
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (headerRef.current && !headerRef.current.contains(event.target)) {
-        closeAllDropdowns();
-      }
-    };
+    const updateScrolledState = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', updateScrolledState, { passive: true });
+    updateScrolledState();
+    return () => window.removeEventListener('scroll', updateScrolledState);
+  }, []);
 
-    const handleKeyDown = (event) => {
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+
+    const getFocusableItems = () => mobileDrawerRef.current?.querySelectorAll(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ) || [];
+
+    getFocusableItems()[0]?.focus({ preventScroll: true });
+
+    const handleMenuKeyDown = (event) => {
       if (event.key === 'Escape') {
-        closeAllDropdowns();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPos = window.scrollY;
-      setScrolled(scrollPos > 15);
-      // Check if user has scrolled past the full-screen hero section
-      if (isHomePage) {
-        setIsPastHero(scrollPos > window.innerHeight * 0.85);
-      } else {
-        setIsPastHero(true);
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isHomePage]);
-
-  // Close mobile drawer and dropdowns on route change
-  useEffect(() => {
-    setMobileMenuOpen(false);
-    setMobileExpandedSection(null);
-    closeAllDropdowns();
-  }, [location.pathname]);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
+        event.preventDefault();
         setMobileMenuOpen(false);
-        setProductsDropdownOpen(false);
-        setResourcesDropdownOpen(false);
-        setPortalsDropdownOpen(false);
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+      const focusableItems = getFocusableItems();
+      if (!focusableItems.length) return;
+
+      const firstItem = focusableItems[0];
+      const lastItem = focusableItems[focusableItems.length - 1];
+      if (event.shiftKey && document.activeElement === firstItem) {
+        event.preventDefault();
+        lastItem.focus();
+      } else if (!event.shiftKey && document.activeElement === lastItem) {
+        event.preventDefault();
+        firstItem.focus();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.addEventListener('keydown', handleMenuKeyDown);
     return () => {
-      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleMenuKeyDown);
+      mobileMenuButtonRef.current?.focus({ preventScroll: true });
     };
   }, [mobileMenuOpen]);
 
-  const isDarkHeader = isHomePage && !isPastHero;
-
-  const getPortalLink = (productKey, destination) => {
-    if (productKey === 'credit') {
-      return isLoggedIn ? destination : '/credit/login';
-    }
-    if (isLoggedIn && Array.isArray(authState?.user?.memberships) && authState.user.memberships.includes(productKey)) {
-      return destination;
-    }
-    return `/${productKey}/login`;
+  const isNavItemActive = (item) => {
+    if (item.to === '/') return location.pathname === '/' && !location.hash;
+    if (item.to === '/learn') return location.pathname === '/learn' || location.pathname.startsWith('/learn/');
+    return location.pathname === '/' && location.hash === item.to.slice(1);
   };
 
   return (
-    <header ref={headerRef} className={`site-header ${isDarkHeader ? 'dark-glass-header' : 'light-glass-header'} ${scrolled ? 'scrolled' : ''} ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-      
-      {/* Main Navigation Bar */}
+    <header className={`site-header light-glass-header ${scrolled ? 'scrolled' : ''} ${mobileMenuOpen ? 'mobile-open' : ''}`}>
       <div className="main-header-bar">
-        
-        {/* Brand Logo Identity */}
-        <Link to="/" className="brand-logo-link" aria-label="KEPWE Home">
-          <img
-            src={kepweLogo}
-            alt="Kepwe Logo"
-            className="kepwe-logo-img"
-          />
-          <span className="brand-name">Kepwe</span>
+        <Link to="/" className="brand-logo-link quant-brand" aria-label="KEPWE QUANT Home">
+          <span className="quant-brand-mark" aria-hidden="true">K</span>
+          <span className="brand-name">KEPWE <strong>QUANT</strong></span>
         </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="desktop-nav-links" aria-label="Main Navigation">
-          
-          {/* Products Dropdown */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => {
-                setProductsDropdownOpen(!productsDropdownOpen);
-                setResourcesDropdownOpen(false);
-                setPortalsDropdownOpen(false);
-              }}
-              aria-expanded={productsDropdownOpen}
-              className="nav-dropdown-btn"
-            >
-              <span>Products</span>
-              <ChevronDown size={14} style={{ transform: productsDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-            </button>
-            {productsDropdownOpen && (
-              <div className="header-dropdown-menu">
-                <Link to="/credit" onClick={() => setProductsDropdownOpen(false)} className="dropdown-item-link">
-                  <span className="dropdown-item-title">
-                    <span className="dropdown-item-dot" style={{ backgroundColor: '#214ECF' }} /> Kepwe Credit
-                  </span>
-                  <span className="dropdown-item-desc">Personal & business loan solutions</span>
-                </Link>
-                <Link to="/ledger" onClick={() => setProductsDropdownOpen(false)} className="dropdown-item-link">
-                  <span className="dropdown-item-title">
-                    <span className="dropdown-item-dot" style={{ backgroundColor: '#2563EB' }} /> Kepwe Ledger
-                  </span>
-                  <span className="dropdown-item-desc">Business finance, GST & accounting</span>
-                </Link>
-                <Link to="/quant" onClick={() => setProductsDropdownOpen(false)} className="dropdown-item-link">
-                  <span className="dropdown-item-title">
-                    <span className="dropdown-item-dot" style={{ backgroundColor: '#0D9488' }} /> KEPWE QUANT
-                  </span>
-                  <span className="dropdown-item-desc">Systematic trading workspace</span>
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Resources Dropdown */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => {
-                setResourcesDropdownOpen(!resourcesDropdownOpen);
-                setProductsDropdownOpen(false);
-                setPortalsDropdownOpen(false);
-              }}
-              aria-expanded={resourcesDropdownOpen}
-              className="nav-dropdown-btn"
-            >
-              <span>Resources</span>
-              <ChevronDown size={14} style={{ transform: resourcesDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-            </button>
-            {resourcesDropdownOpen && (
-              <div className="header-dropdown-menu">
-                <Link to="/resources/calendar" onClick={() => setResourcesDropdownOpen(false)} className="dropdown-item-link">
-                  <span className="dropdown-item-title">Compliance Calendar</span>
-                  <span className="dropdown-item-desc">Statutory filing dates & cutoffs</span>
-                </Link>
-                <Link to="/resources/calculators" onClick={() => setResourcesDropdownOpen(false)} className="dropdown-item-link">
-                  <span className="dropdown-item-title">Financial Calculators</span>
-                  <span className="dropdown-item-desc">EMI, GST, and tax estimators</span>
-                </Link>
-              </div>
-            )}
-          </div>
-
-          <Link to="/about" className="nav-link">About</Link>
+        <nav className="desktop-nav-links quant-main-nav" aria-label="Main Navigation">
+          {navItems.map((item) => {
+            const active = isNavItemActive(item);
+            return (
+              <Link
+                key={item.label}
+                to={item.to}
+                className={`nav-link ${active ? 'active' : ''}`}
+                aria-current={active ? 'page' : undefined}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Right Actions: Portals Dropdown, Login, Get Started */}
-        <div className="header-actions-group">
-          
-          {/* Portals Dropdown (All Workspaces with direct access) */}
-          <div style={{ position: 'relative' }} className="hide-mobile">
-            <button
-              onClick={() => {
-                setPortalsDropdownOpen(!portalsDropdownOpen);
-                setProductsDropdownOpen(false);
-                setResourcesDropdownOpen(false);
-              }}
-              aria-expanded={portalsDropdownOpen}
-              className="portals-btn"
-            >
-              <span>Portals</span>
-              <ChevronDown size={13} style={{ transform: portalsDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-            </button>
-            {portalsDropdownOpen && (
-              <div className="portals-dropdown-menu">
-                <Link to={getPortalLink('ledger', '/ledger/app')} onClick={() => setPortalsDropdownOpen(false)} className="portals-dropdown-item" style={{ color: '#2563EB' }}>
-                  <BookOpen size={16} />
-                  <span>Ledger Workspace</span>
-                </Link>
-                <Link to={getPortalLink('credit', '/credit/workspace')} onClick={() => setPortalsDropdownOpen(false)} className="portals-dropdown-item" style={{ color: '#4F46E5' }}>
-                  <CreditCard size={16} />
-                  <span>Kepwe Credit</span>
-                </Link>
-                <Link to={getPortalLink('quant', '/quant/dashboard')} onClick={() => setPortalsDropdownOpen(false)} className="portals-dropdown-item" style={{ color: '#0D9488' }}>
-                  <Layers size={16} />
-                  <span>Quant Workspace</span>
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {isLoggedIn ? (
-            <UserMenu />
-          ) : (
-            <>
-              <Link to="/login" className="nav-link desktop-only-action">
-                Login
-              </Link>
-              <Link to="/signup" className="btn-primary-cta">
-                <span>Get Started</span>
-                <ArrowRight size={15} />
-              </Link>
-            </>
-          )}
-
-          {/* Mobile Menu Trigger Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            aria-expanded={mobileMenuOpen}
-            className="mobile-menu-btn"
-          >
-            {mobileMenuOpen ? (
-              <X size={26} />
-            ) : (
-              <Menu size={26} />
-            )}
+        <div className="header-actions-group quant-header-actions">
+          {authState?.isLoggedIn ? <UserMenu /> : <>
+            <Link to="/login?product=quant" className="nav-link desktop-only-action">Login</Link>
+            <Link to={demoLink} className="btn-primary-cta quant-demo-cta"><span>Start Free Demo</span><ArrowRight size={15} /></Link>
+          </>}
+          <button ref={mobileMenuButtonRef} type="button" className="mobile-menu-btn" onClick={() => setMobileMenuOpen((open) => !open)} aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={mobileMenuOpen} aria-controls="quant-mobile-navigation">
+            {mobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
         </div>
-
       </div>
 
-      {/* Mobile Navigation Drawer */}
-      {mobileMenuOpen && (
-        <div className="mobile-nav-drawer" role="dialog" aria-label="Mobile menu">
-          
-          <div className="mobile-drawer-content">
-            
-            {/* Products Group */}
-            <div className="mobile-drawer-group">
-              <button
-                type="button"
-                className="mobile-group-trigger"
-                onClick={() => toggleMobileSection('products')}
-              >
-                <span>Products</span>
-                <ChevronDown size={18} className={`mobile-chevron ${mobileExpandedSection === 'products' ? 'rotate-180' : ''}`} />
-              </button>
-              {mobileExpandedSection === 'products' && (
-                <div className="mobile-drawer-sublinks">
-                  <Link to="/credit" onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link">
-                    <span className="mobile-sub-dot" style={{ backgroundColor: '#214ECF' }} /> Kepwe Credit
-                  </Link>
-                  <Link to="/ledger" onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link">
-                    <span className="mobile-sub-dot" style={{ backgroundColor: '#2563EB' }} /> Kepwe Ledger
-                  </Link>
-                  <Link to="/quant" onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link">
-                    <span className="mobile-sub-dot" style={{ backgroundColor: '#0D9488' }} /> KEPWE QUANT
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Resources Group */}
-            <div className="mobile-drawer-group">
-              <button
-                type="button"
-                className="mobile-group-trigger"
-                onClick={() => toggleMobileSection('resources')}
-              >
-                <span>Resources</span>
-                <ChevronDown size={18} className={`mobile-chevron ${mobileExpandedSection === 'resources' ? 'rotate-180' : ''}`} />
-              </button>
-              {mobileExpandedSection === 'resources' && (
-                <div className="mobile-drawer-sublinks">
-                  <Link to="/resources/calendar" onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link">Compliance Calendar</Link>
-                  <Link to="/resources/calculators" onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link">Financial Calculators</Link>
-                  <Link to="/resources/business-guides" onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link">Startup Guides</Link>
-                  <Link to="/resources/gst-guides" onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link">GST Guides</Link>
-                </div>
-              )}
-            </div>
-
-            {/* Portals Group (All connected workspaces) */}
-            <div className="mobile-drawer-group">
-              <button
-                type="button"
-                className="mobile-group-trigger"
-                onClick={() => toggleMobileSection('portals')}
-              >
-                <span>Portals & Workspaces</span>
-                <ChevronDown size={18} className={`mobile-chevron ${mobileExpandedSection === 'portals' ? 'rotate-180' : ''}`} />
-              </button>
-              {mobileExpandedSection === 'portals' && (
-                <div className="mobile-drawer-sublinks">
-                  <Link to={getPortalLink('ledger', '/ledger/app')} onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link" style={{ color: '#2563EB', fontWeight: 600 }}>
-                    <BookOpen size={16} style={{ display: 'inline', marginRight: '6px' }} /> Ledger Workspace
-                  </Link>
-                  <Link to={getPortalLink('credit', '/credit/workspace')} onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link" style={{ color: '#4F46E5', fontWeight: 600 }}>
-                    <CreditCard size={16} style={{ display: 'inline', marginRight: '6px' }} /> Kepwe Credit
-                  </Link>
-                  <Link to={getPortalLink('quant', '/quant/dashboard')} onClick={() => setMobileMenuOpen(false)} className="mobile-sub-link" style={{ color: '#0D9488', fontWeight: 600 }}>
-                    <Layers size={16} style={{ display: 'inline', marginRight: '6px' }} /> Quant Workspace
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="mobile-single-link">About</Link>
-            <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="mobile-single-link">Contact Us</Link>
-
-            {/* Bottom Actions */}
-            <div className="mobile-drawer-actions">
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="mobile-login-btn">Login</Link>
-              <Link to="/signup" onClick={() => setMobileMenuOpen(false)} className="mobile-signup-btn">
-                <span>Get Started</span>
-                <ArrowRight size={16} />
-              </Link>
-            </div>
-
-          </div>
-
+      {mobileMenuOpen && <>
+        <button type="button" className="mobile-nav-backdrop" aria-label="Close navigation menu" onClick={() => setMobileMenuOpen(false)} />
+        <div id="quant-mobile-navigation" ref={mobileDrawerRef} className="mobile-nav-drawer" role="dialog" aria-modal="true" aria-label="Mobile menu">
+          <nav className="mobile-drawer-content" aria-label="Mobile navigation">
+            {navItems.map((item) => {
+              const active = isNavItemActive(item);
+              return (
+                <Link
+                  key={item.label}
+                  to={item.to}
+                  className={`mobile-single-link ${active ? 'active' : ''}`}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+            <Link to="/login?product=quant" className="mobile-login-btn">Login</Link>
+            <Link to={demoLink} className="mobile-signup-btn">Start Free Demo <ArrowRight size={16} /></Link>
+          </nav>
         </div>
-      )}
-
+      </>}
     </header>
   );
-};
-
-export default Header;
+}

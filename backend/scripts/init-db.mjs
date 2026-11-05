@@ -36,8 +36,6 @@ if (checkRes.rows[0]?.exists) {
     'algo_engine_additions.sql',
     'aadhaar_kyc_schema.sql',
     'email_otp_additions.sql',
-    'ledger_schema.sql',
-    'ledger_production_system.sql'
   ];
 
   for (const file of files) {

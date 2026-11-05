@@ -280,7 +280,7 @@ export default function UpgradeModal({ onClose, onViewPlans, featureLabel }) {
             Continue with Trial
           </button>
           <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#94a3b8' }}>
-            No credit card required to try
+            No payment card required to try
           </span>
         </div>
       </div>

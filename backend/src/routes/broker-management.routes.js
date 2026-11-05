@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
+import { requireActiveSubscription } from '../middleware/feature-gate.js';
 import { pool } from '../config/db.js';
 import { setActiveBroker, getActiveBroker, revokeBrokerCredentials } from '../services/broker-token.service.js';
 import { verifyBrokerConnection, getLatestVerification } from '../services/broker-verification.service.js';
@@ -15,6 +16,13 @@ import {
 import { clearAngelOneMarketFeedCache } from '../services/angel-one-market-feed.service.js';
 
 const router = Router();
+
+router.use('/broker', (req, res, next) => {
+  // Keep credential revocation available after expiry as a safety action.
+  if (req.originalUrl.split('?')[0].endsWith('/disconnect')) return next();
+  const checkSubscription = () => requireActiveSubscription(req, res, next);
+  return req.userId ? checkSubscription() : requireAuth(req, res, checkSubscription);
+});
 
 const setActiveBrokerSchema = z.object({
   broker: z.enum(['ANGEL_ONE']),

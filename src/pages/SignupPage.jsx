@@ -29,18 +29,14 @@ const SignupPage = ({ product: propProduct }) => {
   // Detect product from props, pathname, or query param
   const pathParts = location.pathname.toLowerCase().split('/').filter(Boolean);
   let pathProduct = '';
-  if (pathParts[0] === 'ledger') pathProduct = 'ledger';
-  else if (pathParts[0] === 'crm' || pathParts[0] === 'sales-crm') pathProduct = 'crm';
+  if (pathParts[0] === 'crm' || pathParts[0] === 'sales-crm') pathProduct = 'crm';
   else if (pathParts[0] === 'customer-portal' || pathParts[0] === 'portal') pathProduct = 'customer-portal';
-  else if (pathParts[0] === 'credit') pathProduct = 'credit';
   else if (pathParts[0] === 'quant') pathProduct = 'quant';
 
   const queryProduct = (searchParams.get('product') || '').trim().toLowerCase();
   const returnToRaw = (searchParams.get('returnTo') || '').trim();
   let returnToProduct = '';
-  if (returnToRaw.startsWith('/credit')) returnToProduct = 'credit';
-  else if (returnToRaw.startsWith('/ledger')) returnToProduct = 'ledger';
-  else if (returnToRaw.startsWith('/quant')) returnToProduct = 'quant';
+  if (returnToRaw.startsWith('/quant')) returnToProduct = 'quant';
 
   const detectedProduct = (propProduct || pathProduct || queryProduct || returnToProduct || '').trim().toLowerCase();
   const canonicalProduct = detectedProduct === 'portal' ? 'customer-portal' : detectedProduct;
@@ -48,8 +44,9 @@ const SignupPage = ({ product: propProduct }) => {
   const activeProductKey = productConfig ? productConfig.productKey : null;
 
   const selectedPlan = searchParams.get('plan')?.trim() || '';
+  const isDemoSignup = searchParams.get('demo') === '24h';
   const preservedAuthQuery = location.search || '';
-  const defaultDest = productConfig ? productConfig.defaultPath : (returnToRaw.startsWith('/quant') ? '/quant/dashboard' : returnToRaw.startsWith('/credit') ? '/credit/workspace' : '/');
+  const defaultDest = productConfig ? productConfig.defaultPath : (returnToRaw.startsWith('/quant') ? '/quant/dashboard' : '/');
   const redirectPath = getSafeReturnPath(returnToRaw, defaultDest);
 
   const [form, setForm] = useState({ name: '', email: '', mobile: '', otp: '', termsAccepted: false, challengeId: '' });
@@ -166,9 +163,9 @@ const SignupPage = ({ product: propProduct }) => {
           <Link to="/" className="signup-brand-logo-link" aria-label="KEPWE Home">
             <img src={kepweLogo} alt="Kepwe Logo" className="signup-brand-logo-img" />
           </Link>
-          <h1 className="signup-brand-title">{productConfig ? productConfig.title : 'Kepwe'}</h1>
-          <p className="signup-brand-sub">{productConfig ? productConfig.sub : 'BUSINESS PLATFORM'}</p>
-          <p className="signup-brand-trial">{productConfig ? productConfig.tagline : 'Start your business journey with KEPWE — unified accounting, compliance & capital.'}</p>
+          <h1 className="signup-brand-title">{productConfig ? productConfig.brand : 'Kepwe Quant'}</h1>
+          <p className="signup-brand-sub">{productConfig ? productConfig.sub : 'QUANTITATIVE RESEARCH WORKSPACE'}</p>
+          <p className="signup-brand-trial">{isDemoSignup ? 'Start your 24-hour free demo. Research and backtest strategies with Kepwe Quant.' : (productConfig ? productConfig.tagline : 'Research, backtest, and automate systematic strategies with Kepwe Quant.')}</p>
         </div>
 
         {/* Main Signup Card */}

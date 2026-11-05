@@ -57,7 +57,7 @@ export async function runAutoMigrations(client) {
   const checkRes = await client.query(`
     SELECT EXISTS (
       SELECT 1 FROM information_schema.tables 
-      WHERE table_schema = 'public' AND table_name = 'chart_of_accounts'
+      WHERE table_schema = 'public' AND table_name = 'users'
     ) AS exists;
   `);
 
@@ -78,19 +78,9 @@ export async function runAutoMigrations(client) {
       'algo_engine_additions.sql',
       'aadhaar_kyc_schema.sql',
       'email_otp_additions.sql',
-      'ledger_schema.sql',
-      'ledger_production_system.sql',
-      'ledger_production_v2.sql',
-      'ledger_integrations.sql',
-      'ledger_subscriptions.sql',
       'profile_avatar_and_crm_seeds.sql',
       'product_memberships_schema.sql',
       'quant_additions.sql',
-      'ledger_prd_dashboard.sql',
-      'ledger_prd_phase6_upload.sql',
-      'ledger_prd_phase8_goals.sql',
-      'credit_report_analysis.sql',
-      'credit_loan_applications.sql'
     ];
 
     for (const file of files) {
@@ -128,46 +118,6 @@ export async function runAutoMigrations(client) {
           await client.query(sql);
         }
         console.log('[db] product_memberships_schema migration applied successfully.');
-      }
-    }
-    // Check if ledger_production_v2.sql has been applied
-    const v2Check = await client.query(`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name = 'gst_tax_period_locks'
-      ) AS exists;
-    `);
-    if (!v2Check.rows[0]?.exists) {
-      console.log('[db] Applying ledger_production_v2 migration...');
-      const v2Path = resolve(__dirname, '../../db/ledger_production_v2.sql');
-      if (fs.existsSync(v2Path)) {
-        const sql = fs.readFileSync(v2Path, 'utf-8');
-        if (client.exec) {
-          await client.exec(sql);
-        } else {
-          await client.query(sql);
-        }
-        console.log('[db] ledger_production_v2 migration applied successfully.');
-      }
-    }
-    const integrationsCheck = await client.query(`
-      SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ledger_webhooks') AS exists;
-    `);
-    if (!integrationsCheck.rows[0]?.exists) {
-      const integrationsPath = resolve(__dirname, '../../db/ledger_integrations.sql');
-      if (fs.existsSync(integrationsPath)) {
-        const sql = fs.readFileSync(integrationsPath, 'utf-8');
-        if (client.exec) await client.exec(sql); else await client.query(sql);
-      }
-    }
-    const ledgerPlansCheck = await client.query(`
-      SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ledger_plans') AS exists;
-    `);
-    if (!ledgerPlansCheck.rows[0]?.exists) {
-      const plansPath = resolve(__dirname, '../../db/ledger_subscriptions.sql');
-      if (fs.existsSync(plansPath)) {
-        const sql = fs.readFileSync(plansPath, 'utf-8');
-        if (client.exec) await client.exec(sql); else await client.query(sql);
       }
     }
     // Check each profile avatar column so a partially applied migration is repaired.
@@ -284,57 +234,6 @@ export async function runAutoMigrations(client) {
       await client.query(`ALTER TABLE idempotency_records ALTER COLUMN expires_at SET DEFAULT (NOW() + INTERVAL '24 hours')`);
     } catch (_) {}
 
-    // Check if ledger_financial_profiles table exists
-    const prdCheck = await client.query(`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name = 'ledger_financial_profiles'
-      ) AS exists;
-    `);
-    if (!prdCheck.rows[0]?.exists) {
-      console.log('[db] Applying ledger_prd_dashboard.sql migration...');
-      const prdPath = resolve(__dirname, '../../db/ledger_prd_dashboard.sql');
-      if (fs.existsSync(prdPath)) {
-        let sql = fs.readFileSync(prdPath, 'utf-8');
-        if (client.exec) await client.exec(sql); else await client.query(sql);
-        console.log('[db] ledger_prd_dashboard.sql migration applied successfully.');
-      }
-    }
-
-    // Check if ledger_transactions has statement_import_id column
-    const phase6Check = await client.query(`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'public' AND table_name = 'ledger_transactions' AND column_name = 'statement_import_id'
-      ) AS exists;
-    `);
-    if (!phase6Check.rows[0]?.exists) {
-      console.log('[db] Applying ledger_prd_phase6_upload.sql migration...');
-      const p6Path = resolve(__dirname, '../../db/ledger_prd_phase6_upload.sql');
-      if (fs.existsSync(p6Path)) {
-        let sql = fs.readFileSync(p6Path, 'utf-8');
-        if (client.exec) await client.exec(sql); else await client.query(sql);
-        console.log('[db] ledger_prd_phase6_upload.sql migration applied successfully.');
-      }
-    }
-
-    // Check if ledger_goals table exists (Phase 8)
-    const phase8Check = await client.query(`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name = 'ledger_goals'
-      ) AS exists;
-    `);
-    if (!phase8Check.rows[0]?.exists) {
-      console.log('[db] Applying ledger_prd_phase8_goals.sql migration...');
-      const p8Path = resolve(__dirname, '../../db/ledger_prd_phase8_goals.sql');
-      if (fs.existsSync(p8Path)) {
-        let sql = fs.readFileSync(p8Path, 'utf-8');
-        if (client.exec) await client.exec(sql); else await client.query(sql);
-        console.log('[db] ledger_prd_phase8_goals.sql migration applied successfully.');
-      }
-    }
-
     // Check if user_subscriptions table exists
     const subCheck = await client.query(`
       SELECT EXISTS (
@@ -357,47 +256,17 @@ export async function runAutoMigrations(client) {
       }
     }
 
-    const creditReportCheck = await client.query(`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'credit_report_analyses'
-      ) AS exists;
-    `);
-    if (!creditReportCheck.rows[0]?.exists) {
-      const creditReportPath = resolve(__dirname, '../../db/credit_report_analysis.sql');
-      if (fs.existsSync(creditReportPath)) {
-        const sql = fs.readFileSync(creditReportPath, 'utf-8');
-        if (client.exec) await client.exec(sql); else await client.query(sql);
-      }
+    // Trial status/entitlement policy is intentionally applied after the
+    // subscription tables exist, including on databases migrated previously.
+    const trialStatusPath = resolve(__dirname, '../../db/migrations/011_quant_trial_not_started_status.sql');
+    if (fs.existsSync(trialStatusPath)) {
+      const sql = fs.readFileSync(trialStatusPath, 'utf-8');
+      if (client.exec) await client.exec(sql); else await client.query(sql);
     }
-
-    const creditApplicationsCheck = await client.query(`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'credit_loan_applications'
-      ) AS exists;
-    `);
-    if (!creditApplicationsCheck.rows[0]?.exists) {
-      const applicationsPath = resolve(__dirname, '../../db/credit_loan_applications.sql');
-      if (fs.existsSync(applicationsPath)) {
-        const sql = fs.readFileSync(applicationsPath, 'utf-8');
-        if (client.exec) await client.exec(sql); else await client.query(sql);
-      }
-    } else {
-      await client.query(`
-        ALTER TABLE credit_loan_applications
-          ADD COLUMN IF NOT EXISTS application_details JSONB NOT NULL DEFAULT '{}'::jsonb;
-        ALTER TABLE credit_loan_applications
-          DROP CONSTRAINT IF EXISTS credit_loan_applications_loan_type_check;
-        ALTER TABLE credit_loan_applications
-          ADD CONSTRAINT credit_loan_applications_loan_type_check
-          CHECK (loan_type IN ('working_capital', 'term_loan', 'invoice_discounting', 'equipment_finance', 'personal_loan', 'other'));
-        ALTER TABLE credit_loan_application_documents
-          DROP CONSTRAINT IF EXISTS credit_loan_application_documents_mime_type_check;
-        ALTER TABLE credit_loan_application_documents
-          ADD CONSTRAINT credit_loan_application_documents_mime_type_check
-          CHECK (mime_type IN ('application/pdf', 'image/jpeg', 'image/png', 'image/webp'));
-      `);
+    const trialPolicyPath = resolve(__dirname, '../../db/migrations/012_quant_24h_trial.sql');
+    if (fs.existsSync(trialPolicyPath)) {
+      const sql = fs.readFileSync(trialPolicyPath, 'utf-8');
+      if (client.exec) await client.exec(sql); else await client.query(sql);
     }
 
     // Check if QA user exists
@@ -412,16 +281,17 @@ export async function runAutoMigrations(client) {
           VALUES ('11111111-1111-4111-8111-111111111111', 'qa@kepwe.in', $1, 'Harshad Mehta', '9876543210', TRUE, TRUE)
           ON CONFLICT (id) DO UPDATE SET password_hash = $1, is_active = TRUE, email_verified = TRUE, full_name = 'Harshad Mehta'
         `, [passHash]);
-        await client.query(`
-          INSERT INTO product_memberships (user_id, product, role, status)
-          VALUES ('11111111-1111-4111-8111-111111111111', 'ledger', 'member', 'active')
-          ON CONFLICT (user_id, product) DO UPDATE SET status = 'active'
-        `);
         console.log('[db] QA user bootstrapped successfully.');
       }
     } catch (err) {
       console.warn('[db] Note: QA user bootstrap skipped:', err.message);
     }
+  }
+  // Remove the retired academy schema on both fresh and already-migrated DBs.
+  const docsCenterPath = resolve(__dirname, '../../db/migrations/013_kepwe_docs_center.sql');
+  if (fs.existsSync(docsCenterPath)) {
+    const sql = fs.readFileSync(docsCenterPath, 'utf-8');
+    if (client.exec) await client.exec(sql); else await client.query(sql);
   }
 }
 

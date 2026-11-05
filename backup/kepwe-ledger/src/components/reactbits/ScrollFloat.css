@@ -1,0 +1,28 @@
+.scroll-float-container {
+  display: inline-block;
+  overflow: visible;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.scroll-float-word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.scroll-float-char {
+  display: inline-block;
+  transform-origin: 50% 100%;
+  will-change: transform, opacity;
+}
+
+.scroll-float-space {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-float-char {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}

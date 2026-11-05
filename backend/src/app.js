@@ -37,9 +37,6 @@ import algoRoutes from './routes/algo.routes.js';
 import brokerOAuthRoutes from './routes/broker-oauth.routes.js';
 import brokerManagementRoutes from './routes/broker-management.routes.js';
 import kycRoutes from './routes/kyc.routes.js';
-import ledgerRoutes, { ledgerWebhookRoutes } from './routes/ledger.routes.js';
-import ledgerV1Routes from './routes/v1/ledger-v1.routes.js';
-import creditRoutes from './routes/credit.routes.js';
 import quantRoutes from './routes/quant.routes.js';
 import { pool } from './config/db.js';
 
@@ -251,10 +248,6 @@ app.use('/api', brokerOAuthRoutes);
 app.use('/api', brokerManagementRoutes);
 app.use('/api', algoRoutes);
 app.use('/api/kyc', kycRoutes);
-app.use('/api', ledgerRoutes);
-app.use('/api', ledgerWebhookRoutes);
-app.use('/api/v1', ledgerV1Routes);
-app.use('/api/credit', creditRoutes);
 app.use('/api/quant', quantRoutes);
 
 // ── Health check ────────────────────────────────────────────────────

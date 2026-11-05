@@ -114,12 +114,14 @@ export function SubscriptionProvider({ children }) {
   });
 
   const fetchedRef = useRef(false);
+  const countdownAnchorRef = useRef(null);
 
   // ── Load subscription from API ──────────────────────────────────────────
   const loadSubscription = useCallback(async () => {
     if (!authState.isLoggedIn) {
       setSubscription(null);
       setFeatures({});
+      countdownAnchorRef.current = null;
       setLoading(false);
       return;
     }
@@ -131,9 +133,15 @@ export function SubscriptionProvider({ children }) {
       ]);
 
       if (subRes.ok && subRes.data?.subscription) {
-        setSubscription(subRes.data.subscription);
+        const nextSubscription = subRes.data.subscription;
+        setSubscription(nextSubscription);
+        const remainingMs = Number(nextSubscription.timeRemaining);
+        countdownAnchorRef.current = nextSubscription.timeRemaining != null && Number.isFinite(remainingMs)
+          ? { remainingMs: Math.max(0, remainingMs), measuredAt: performance.now() }
+          : null;
       } else {
         setSubscription(null);
+        countdownAnchorRef.current = null;
       }
 
       if (featRes.ok && featRes.data?.features) {
@@ -145,6 +153,9 @@ export function SubscriptionProvider({ children }) {
       setError(null);
     } catch (err) {
       setError(err.message);
+      setSubscription(null);
+      setFeatures({});
+      countdownAnchorRef.current = null;
     } finally {
       setLoading(false);
     }
@@ -157,13 +168,22 @@ export function SubscriptionProvider({ children }) {
     }
   }, [authState.isLoading, authState.isLoggedIn, loadSubscription]);
 
+  useEffect(() => {
+    const refreshOnReturn = () => {
+      if (document.visibilityState === 'visible' && authState.isLoggedIn) loadSubscription();
+    };
+    document.addEventListener('visibilitychange', refreshOnReturn);
+    return () => document.removeEventListener('visibilitychange', refreshOnReturn);
+  }, [authState.isLoggedIn, loadSubscription]);
+
   // ── Derived state ────────────────────────────────────────────────────────
 
   const planCode = subscription?.planCode || 'TRIAL';
   const isActive = subscription?.isActive === true;
   const isTrial  = subscription?.status === 'trial';
   const isPaid   = subscription?.status === 'active';
-  const isExpired = !isActive && subscription != null;
+  const isExpired = subscription?.status === 'expired' || (subscription?.status === 'cancelled' && !isActive);
+  const isNotStarted = subscription?.trialStatus === 'NOT_STARTED' || subscription?.status === 'not_started';
 
   /**
    * Check if user is allowed to use a feature.
@@ -207,16 +227,9 @@ export function SubscriptionProvider({ children }) {
    * Returns null if no active trial/subscription end date.
    */
   const getCountdown = useCallback(() => {
-    if (!subscription) return null;
-
-    const endDate =
-      subscription.status === 'trial'
-        ? subscription.trialEndAt
-        : subscription.subscriptionEndAt;
-
-    if (!endDate) return null;
-
-    const ms = Math.max(0, new Date(endDate).getTime() - Date.now());
+    if (!subscription || !countdownAnchorRef.current) return null;
+    const { remainingMs, measuredAt } = countdownAnchorRef.current;
+    const ms = Math.max(0, remainingMs - (performance.now() - measuredAt));
     const days    = Math.floor(ms / (1000 * 60 * 60 * 24));
     const hours   = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
@@ -235,6 +248,7 @@ export function SubscriptionProvider({ children }) {
     isTrial,
     isPaid,
     isExpired,
+    isNotStarted,
     isFeatureAllowed,
     openUpgradeModal,
     closeUpgradeModal,

@@ -52,7 +52,6 @@ async function verifySupabase() {
       'broker_execution_events',
       'notifications',
       'payments',
-      'ledger_transactions',
       'crm_customers',
       'crm_interactions'
     ];

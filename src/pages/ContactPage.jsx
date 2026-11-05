@@ -29,8 +29,7 @@ const ContactPage = () => {
     { value: 'Company Registration', label: 'Company Incorporation / Registration' },
     { value: 'MCA ROC Filings', label: 'MCA Annual Filings & Secretarial' },
     { value: 'Payroll & HR', label: 'Payroll, PF & ESI Setup' },
-    { value: 'Virtual CFO', label: 'Virtual CFO & Financial Advisory' },
-    { value: 'Business Finance', label: 'Working Capital & Business Loans' }
+    { value: 'Virtual CFO', label: 'Virtual CFO & Financial Advisory' }
   ];
 
   useEffect(() => {

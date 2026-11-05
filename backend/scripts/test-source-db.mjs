@@ -42,7 +42,7 @@ async function testConnection() {
       'algo_trades',
       'notifications',
       'payments',
-      'ledger_transactions'
+      'users'
     ];
 
     console.log('\n[source-test] Critical tables row counts:');

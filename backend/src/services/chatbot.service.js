@@ -33,8 +33,8 @@ const TOPIC_RESPONSES = [
     suggestions: ['What is Broker Connections?', 'What is the Trading Desk?'],
   },
   {
-    terms: ['trial', 'free trial', '7 day', '7-day'],
-    answer: 'Every eligible new account receives a server-managed 7-day free trial. Your exact trial status, remaining time, and end deadline are shown on the dashboard. Selected advanced features remain locked until a paid plan is active.',
+    terms: ['trial', 'free trial', '24 hour', '24-hour', 'demo'],
+    answer: 'Eligible new accounts can activate one server-managed 24-hour KEPWE Quant demo from the dashboard. The timer starts only when activated, and the dashboard shows its exact expiry countdown. Selected advanced features remain available only when the active plan includes them.',
     suggestions: ['What can I use in my trial?', 'What is locked in the trial?'],
   },
   {

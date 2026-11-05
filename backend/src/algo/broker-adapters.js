@@ -1163,7 +1163,7 @@ export class AngelOneAdapter {
     }));
   }
 
-  /** Transaction/ledger history is not offered by SmartAPI. */
+  /** Transaction history is not offered by SmartAPI. */
   async getTransactionHistory() {
     const error = new BrokerCapabilityError(this.name, 'transaction history (SmartAPI does not provide it; use the order and trade books)');
     error.statusCode = 501;

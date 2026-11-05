@@ -1,0 +1,361 @@
+.ledger-pricing-section {
+  --ledger-price-ink: #172e2b;
+  --ledger-price-muted: #64736f;
+  --ledger-price-line: #dbe5e1;
+  --ledger-price-accent: #176b55;
+  width: 100%;
+  padding: 74px clamp(18px, 4vw, 56px);
+  background: #f4f8f5;
+  color: var(--ledger-price-ink);
+}
+
+.ledger-pricing-section.compact {
+  padding: 26px 22px;
+  border-radius: 8px;
+}
+
+.ledger-pricing-heading,
+.ledger-plan-card-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.ledger-pricing-heading {
+  max-width: 1180px;
+  margin: 0 auto 26px;
+}
+
+.ledger-pricing-eyebrow,
+.ledger-plan-kicker {
+  margin: 0 0 8px;
+  color: var(--ledger-price-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ledger-pricing-heading h2,
+.ledger-checkout-dialog h2 {
+  margin: 0;
+  color: var(--ledger-price-ink);
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.ledger-pricing-heading p:not(.ledger-pricing-eyebrow) {
+  margin: 9px 0 0;
+  color: var(--ledger-price-muted);
+  line-height: 1.55;
+}
+
+.ledger-billing-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 4px;
+  border: 1px solid var(--ledger-price-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ledger-billing-switch button {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #53635e;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ledger-billing-switch button[aria-pressed="true"] {
+  background: var(--ledger-price-ink);
+  color: #fff;
+}
+
+.ledger-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 14px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.ledger-plan-card {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid var(--ledger-price-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ledger-plan-card.featured {
+  border-color: var(--ledger-price-accent);
+  box-shadow: 0 8px 28px rgb(23 107 85 / 9%);
+}
+
+.ledger-plan-card-top {
+  align-items: flex-start;
+}
+
+.ledger-plan-card h3 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.ledger-current-plan {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: #e7f4ee;
+  color: #176b55;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.ledger-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 19px 0;
+}
+
+.ledger-plan-price strong {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.ledger-plan-price span,
+.ledger-checkout-amount span {
+  color: var(--ledger-price-muted);
+  font-size: 13px;
+}
+
+.ledger-plan-limits {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+  padding: 13px 0;
+  border-top: 1px solid #edf1ef;
+  border-bottom: 1px solid #edf1ef;
+}
+
+.ledger-plan-limits div {
+  min-width: 0;
+}
+
+.ledger-plan-limits dt {
+  color: var(--ledger-price-muted);
+  font-size: 11px;
+}
+
+.ledger-plan-limits dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.ledger-plan-feature-list {
+  margin: 14px 0 18px;
+}
+
+.ledger-plan-feature-list summary {
+  color: var(--ledger-price-accent);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.ledger-plan-feature-list ul {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ledger-plan-feature-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #43534e;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ledger-plan-feature-list li svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--ledger-price-accent);
+}
+
+.ledger-plan-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--ledger-price-accent);
+  border-radius: 6px;
+  background: var(--ledger-price-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.ledger-plan-action:disabled,
+.ledger-plan-action.current {
+  border-color: #dbe5e1;
+  background: #edf2ef;
+  color: #61716b;
+  cursor: default;
+}
+
+.ledger-plan-action.secondary {
+  border-color: var(--ledger-price-line);
+  background: #fff;
+  color: var(--ledger-price-ink);
+}
+
+.ledger-pricing-footnote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  max-width: 1180px;
+  margin: 19px auto 0;
+  color: var(--ledger-price-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.ledger-pricing-footnote svg {
+  flex: 0 0 auto;
+  color: var(--ledger-price-accent);
+}
+
+.ledger-pricing-status,
+.ledger-pricing-alert,
+.ledger-pricing-success {
+  max-width: 1180px;
+  margin: 14px auto;
+  color: var(--ledger-price-muted);
+}
+
+.ledger-pricing-alert,
+.ledger-pricing-success {
+  padding: 10px 12px;
+  border: 1px solid #ecc8c1;
+  border-radius: 6px;
+  background: #fff8f6;
+  color: #8a3326;
+}
+
+.ledger-pricing-success {
+  border-color: #c6e4d3;
+  background: #f2faf5;
+  color: #176b55;
+}
+
+.ledger-checkout-backdrop {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  overflow-y: auto;
+  padding: 20px;
+  background: rgb(13 28 25 / 58%);
+}
+
+.ledger-checkout-dialog {
+  position: relative;
+  width: min(100%, 620px);
+  max-height: min(90vh, 900px);
+  overflow-y: auto;
+  padding: 26px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 24%);
+}
+
+.ledger-checkout-close {
+  position: absolute;
+  top: 17px;
+  right: 17px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--ledger-price-line);
+  border-radius: 5px;
+  background: #fff;
+  color: #40514b;
+  cursor: pointer;
+}
+
+.ledger-checkout-amount {
+  margin: 14px 0 16px;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.ledger-checkout-dialog .ledger-plan-details {
+  margin-bottom: 18px;
+}
+
+.ledger-checkout-note {
+  margin: 10px 0 0;
+  color: var(--ledger-price-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .ledger-plan-grid {
+    grid-template-columns: 1fr;
+    max-width: 560px;
+  }
+
+  .ledger-pricing-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 540px) {
+  .ledger-pricing-section {
+    padding: 50px 16px;
+  }
+
+  .ledger-pricing-section.compact {
+    padding: 20px 14px;
+  }
+
+  .ledger-pricing-heading h2,
+  .ledger-checkout-dialog h2 {
+    font-size: 24px;
+  }
+
+  .ledger-plan-card {
+    padding: 18px;
+  }
+
+  .ledger-checkout-dialog {
+    padding: 22px 17px;
+  }
+}

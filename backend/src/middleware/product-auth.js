@@ -7,7 +7,7 @@ import { canonicalizeProduct, hasProductAccess } from '../services/product-membe
  * If user lacks DB membership for the product, returns 403 PRODUCT_ACCESS_DENIED.
  *
  * Example:
- * router.get('/ledger/dashboard', requireProductAccess('ledger'), handler);
+ * router.get('/quant/dashboard', requireProductAccess('quant'), handler);
  */
 export function requireProductAccess(requiredProduct) {
   const canonical = canonicalizeProduct(requiredProduct);

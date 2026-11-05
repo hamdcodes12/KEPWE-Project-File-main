@@ -3,22 +3,18 @@ import { pool } from '../config/db.js';
 export const VALID_PRODUCTS = [
   'customer-portal',
   'crm',
-  'ledger',
-  'credit',
   'quant',
 ];
 
 // These workspaces share the website's single customer identity and session.
 // Membership remains an authorization record, not a second login system.
-export const GLOBAL_DASHBOARD_PRODUCTS = ['ledger', 'crm', 'quant', 'credit'];
+export const GLOBAL_DASHBOARD_PRODUCTS = ['crm', 'quant'];
 
 export function canonicalizeProduct(product) {
   if (!product) return null;
   const p = String(product).toLowerCase().trim();
   if (['customer-portal', 'customer', 'portal', 'client-portal'].includes(p)) return 'customer-portal';
   if (['crm', 'sales-crm'].includes(p)) return 'crm';
-  if (['ledger', 'kepwe-ledger', 'accounting'].includes(p)) return 'ledger';
-  if (['credit', 'loans', 'capital'].includes(p)) return 'credit';
   if (['quant', 'kepwe-quant'].includes(p)) return 'quant';
   return null;
 }

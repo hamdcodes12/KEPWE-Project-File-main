@@ -210,8 +210,8 @@ const PRICING_PLANS = [
     price: '₹1,999',
     frequency: '/month (or ₹4,999/quarter)',
     badge: 'MOST POPULAR',
-    cta: 'Start Pro Free Trial',
-    ctaRoute: '/quant/dashboard',
+    cta: 'Start 24-Hour Free Demo',
+    ctaRoute: '/signup?product=quant&demo=24h',
     highlighted: true,
     features: [
       'Unlimited Historical Backtesting (5 Yrs)',
@@ -273,6 +273,47 @@ const QUANT_FAQS = [
   },
 ];
 
+// Values in the marketing workspace preview are illustrative only. They are
+// deliberately isolated from authenticated dashboard and broker data.
+const WORKSPACE_PREVIEW_WATCHLIST = [
+  { symbol: 'NIFTY 50', exchange: 'NSE · INDEX', price: '24,312.40', change: '+0.42%', tone: 'up' },
+  { symbol: 'BANK NIFTY', exchange: 'NSE · INDEX', price: '52,174.85', change: '+0.18%', tone: 'up' },
+  { symbol: 'FINNIFTY', exchange: 'NSE · INDEX', price: '23,811.30', change: '−0.11%', tone: 'down' },
+  { symbol: 'SENSEX', exchange: 'BSE · INDEX', price: '80,123.25', change: '+0.31%', tone: 'up' },
+];
+
+const WORKSPACE_PREVIEW_CANDLES = [
+  { x: 28, high: 128, low: 171, open: 159, close: 143 },
+  { x: 54, high: 118, low: 157, open: 145, close: 131 },
+  { x: 80, high: 121, low: 164, open: 132, close: 150 },
+  { x: 106, high: 111, low: 151, open: 146, close: 124 },
+  { x: 132, high: 101, low: 138, open: 127, close: 113 },
+  { x: 158, high: 105, low: 148, open: 116, close: 132 },
+  { x: 184, high: 91, low: 136, open: 130, close: 105 },
+  { x: 210, high: 84, low: 121, open: 108, close: 96 },
+  { x: 236, high: 92, low: 136, open: 98, close: 119 },
+  { x: 262, high: 76, low: 123, open: 117, close: 91 },
+  { x: 288, high: 81, low: 116, open: 94, close: 103 },
+  { x: 314, high: 67, low: 111, open: 104, close: 80 },
+  { x: 340, high: 72, low: 119, open: 84, close: 108 },
+  { x: 366, high: 59, low: 101, open: 104, close: 73 },
+  { x: 392, high: 63, low: 96, open: 76, close: 87 },
+  { x: 418, high: 46, low: 91, open: 88, close: 60 },
+  { x: 444, high: 53, low: 103, open: 63, close: 88 },
+  { x: 470, high: 39, low: 81, open: 86, close: 51 },
+];
+
+const WORKSPACE_PREVIEW_POSITIONS = [
+  { symbol: 'NIFTY 50', side: 'LONG', quantity: '50', entry: '24,268.10', pnl: '+₹5,220', tone: 'up' },
+  { symbol: 'BANK NIFTY', side: 'SHORT', quantity: '15', entry: '52,245.00', pnl: '−₹1,850', tone: 'down' },
+];
+
+const WORKSPACE_PREVIEW_ACTIVITY = [
+  { time: '10:42:08', title: 'Risk check passed', detail: 'NIFTY 50 · Preview order', icon: ShieldCheck },
+  { time: '10:41:52', title: 'Signal evaluated', detail: 'Momentum Trend · Simulated', icon: Activity },
+  { time: '10:39:17', title: 'Order route preview', detail: 'BANK NIFTY · Simulated', icon: ArrowUpRight },
+];
+
 export default function QuantMarketingPage() {
   const navigate = useNavigate();
 
@@ -319,8 +360,8 @@ export default function QuantMarketingPage() {
               </p>
 
               <div className="quant-hero-actions">
-                <Link to="/quant/dashboard" className="quant-btn-primary">
-                  <span>Start Trading Free</span>
+                <Link to="/signup?product=quant&demo=24h" className="quant-btn-primary">
+                  <span>Start 24-Hour Free Demo</span>
                   <ArrowRight size={17} />
                 </Link>
                 <a href="#marketplace" className="quant-btn-secondary">
@@ -549,11 +590,15 @@ export default function QuantMarketingPage() {
 
           {/* Step Selector Buttons */}
           <div className="quant-step-selector-row">
+            <span className="quant-step-connector" aria-hidden="true"><span style={{ width: `${((Number(activeTab) - 1) / 4) * 100}%` }} /></span>
             {HOW_IT_WORKS_STEPS.map((st) => (
               <button
                 key={st.step}
-                className={`quant-step-pill ${activeTab === st.step ? 'active' : ''}`}
+                type="button"
+                className={`quant-step-pill ${activeTab === st.step ? 'active' : ''} ${Number(st.step) < Number(activeTab) ? 'complete' : ''}`}
                 onClick={() => setActiveTab(st.step)}
+                aria-pressed={activeTab === st.step}
+                aria-controls="quant-step-content"
               >
                 <span className="step-num">{st.step}</span>
                 <span className="step-label">{st.title}</span>
@@ -565,7 +610,7 @@ export default function QuantMarketingPage() {
           {HOW_IT_WORKS_STEPS.filter((s) => s.step === activeTab).map((st) => {
             const IconComponent = st.icon;
             return (
-              <div key={st.step} className="quant-step-display-card">
+              <div key={st.step} id="quant-step-content" className="quant-step-display-card" aria-live="polite">
                 <div className="step-card-grid">
                   
                   <div className="step-card-left">
@@ -885,30 +930,47 @@ export default function QuantMarketingPage() {
             </p>
           </div>
 
+          <div className="pipeline-flow-caption" aria-label="Illustrative execution flow">
+            <span className="pipeline-flow-caption-dot" aria-hidden="true" />
+            <span>ILLUSTRATIVE EXECUTION FLOW</span>
+          </div>
+
           <div className="pipeline-grid">
             <div className="pipeline-step-card">
-              <div className="p-num">01</div>
+              <div className="pipeline-card-top">
+                <span className="pipeline-icon" aria-hidden="true"><Activity size={20} /></span>
+                <span className="p-num">01</span>
+              </div>
               <h3 className="p-title">Signal Ingestion</h3>
               <p className="p-desc">
                 Engine evaluates technical indicators, multi-timeframe candle close, or external Webhooks in sub-20ms.
               </p>
             </div>
             <div className="pipeline-step-card">
-              <div className="p-num">02</div>
+              <div className="pipeline-card-top">
+                <span className="pipeline-icon" aria-hidden="true"><ShieldCheck size={20} /></span>
+                <span className="p-num">02</span>
+              </div>
               <h3 className="p-title">Pre-Trade Safety Gate</h3>
               <p className="p-desc">
                 Checks max loss limits, daily trade count, consecutive losses, and current margin before placing order.
               </p>
             </div>
             <div className="pipeline-step-card">
-              <div className="p-num">03</div>
+              <div className="pipeline-card-top">
+                <span className="pipeline-icon" aria-hidden="true"><ArrowUpRight size={20} /></span>
+                <span className="p-num">03</span>
+              </div>
               <h3 className="p-title">Smart Order Routing</h3>
               <p className="p-desc">
                 Dispatches limit / market order with automated bracket SL & target triggers to connected broker API.
               </p>
             </div>
             <div className="pipeline-step-card">
-              <div className="p-num">04</div>
+              <div className="pipeline-card-top">
+                <span className="pipeline-icon" aria-hidden="true"><Gauge size={20} /></span>
+                <span className="p-num">04</span>
+              </div>
               <h3 className="p-title">Real-Time Telemetry</h3>
               <p className="p-desc">
                 Fills are instantly confirmed, trailing stop loss is managed, and trade journal is updated in real time.
@@ -922,43 +984,45 @@ export default function QuantMarketingPage() {
       {/* ─── 07. RISK MANAGEMENT ────────────────────────────────────────────── */}
       <section className="quant-risk-section" id="risk-management">
         <div className="quant-container">
-          
-          <div className="quant-risk-grid">
-            
-            <div className="risk-text-col">
-              <div className="quant-eyebrow">
-                <span className="eyebrow-dot" />
-                <span>INSTITUTIONAL RISK PROTOCOLS</span>
-              </div>
+          <div className="risk-intro">
+            <div className="quant-eyebrow">
+              <span className="eyebrow-dot" />
+              <span>INSTITUTIONAL RISK PROTOCOLS</span>
+            </div>
+            <div className="risk-intro-content">
               <h2 className="risk-heading">Discipline is hardcoded. Not optional.</h2>
               <p className="risk-desc">
                 The best algorithmic strategy fails without ironclad risk management. KEPWE QUANT puts protective guardrails between your capital and market volatility.
               </p>
+            </div>
+          </div>
 
+          <div className="quant-risk-grid">
+            <div className="risk-text-col">
               <div className="risk-features-list">
                 <div className="risk-feature-card">
-                  <ShieldCheck size={20} className="risk-icon" />
+                  <span className="risk-feature-icon" aria-hidden="true"><CircleDollarSign size={20} /></span>
                   <div>
                     <h4>Maximum Loss Per Trade</h4>
                     <p>Hard stop-loss automatically sent with every order. Never hold a losing position hoping it recovers.</p>
                   </div>
                 </div>
                 <div className="risk-feature-card">
-                  <ShieldCheck size={20} className="risk-icon" />
+                  <span className="risk-feature-icon" aria-hidden="true"><Gauge size={20} /></span>
                   <div>
                     <h4>Daily Max Loss Threshold</h4>
                     <p>Automated circuit breaker halts all new order generation when daily loss limit is touched.</p>
                   </div>
                 </div>
                 <div className="risk-feature-card">
-                  <ShieldCheck size={20} className="risk-icon" />
+                  <span className="risk-feature-icon" aria-hidden="true"><RefreshCw size={20} /></span>
                   <div>
                     <h4>Consecutive-Loss Auto-Pause</h4>
                     <p>Protects capital against non-trending market chop by pausing strategy after 3 consecutive stop-outs.</p>
                   </div>
                 </div>
                 <div className="risk-feature-card">
-                  <ShieldCheck size={20} className="risk-icon" />
+                  <span className="risk-feature-icon" aria-hidden="true"><ShieldAlert size={20} /></span>
                   <div>
                     <h4>1-Click Emergency Kill Switch</h4>
                     <p>Instantly cancel all pending orders and square off all open positions with a single click.</p>
@@ -970,46 +1034,51 @@ export default function QuantMarketingPage() {
             <div className="risk-visual-col">
               <div className="risk-control-box">
                 <div className="risk-box-header">
-                  <Shield size={18} className="text-blue" />
-                  <span>RISK PARAMETER CONFIGURATION</span>
+                  <div className="risk-box-title">
+                    <span className="risk-box-icon"><Shield size={18} /></span>
+                    <span>RISK PARAMETER CONFIGURATION</span>
+                  </div>
+                  <span className="risk-demo-badge">ILLUSTRATIVE CONFIGURATION</span>
                 </div>
 
-                <div className="risk-control-item">
-                  <div className="item-meta">
-                    <span className="name">Max Loss Per Trade</span>
-                    <span className="badge">Configured</span>
+                <div className="risk-control-grid">
+                  <div className="risk-control-item">
+                    <div className="item-meta">
+                      <span className="name">Max Loss Per Trade</span>
+                      <span className="badge">Configured</span>
+                    </div>
+                    <div className="item-val font-mono">₹1,500 / Trade (1.5%)</div>
                   </div>
-                  <div className="item-val font-mono">₹1,500 / Trade (1.5%)</div>
-                </div>
 
-                <div className="risk-control-item">
-                  <div className="item-meta">
-                    <span className="name">Daily Loss Limit</span>
-                    <span className="badge">Hard Cap</span>
+                  <div className="risk-control-item">
+                    <div className="item-meta">
+                      <span className="name">Daily Loss Limit</span>
+                      <span className="badge">Hard Cap</span>
+                    </div>
+                    <div className="item-val font-mono">₹5,000 / Day</div>
                   </div>
-                  <div className="item-val font-mono">₹5,000 / Day</div>
-                </div>
 
-                <div className="risk-control-item">
-                  <div className="item-meta">
-                    <span className="name">Max Trades Per Session</span>
-                    <span className="badge">Intraday</span>
+                  <div className="risk-control-item">
+                    <div className="item-meta">
+                      <span className="name">Max Trades Per Session</span>
+                      <span className="badge">Intraday</span>
+                    </div>
+                    <div className="item-val font-mono">4 Trades Maximum</div>
                   </div>
-                  <div className="item-val font-mono">4 Trades Maximum</div>
-                </div>
 
-                <div className="risk-control-item">
-                  <div className="item-meta">
-                    <span className="name">Consecutive Loss Lockout</span>
-                    <span className="badge">Safety Shield</span>
+                  <div className="risk-control-item">
+                    <div className="item-meta">
+                      <span className="name">Consecutive Loss Lockout</span>
+                      <span className="badge">Safety Shield</span>
+                    </div>
+                    <div className="item-val font-mono">Pause after 3 Stop-Outs</div>
                   </div>
-                  <div className="item-val font-mono">Pause after 3 Stop-Outs</div>
                 </div>
 
                 {/* Emergency Kill Switch */}
                 <div className="kill-switch-box">
                   <div className="ks-info">
-                    <strong>EMERGENCY KILL SWITCH</strong>
+                    <strong><ShieldAlert size={15} aria-hidden="true" />EMERGENCY KILL SWITCH</strong>
                     <span>Cancels pending orders & squares off all live positions immediately</span>
                   </div>
                   <button className="kill-switch-btn" onClick={() => alert('Kill switch is ready in authenticated workspace.')}>
@@ -1120,43 +1189,205 @@ export default function QuantMarketingPage() {
       {/* ─── 10. PERFORMANCE DASHBOARD SHOWCASE ─────────────────────────────── */}
       <section className="quant-showcase-section">
         <div className="quant-container">
-          
-          <div className="quant-showcase-box">
-            <div className="showcase-content">
-              <div className="quant-eyebrow">
-                <span className="eyebrow-dot" />
-                <span>UNIFIED WORKSPACE</span>
-              </div>
+
+          <div className="showcase-content">
+            <div className="quant-eyebrow">
+              <span className="eyebrow-dot" />
+              <span>UNIFIED WORKSPACE</span>
+            </div>
+            <div className="showcase-heading-row">
               <h2 className="showcase-title">Your Quantitative Command Center</h2>
               <p className="showcase-desc">
                 Everything you need to monitor execution, manage open positions, review P&L analytics, and build strategies in one focused desktop workspace.
               </p>
+            </div>
+          </div>
 
-              <div className="showcase-features-grid">
-                <div className="s-feat">
-                  <Activity size={18} className="text-blue" />
-                  <span>Real-Time Watchlist & Market Pulse</span>
-                </div>
-                <div className="s-feat">
-                  <Bot size={18} className="text-blue" />
-                  <span>Visual 4-Step Strategy Canvas</span>
-                </div>
-                <div className="s-feat">
-                  <ShieldCheck size={18} className="text-blue" />
-                  <span>Live Risk Status & Loss Limit Guards</span>
-                </div>
-                <div className="s-feat">
-                  <BarChart3 size={18} className="text-blue" />
-                  <span>P&L Attribution & Trade Journal</span>
-                </div>
+          <div className="workspace-preview-frame" aria-label="Simulated KEPWE QUANT workspace preview">
+            <div className="workspace-window-bar">
+              <div className="workspace-window-controls" aria-hidden="true"><span /><span /><span /></div>
+              <div className="workspace-brand-lockup">
+                <span className="workspace-brand-mark">K</span>
+                <span className="workspace-brand-name">KEPWE QUANT <small>WORKSPACE</small></span>
               </div>
+              <div className="workspace-simulation-label">
+                <span className="workspace-simulation-dot" />
+                SIMULATED PREVIEW · NO LIVE ACCOUNT DATA
+              </div>
+            </div>
 
-              <div className="showcase-actions">
-                <Link to="/quant/dashboard" className="quant-btn-primary">
-                  <span>Enter Quant Workspace</span>
-                  <ArrowRight size={16} />
-                </Link>
+            <div className="workspace-toolbar">
+              <div className="workspace-page-context">
+                <span>Workspace overview</span>
+                <small>Illustrative account view</small>
               </div>
+              <div className="workspace-toolbar-meta">
+                <span className="workspace-session-chip">Preview session</span>
+                <span className="workspace-user-mark">Q</span>
+              </div>
+            </div>
+
+            <div className="workspace-summary-grid">
+              <div className="workspace-summary-card">
+                <span>SESSION P&amp;L <small>SIMULATED</small></span>
+                <strong className="positive">+₹3,370</strong>
+                <em>Illustrative session</em>
+              </div>
+              <div className="workspace-summary-card">
+                <span>OPEN POSITIONS <small>PREVIEW</small></span>
+                <strong>02</strong>
+                <em>Sample positions</em>
+              </div>
+              <div className="workspace-summary-card">
+                <span>STRATEGY STATE <small>SIMULATED</small></span>
+                <strong className="summary-state">Preview mode</strong>
+                <em>NIFTY Momentum Trend 5M</em>
+              </div>
+              <div className="workspace-summary-card">
+                <span>RISK USAGE <small>SIMULATED</small></span>
+                <strong>24%</strong>
+                <div className="workspace-risk-meter"><span /></div>
+              </div>
+            </div>
+
+            <div className="workspace-main-grid">
+              <section className="workspace-panel workspace-watchlist-panel">
+                <div className="workspace-panel-heading">
+                  <div><span>MARKET WATCH</span><small>SIMULATED QUOTES</small></div>
+                  <Search size={15} aria-hidden="true" />
+                </div>
+                <div className="workspace-watchlist-head"><span>INSTRUMENT</span><span>PRICE</span></div>
+                <div className="workspace-watchlist-rows">
+                  {WORKSPACE_PREVIEW_WATCHLIST.map((item) => (
+                    <div className="workspace-watchlist-row" key={item.symbol}>
+                      <div className="workspace-instrument-name"><strong>{item.symbol}</strong><small>{item.exchange}</small></div>
+                      <div className="workspace-instrument-price"><strong>{item.price}</strong><small className={item.tone}>{item.change}</small></div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="workspace-panel workspace-chart-panel">
+                <div className="workspace-chart-heading">
+                  <div>
+                    <div className="workspace-chart-symbol"><strong>NIFTY 50</strong><span>5 MIN · SIMULATED</span></div>
+                    <div className="workspace-chart-price">24,312.40 <small>+102.11 (+0.42%)</small></div>
+                  </div>
+                  <span className="workspace-chart-tag"><Activity size={12} /> PREVIEW SERIES</span>
+                </div>
+                <div className="workspace-chart-wrap">
+                  <div className="workspace-chart-ylabels" aria-hidden="true"><span>24,380</span><span>24,320</span><span>24,260</span><span>24,200</span></div>
+                  <svg className="workspace-candlestick-chart" viewBox="0 0 500 195" role="img" aria-label="Simulated NIFTY 50 candlestick chart">
+                    <defs>
+                      <linearGradient id="workspaceChartFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#214ECF" stopOpacity="0.22" />
+                        <stop offset="100%" stopColor="#214ECF" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    {[30, 75, 120, 165].map((y) => <line key={`h-${y}`} x1="0" x2="500" y1={y} y2={y} className="workspace-chart-gridline" />)}
+                    {[50, 150, 250, 350, 450].map((x) => <line key={`v-${x}`} x1={x} x2={x} y1="18" y2="176" className="workspace-chart-gridline vertical" />)}
+                    <path d="M 8 154 C 58 144, 72 151, 105 130 S 158 135, 183 117 S 228 126, 252 94 S 290 111, 320 82 S 368 96, 392 61 S 435 75, 492 36 L 492 176 L 8 176 Z" fill="url(#workspaceChartFill)" />
+                    <path d="M 8 154 C 58 144, 72 151, 105 130 S 158 135, 183 117 S 228 126, 252 94 S 290 111, 320 82 S 368 96, 392 61 S 435 75, 492 36" fill="none" stroke="#60A5FA" strokeWidth="1.5" strokeDasharray="4 5" opacity="0.65" />
+                    {WORKSPACE_PREVIEW_CANDLES.map((candle) => {
+                      const rising = candle.close < candle.open;
+                      const top = Math.min(candle.open, candle.close);
+                      const bodyHeight = Math.max(4, Math.abs(candle.close - candle.open));
+                      return (
+                        <g key={candle.x} className={rising ? 'workspace-candle rising' : 'workspace-candle falling'}>
+                          <line x1={candle.x} x2={candle.x} y1={candle.high} y2={candle.low} />
+                          <rect x={candle.x - 5} y={top} width="10" height={bodyHeight} rx="1.5" />
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+                <div className="workspace-chart-xlabels" aria-hidden="true"><span>09:30</span><span>11:00</span><span>12:30</span><span>14:00</span><span>15:15</span></div>
+              </section>
+
+              <aside className="workspace-panel workspace-strategy-panel">
+                <div className="workspace-panel-heading">
+                  <div><span>STRATEGY MONITOR</span><small>SIMULATED STATE</small></div>
+                  <Bot size={16} aria-hidden="true" />
+                </div>
+                <div className="workspace-strategy-name">NIFTY Momentum Trend 5M</div>
+                <div className="workspace-strategy-status"><span /> PREVIEW MODE</div>
+                <div className="workspace-strategy-flow">
+                  <div><span className="workspace-step-index">01</span><span>Signal evaluation</span><small>SIM</small></div>
+                  <div><span className="workspace-step-index">02</span><span>Risk validation</span><small>SIM</small></div>
+                  <div><span className="workspace-step-index">03</span><span>Order routing</span><small>SIM</small></div>
+                  <div><span className="workspace-step-index">04</span><span>Trade telemetry</span><small>SIM</small></div>
+                </div>
+                <div className="workspace-risk-summary">
+                  <div><span>Daily loss limit</span><strong>₹5,000</strong></div>
+                  <div className="workspace-risk-track"><span /></div>
+                  <small>Risk usage shown for illustration</small>
+                </div>
+              </aside>
+            </div>
+
+            <div className="workspace-lower-grid">
+              <section className="workspace-panel workspace-positions-panel">
+                <div className="workspace-panel-heading">
+                  <div><span>OPEN POSITIONS</span><small>SIMULATED OVERVIEW</small></div>
+                  <Wallet size={15} aria-hidden="true" />
+                </div>
+                <div className="workspace-position-table">
+                  <div className="workspace-position-head"><span>INSTRUMENT</span><span>SIDE</span><span>QTY</span><span>ENTRY</span><span>UNREALIZED P&amp;L</span></div>
+                  {WORKSPACE_PREVIEW_POSITIONS.map((position) => (
+                    <div className="workspace-position-row" key={position.symbol}>
+                      <strong>{position.symbol}</strong>
+                      <span className={`workspace-position-side ${position.side.toLowerCase()}`}>{position.side}</span>
+                      <span>{position.quantity}</span><span>{position.entry}</span><strong className={position.tone}>{position.pnl}</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="workspace-panel workspace-pnl-panel">
+                <div className="workspace-panel-heading">
+                  <div><span>P&amp;L ATTRIBUTION</span><small>SIMULATED SESSION</small></div>
+                  <BarChart3 size={15} aria-hidden="true" />
+                </div>
+                <div className="workspace-pnl-total"><span>Net session P&amp;L</span><strong>+₹3,370</strong></div>
+                <div className="workspace-pnl-row"><span><i className="gain-dot" /> NIFTY 50</span><strong className="positive">+₹5,220</strong></div>
+                <div className="workspace-pnl-bar"><span className="gain-bar" /></div>
+                <div className="workspace-pnl-row"><span><i className="loss-dot" /> BANK NIFTY</span><strong className="negative">−₹1,850</strong></div>
+                <div className="workspace-pnl-bar"><span className="loss-bar" /></div>
+              </section>
+
+              <section className="workspace-panel workspace-activity-panel">
+                <div className="workspace-panel-heading">
+                  <div><span>EXECUTION ACTIVITY</span><small>SIMULATED FEED</small></div>
+                  <Activity size={15} aria-hidden="true" />
+                </div>
+                <div className="workspace-activity-list">
+                  {WORKSPACE_PREVIEW_ACTIVITY.map((activity) => {
+                    const ActivityIcon = activity.icon;
+                    return (
+                      <div className="workspace-activity-row" key={activity.time}>
+                        <span className="workspace-activity-icon"><ActivityIcon size={13} /></span>
+                        <div><strong>{activity.title}</strong><small>{activity.detail}</small></div>
+                        <time>{activity.time}</time>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div className="showcase-bottom-row">
+            <div className="showcase-features-grid">
+              <div className="s-feat"><Activity size={18} className="text-blue" /><span>Real-Time Watchlist &amp; Market Pulse</span></div>
+              <div className="s-feat"><Bot size={18} className="text-blue" /><span>Visual 4-Step Strategy Canvas</span></div>
+              <div className="s-feat"><ShieldCheck size={18} className="text-blue" /><span>Live Risk Status &amp; Loss Limit Guards</span></div>
+              <div className="s-feat"><BarChart3 size={18} className="text-blue" /><span>P&amp;L Attribution &amp; Trade Journal</span></div>
+            </div>
+            <div className="showcase-actions">
+              <Link to="/quant/dashboard" className="quant-btn-primary showcase-cta">
+                <span>Enter Quant Workspace</span>
+                <ArrowRight size={16} />
+              </Link>
             </div>
           </div>
 
@@ -1174,7 +1405,7 @@ export default function QuantMarketingPage() {
             </div>
             <h2 className="quant-section-title">Plans Designed For Every Quantitative Stage</h2>
             <p className="quant-section-sub">
-              Start with a free trial for research and backtesting, then upgrade when you’re ready to deploy live algorithms to your own broker account.
+              Explore Kepwe Quant with a 24-hour free demo, then choose a plan when you’re ready to deploy live algorithms to your own broker account.
             </p>
           </div>
 
@@ -1254,33 +1485,48 @@ export default function QuantMarketingPage() {
       <section className="quant-final-cta-section">
         <div className="quant-container">
           <div className="quant-final-cta-card">
-            <div className="cta-content text-center">
-              <div className="quant-eyebrow">
-                <span className="eyebrow-dot" />
-                <span>START YOUR QUANTITATIVE JOURNEY</span>
-              </div>
-              <h2 className="cta-headline">Ready to turn your trading strategy into an automated system?</h2>
-              <p className="cta-sub">
-                Join thousands of disciplined traders building, backtesting, and automating algorithmic models on KEPWE QUANT.
-              </p>
-              
-              <div className="cta-btn-group">
-                <Link to="/quant/dashboard" className="quant-btn-primary">
-                  <span>Start Trading Free</span>
-                  <ArrowRight size={16} />
-                </Link>
-                <Link to="/contact" className="quant-btn-secondary">
-                  <span>Talk to a Quant Specialist</span>
-                  <ExternalLink size={15} />
-                </Link>
+            <div className="final-cta-layout">
+              <div className="cta-content">
+                <div className="quant-eyebrow">
+                  <span className="eyebrow-dot" />
+                  <span>START YOUR QUANTITATIVE JOURNEY</span>
+                </div>
+                <h2 className="cta-headline">Ready to turn your trading strategy into an automated system?</h2>
+                <p className="cta-sub">
+                  Join thousands of disciplined traders building, backtesting, and automating algorithmic models on KEPWE QUANT.
+                </p>
+
+                <div className="cta-btn-group">
+                  <Link to="/signup?product=quant&demo=24h" className="quant-btn-primary">
+                    <span>Start 24-Hour Free Demo</span>
+                    <ArrowRight size={16} />
+                  </Link>
+                  <Link to="/contact" className="quant-btn-secondary">
+                    <span>Talk to a Quant Specialist</span>
+                    <ExternalLink size={15} />
+                  </Link>
+                </div>
+
+                <div className="cta-points">
+                  <span>Unlimited Backtesting</span>
+                  <span className="dot">•</span>
+                  <span>No Payment Card Required</span>
+                  <span className="dot">•</span>
+                  <span>Direct Broker OAuth</span>
+                </div>
               </div>
 
-              <div className="cta-points">
-                <span>Unlimited Backtesting</span>
-                <span className="dot">•</span>
-                <span>No Credit Card Required</span>
-                <span className="dot">•</span>
-                <span>Direct Broker OAuth</span>
+              <div className="cta-visual" aria-hidden="true">
+                <div className="cta-visual-grid" />
+                <div className="cta-orbit cta-orbit-outer" />
+                <div className="cta-orbit cta-orbit-inner" />
+                <div className="cta-orbit-center"><span>K</span></div>
+                <div className="cta-icon-orbit">
+                  <div className="cta-orbit-item cta-visual-node-one"><div className="cta-visual-node"><Activity size={20} /></div></div>
+                  <div className="cta-orbit-item cta-visual-node-two"><div className="cta-visual-node"><Bot size={20} /></div></div>
+                  <div className="cta-orbit-item cta-visual-node-three"><div className="cta-visual-node"><ShieldCheck size={20} /></div></div>
+                  <div className="cta-orbit-item cta-visual-node-four"><div className="cta-visual-node"><BarChart3 size={20} /></div></div>
+                </div>
               </div>
             </div>
           </div>

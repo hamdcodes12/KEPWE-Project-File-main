@@ -37,26 +37,19 @@ function formatEndTime(dateStr) {
 
 // ── Countdown hook ────────────────────────────────────────────────────────────
 
-function useCountdown(endDateStr) {
+function useCountdown(getServerCountdown, active) {
   const calc = useCallback(() => {
-    if (!endDateStr) return null;
-    const ms = Math.max(0, new Date(endDateStr).getTime() - Date.now());
-    return {
-      days:    Math.floor(ms / (1000 * 60 * 60 * 24)),
-      hours:   Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-      minutes: Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60)),
-      seconds: Math.floor((ms % (1000 * 60)) / 1000),
-      expired: ms === 0,
-    };
-  }, [endDateStr]);
+    const countdown = getServerCountdown();
+    return countdown ? { ...countdown, expired: countdown.totalMs === 0 } : null;
+  }, [getServerCountdown]);
 
   const [countdown, setCountdown] = useState(calc);
 
   useEffect(() => {
-    if (!endDateStr) return;
+    if (!active) return;
     const timer = setInterval(() => setCountdown(calc()), 1000);
     return () => clearInterval(timer);
-  }, [endDateStr, calc]);
+  }, [active, calc]);
 
   return countdown;
 }
@@ -98,14 +91,12 @@ function CountdownSeparator() {
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function TrialStatusCard({ onViewPlans, compact = false }) {
-  const { subscription, isTrial, isPaid, isExpired, isActive, planCode, loading } = useSubscription();
+  const { subscription, isTrial, isPaid, isExpired, isActive, planCode, loading, getCountdown } = useSubscription();
 
   const trialEnd   = subscription?.trialEndAt   || subscription?.trial_end_at;
   const subEnd     = subscription?.subscriptionEndAt || subscription?.subscription_end_at;
   const trialStart = subscription?.trialStartAt || subscription?.trial_start_at;
-  const activeEnd  = isTrial ? trialEnd : subEnd;
-
-  const countdown = useCountdown(isActive ? activeEnd : null);
+  const countdown = useCountdown(getCountdown, isActive && (isTrial || isPaid));
 
   if (loading) {
     return (
@@ -159,7 +150,7 @@ export default function TrialStatusCard({ onViewPlans, compact = false }) {
             </div>
 
             <div style={{ fontSize: compact ? '0.9rem' : '1.05rem', fontWeight: 700, color: '#1e3a8a', marginBottom: '4px' }}>
-              Your free trial is active
+              Your Free Trial Is Active
             </div>
             <div style={{ fontSize: '0.78rem', color: '#3b82f6', fontWeight: 600 }}>
               <span style={{ display: 'block' }}>Trial ends: {formatEndDate(trialEnd)}</span>
@@ -170,9 +161,7 @@ export default function TrialStatusCard({ onViewPlans, compact = false }) {
           {/* Countdown */}
           {!compact && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <CountdownBlock value={countdown.days} label="days" />
-              <CountdownSeparator />
-              <CountdownBlock value={countdown.hours} label="hrs" />
+              <CountdownBlock value={Math.floor(countdown.totalMs / (1000 * 60 * 60))} label="hrs" />
               <CountdownSeparator />
               <CountdownBlock value={countdown.minutes} label="min" />
               <CountdownSeparator />
@@ -183,7 +172,7 @@ export default function TrialStatusCard({ onViewPlans, compact = false }) {
           {compact && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#2456d7', fontWeight: 700, fontSize: '0.9rem' }}>
               <Clock size={14} />
-              {countdown.days}d {pad(countdown.hours)}h remaining
+              {Math.floor(countdown.totalMs / (1000 * 60 * 60))}h {pad(countdown.minutes)}m {pad(countdown.seconds)}s remaining
             </div>
           )}
         </div>
@@ -242,7 +231,7 @@ export default function TrialStatusCard({ onViewPlans, compact = false }) {
               FREE TRIAL EXPIRED
             </div>
             <div style={{ fontSize: '0.78rem', color: '#c2410c', marginBottom: '14px', lineHeight: 1.5 }}>
-              Your 7-day free trial has ended. Choose a plan to continue using KEPWE Quant.
+              Your 24-hour free trial has ended. Choose a plan to continue using KEPWE Quant.
               Your strategies, backtests, and account data are safely stored.
             </div>
             <button

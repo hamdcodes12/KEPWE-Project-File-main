@@ -7,16 +7,6 @@ import kepweLogo from '../assets/kepwe-logo.png';
 import './LoginPage.css';
 
 export const PRODUCT_CONFIG = {
-  ledger: {
-    title: 'Kepwe Ledger Login',
-    brand: 'Kepwe Ledger',
-    sub: 'LEDGER WORKSPACE',
-    tagline: 'Precision double-entry accounting, real-time GST reconciliation, and financial audit trails.',
-    defaultPath: '/ledger/app',
-    loginPath: '/ledger/login',
-    signupPath: '/ledger/signup',
-    productKey: 'ledger',
-  },
   crm: {
     title: 'Sales CRM Login',
     brand: 'Sales CRM',
@@ -47,16 +37,6 @@ export const PRODUCT_CONFIG = {
     signupPath: '/customer-portal/signup',
     productKey: 'customer-portal',
   },
-  credit: {
-    title: 'Kepwe Credit Login',
-    brand: 'Kepwe Credit',
-    sub: 'CREDIT HEALTH WORKSPACE',
-    tagline: 'Understand your credit report with a private, factor-by-factor health analysis.',
-    defaultPath: '/credit/consent',
-    loginPath: '/credit/login',
-    signupPath: '/credit/signup',
-    productKey: 'credit',
-  },
   quant: {
     title: 'Kepwe Quant Login',
     brand: 'Kepwe Quant',
@@ -78,18 +58,14 @@ const LoginPage = ({ product: propProduct }) => {
   // Detect product from props, pathname, or query param
   const pathParts = location.pathname.toLowerCase().split('/').filter(Boolean);
   let pathProduct = '';
-  if (pathParts[0] === 'ledger') pathProduct = 'ledger';
-  else if (pathParts[0] === 'crm' || pathParts[0] === 'sales-crm') pathProduct = 'crm';
+  if (pathParts[0] === 'crm' || pathParts[0] === 'sales-crm') pathProduct = 'crm';
   else if (pathParts[0] === 'customer-portal' || pathParts[0] === 'portal') pathProduct = 'customer-portal';
-  else if (pathParts[0] === 'credit') pathProduct = 'credit';
   else if (pathParts[0] === 'quant') pathProduct = 'quant';
 
   const queryProduct = (searchParams.get('product') || '').trim().toLowerCase();
   const returnToRaw = (searchParams.get('returnTo') || '').trim();
   let returnToProduct = '';
-  if (returnToRaw.startsWith('/credit')) returnToProduct = 'credit';
-  else if (returnToRaw.startsWith('/ledger')) returnToProduct = 'ledger';
-  else if (returnToRaw.startsWith('/quant')) returnToProduct = 'quant';
+  if (returnToRaw.startsWith('/quant')) returnToProduct = 'quant';
 
   const detectedProduct = (propProduct || pathProduct || queryProduct || returnToProduct || '').trim().toLowerCase();
   const canonicalProduct = detectedProduct === 'portal' ? 'customer-portal' : detectedProduct;
@@ -98,7 +74,7 @@ const LoginPage = ({ product: propProduct }) => {
 
   const selectedPlan = searchParams.get('plan')?.trim() || '';
   const preservedAuthQuery = location.search || '';
-  const defaultDest = productConfig ? productConfig.defaultPath : (returnToRaw.startsWith('/quant') ? '/quant/dashboard' : returnToRaw.startsWith('/credit') ? '/credit/workspace' : '/');
+  const defaultDest = productConfig ? productConfig.defaultPath : (returnToRaw.startsWith('/quant') ? '/quant/dashboard' : '/');
   const redirectPath = getSafeReturnPath(returnToRaw, defaultDest);
 
   const [form, setForm] = useState({ identifier: '', otp: '', otpEmail: '', rememberMe: false });
@@ -250,7 +226,7 @@ const LoginPage = ({ product: propProduct }) => {
           </div>
 
           <p className="fintech-brand-tagline">
-            {productConfig ? productConfig.tagline : 'Everything your business needs — accounting, compliance, and capital.'}
+            {productConfig ? productConfig.tagline : 'Research, backtest, and automate systematic strategies with Kepwe Quant.'}
           </p>
         </div>
 
