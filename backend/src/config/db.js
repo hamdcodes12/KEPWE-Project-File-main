@@ -234,6 +234,15 @@ export async function runAutoMigrations(client) {
       await client.query(`ALTER TABLE idempotency_records ALTER COLUMN expires_at SET DEFAULT (NOW() + INTERVAL '24 hours')`);
     } catch (_) {}
 
+    // Upgrade the subscription enum before the subscription schema uses the
+    // new value. The migration is a no-op on a fresh database where the enum
+    // has not been created yet.
+    const trialStatusPath = resolve(__dirname, '../../db/migrations/011_quant_trial_not_started_status.sql');
+    if (fs.existsSync(trialStatusPath)) {
+      const sql = fs.readFileSync(trialStatusPath, 'utf-8');
+      if (client.exec) await client.exec(sql); else await client.query(sql);
+    }
+
     // Check if user_subscriptions table exists
     const subCheck = await client.query(`
       SELECT EXISTS (
@@ -256,13 +265,8 @@ export async function runAutoMigrations(client) {
       }
     }
 
-    // Trial status/entitlement policy is intentionally applied after the
-    // subscription tables exist, including on databases migrated previously.
-    const trialStatusPath = resolve(__dirname, '../../db/migrations/011_quant_trial_not_started_status.sql');
-    if (fs.existsSync(trialStatusPath)) {
-      const sql = fs.readFileSync(trialStatusPath, 'utf-8');
-      if (client.exec) await client.exec(sql); else await client.query(sql);
-    }
+    // Trial policy is applied after the subscription tables exist, including
+    // on databases migrated previously.
     const trialPolicyPath = resolve(__dirname, '../../db/migrations/012_quant_24h_trial.sql');
     if (fs.existsSync(trialPolicyPath)) {
       const sql = fs.readFileSync(trialPolicyPath, 'utf-8');

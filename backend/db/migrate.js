@@ -129,8 +129,8 @@ async function main() {
     await applySqlFile(client, join(__dirname, 'migrations/007_live_flow_hardening.sql'), '007_live_flow_hardening.sql');
     await applySqlFile(client, join(__dirname, 'migrations/008_order_remaining_quantity.sql'), '008_order_remaining_quantity.sql');
     await applySqlFile(client, join(__dirname, 'migrations/009_angel_one_only.sql'), '009_angel_one_only.sql');
-    await applySqlFile(client, join(__dirname, 'quant_subscription_system.sql'), 'quant_subscription_system.sql');
     await applySqlFile(client, join(__dirname, 'migrations/011_quant_trial_not_started_status.sql'), '011_quant_trial_not_started_status.sql');
+    await applySqlFile(client, join(__dirname, 'quant_subscription_system.sql'), 'quant_subscription_system.sql');
     await applySqlFile(client, join(__dirname, 'migrations/012_quant_24h_trial.sql'), '012_quant_24h_trial.sql');
     await applySqlFile(client, join(__dirname, 'migrations/013_kepwe_docs_center.sql'), '013_kepwe_docs_center.sql');
     await applySqlFile(client, join(__dirname, 'fix_quant_memberships.sql'), 'fix_quant_memberships.sql');
