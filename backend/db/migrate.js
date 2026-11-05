@@ -134,13 +134,6 @@ async function main() {
     await applySqlFile(client, join(__dirname, 'migrations/012_quant_24h_trial.sql'), '012_quant_24h_trial.sql');
     await applySqlFile(client, join(__dirname, 'migrations/013_kepwe_docs_center.sql'), '013_kepwe_docs_center.sql');
     await applySqlFile(client, join(__dirname, 'fix_quant_memberships.sql'), 'fix_quant_memberships.sql');
-    // which adds a UNIQUE INDEX that would fail if duplicate (user_id, type, name) rows exist.
-    await client.query(`
-      WHERE a.ctid < b.ctid
-        AND COALESCE(a.user_id, '00000000-0000-0000-0000-000000000000') = COALESCE(b.user_id, '00000000-0000-0000-0000-000000000000')
-        AND a.type = b.type
-        AND a.name = b.name
-    `);
 
     console.log('[migrate] Migration completed successfully.');
   } catch (err) {
